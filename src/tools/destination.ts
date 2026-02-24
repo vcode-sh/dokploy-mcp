@@ -27,9 +27,11 @@ const one = getTool({
   title: 'Get Backup Destination',
   description:
     'Retrieve the full configuration of a specific backup destination by its unique ID. Requires the destinationId parameter. Returns the destination object with name, S3 bucket, region, endpoint, and credential details.',
-  schema: z.object({
-    destinationId: z.string().min(1).describe('Unique destination ID'),
-  }).strict(),
+  schema: z
+    .object({
+      destinationId: z.string().min(1).describe('Unique destination ID'),
+    })
+    .strict(),
   endpoint: '/destination.one',
 })
 
@@ -38,9 +40,11 @@ const create = postTool({
   title: 'Create Backup Destination',
   description:
     'Create a new S3-compatible backup destination in Dokploy. Requires the destination name, S3 access key, secret access key, bucket name, region, and endpoint URL. Returns the newly created destination object with its assigned ID.',
-  schema: z.object({
-    ...destinationBaseSchema,
-  }).strict(),
+  schema: z
+    .object({
+      ...destinationBaseSchema,
+    })
+    .strict(),
   endpoint: '/destination.create',
 })
 
@@ -49,10 +53,12 @@ const update = postTool({
   title: 'Update Backup Destination',
   description:
     'Update an existing S3-compatible backup destination configuration. Requires the destinationId of the destination to modify along with the updated S3 credentials and bucket settings. Returns the updated destination object.',
-  schema: z.object({
-    destinationId: z.string().min(1).describe('Unique destination ID to update'),
-    ...destinationBaseSchema,
-  }).strict(),
+  schema: z
+    .object({
+      destinationId: z.string().min(1).describe('Unique destination ID to update'),
+      ...destinationBaseSchema,
+    })
+    .strict(),
   endpoint: '/destination.update',
 })
 
@@ -61,9 +67,11 @@ const remove = postTool({
   title: 'Remove Backup Destination',
   description:
     'Permanently remove a backup destination from Dokploy. This action is irreversible and will delete the destination configuration. Requires the destinationId parameter. Any backup schedules referencing this destination should be updated or removed first.',
-  schema: z.object({
-    destinationId: z.string().min(1).describe('Unique destination ID to remove'),
-  }).strict(),
+  schema: z
+    .object({
+      destinationId: z.string().min(1).describe('Unique destination ID to remove'),
+    })
+    .strict(),
   endpoint: '/destination.remove',
   annotations: { destructiveHint: true },
 })
@@ -73,9 +81,11 @@ const testConnection = postTool({
   title: 'Test Destination Connection',
   description:
     'Test the connection to an S3-compatible backup destination using the provided credentials. Requires the destination name, access key, secret access key, bucket, region, and endpoint. Returns a success or failure status indicating whether the S3 bucket is reachable and writable.',
-  schema: z.object({
-    ...destinationBaseSchema,
-  }).strict(),
+  schema: z
+    .object({
+      ...destinationBaseSchema,
+    })
+    .strict(),
   endpoint: '/destination.testConnection',
 })
 

@@ -96,9 +96,14 @@ const saveSSHPrivateKey = postTool({
   title: 'Save SSH Private Key',
   description:
     'Save an SSH private key for server access and remote operations. Accepts the sshPrivateKey parameter containing the key content, or null to clear the stored key. Returns a confirmation that the key was saved successfully.',
-  schema: z.object({
-    sshPrivateKey: z.string().nullable().describe('The SSH private key content, or null to clear'),
-  }).strict(),
+  schema: z
+    .object({
+      sshPrivateKey: z
+        .string()
+        .nullable()
+        .describe('The SSH private key content, or null to clear'),
+    })
+    .strict(),
   endpoint: '/settings.saveSSHPrivateKey',
 })
 
@@ -117,16 +122,18 @@ const assignDomainServer = postTool({
   title: 'Assign Domain to Server',
   description:
     "Assign a domain to the Dokploy server with optional SSL certificate configuration. Accepts an optional letsEncryptEmail for Let's Encrypt certificate registration and an optional certificateType ('letsencrypt' or 'none'). Returns the updated domain assignment configuration.",
-  schema: z.object({
-    letsEncryptEmail: z
-      .string()
-      .optional()
-      .describe("Email for Let's Encrypt certificate registration"),
-    certificateType: z
-      .enum(['letsencrypt', 'none'])
-      .optional()
-      .describe('Type of SSL certificate: letsencrypt or none'),
-  }).strict(),
+  schema: z
+    .object({
+      letsEncryptEmail: z
+        .string()
+        .optional()
+        .describe("Email for Let's Encrypt certificate registration"),
+      certificateType: z
+        .enum(['letsencrypt', 'none'])
+        .optional()
+        .describe('Type of SSL certificate: letsencrypt or none'),
+    })
+    .strict(),
   endpoint: '/settings.assignDomainServer',
 })
 
@@ -135,10 +142,12 @@ const updateDockerCleanup = postTool({
   title: 'Update Docker Cleanup Schedule',
   description:
     'Configure automatic Docker cleanup scheduling to periodically remove unused resources. Requires the enabled boolean parameter and accepts an optional cron schedule expression. Returns the updated cleanup configuration.',
-  schema: z.object({
-    enabled: z.boolean().describe('Whether automatic cleanup is enabled'),
-    schedule: z.string().optional().describe('Cron schedule expression for the cleanup job'),
-  }).strict(),
+  schema: z
+    .object({
+      enabled: z.boolean().describe('Whether automatic cleanup is enabled'),
+      schedule: z.string().optional().describe('Cron schedule expression for the cleanup job'),
+    })
+    .strict(),
   endpoint: '/settings.updateDockerCleanup',
 })
 
@@ -156,9 +165,11 @@ const updateTraefikConfig = postTool({
   title: 'Update Traefik Config',
   description:
     'Update the main Traefik configuration file with new content. Requires the traefikConfig parameter containing the full configuration. Returns a confirmation of the update. A Traefik reload may be needed to apply changes.',
-  schema: z.object({
-    traefikConfig: z.string().min(1).describe('The new Traefik configuration content'),
-  }).strict(),
+  schema: z
+    .object({
+      traefikConfig: z.string().min(1).describe('The new Traefik configuration content'),
+    })
+    .strict(),
   endpoint: '/settings.updateTraefikConfig',
 })
 
@@ -176,9 +187,11 @@ const updateWebServerTraefikConfig = postTool({
   title: 'Update Web Server Traefik Config',
   description:
     'Update the Traefik configuration for the Dokploy web server. Requires the traefikConfig parameter containing the full web server configuration. Returns a confirmation of the update. A Traefik reload may be needed to apply changes.',
-  schema: z.object({
-    traefikConfig: z.string().min(1).describe('The new web server Traefik configuration content'),
-  }).strict(),
+  schema: z
+    .object({
+      traefikConfig: z.string().min(1).describe('The new web server Traefik configuration content'),
+    })
+    .strict(),
   endpoint: '/settings.updateWebServerTraefikConfig',
 })
 
@@ -196,9 +209,11 @@ const updateMiddlewareTraefikConfig = postTool({
   title: 'Update Middleware Traefik Config',
   description:
     'Update the Traefik middleware configuration that controls request processing rules. Requires the traefikConfig parameter containing the full middleware configuration. Returns a confirmation of the update. A Traefik reload may be needed to apply changes.',
-  schema: z.object({
-    traefikConfig: z.string().min(1).describe('The new middleware Traefik configuration content'),
-  }).strict(),
+  schema: z
+    .object({
+      traefikConfig: z.string().min(1).describe('The new middleware Traefik configuration content'),
+    })
+    .strict(),
   endpoint: '/settings.updateMiddlewareTraefikConfig',
 })
 
@@ -243,9 +258,11 @@ const readTraefikFile = getTool({
   title: 'Read Traefik File',
   description:
     'Read a specific Traefik configuration file from the server file system. Accepts a path parameter to specify which Traefik file to read. Returns the raw file content as a string. Useful for inspecting individual Traefik configuration files beyond the main config.',
-  schema: z.object({
-    path: z.string().min(1).describe('Path to the Traefik configuration file to read'),
-  }).strict(),
+  schema: z
+    .object({
+      path: z.string().min(1).describe('Path to the Traefik configuration file to read'),
+    })
+    .strict(),
   endpoint: '/settings.readTraefikFile',
 })
 
@@ -254,10 +271,12 @@ const updateTraefikFile = postTool({
   title: 'Update Traefik File',
   description:
     'Update a specific Traefik configuration file on the server. Requires the file path and new content. Returns a confirmation. A Traefik reload may be needed to apply changes.',
-  schema: z.object({
-    path: z.string().min(1).describe('Path to the Traefik configuration file to update'),
-    traefikConfig: z.string().min(1).describe('The new file content'),
-  }).strict(),
+  schema: z
+    .object({
+      path: z.string().min(1).describe('Path to the Traefik configuration file to update'),
+      traefikConfig: z.string().min(1).describe('The new file content'),
+    })
+    .strict(),
   endpoint: '/settings.updateTraefikFile',
 })
 

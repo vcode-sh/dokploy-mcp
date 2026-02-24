@@ -20,16 +20,18 @@ const create = postTool({
   title: 'Create Port Mapping',
   description:
     'Create a new port mapping for a Dokploy application. Maps an externally published port to a target port inside the container. Requires the published port number, target port number, and application ID. Optionally specify the protocol as TCP (default) or UDP. Returns the created port mapping configuration.',
-  schema: z.object({
-    publishedPort: z.number().describe('The externally published port number'),
-    targetPort: z.number().describe('The target port inside the container'),
-    applicationId: z.string().min(1).describe('ID of the application to add the port mapping to'),
-    protocol: z
-      .enum(['tcp', 'udp'])
-      .optional()
-      .default('tcp')
-      .describe('Network protocol for the port mapping'),
-  }).strict(),
+  schema: z
+    .object({
+      publishedPort: z.number().describe('The externally published port number'),
+      targetPort: z.number().describe('The target port inside the container'),
+      applicationId: z.string().min(1).describe('ID of the application to add the port mapping to'),
+      protocol: z
+        .enum(['tcp', 'udp'])
+        .optional()
+        .default('tcp')
+        .describe('Network protocol for the port mapping'),
+    })
+    .strict(),
   endpoint: '/port.create',
 })
 
@@ -38,12 +40,14 @@ const update = postTool({
   title: 'Update Port Mapping',
   description:
     'Update an existing port mapping configuration for a Dokploy application. Requires the portId of the mapping to modify. Optionally update the published port, target port, or protocol (TCP/UDP). Returns the updated port mapping configuration.',
-  schema: z.object({
-    portId,
-    publishedPort: z.number().optional().describe('New externally published port number'),
-    targetPort: z.number().optional().describe('New target port inside the container'),
-    protocol: z.enum(['tcp', 'udp']).optional().describe('New network protocol'),
-  }).strict(),
+  schema: z
+    .object({
+      portId,
+      publishedPort: z.number().optional().describe('New externally published port number'),
+      targetPort: z.number().optional().describe('New target port inside the container'),
+      protocol: z.enum(['tcp', 'udp']).optional().describe('New network protocol'),
+    })
+    .strict(),
   endpoint: '/port.update',
 })
 

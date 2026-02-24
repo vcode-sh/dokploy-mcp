@@ -83,7 +83,7 @@ function readConfigFile(): ConfigFile | null {
       return null
     }
 
-    if (!record.url || !record.apiKey) {
+    if (!(record.url && record.apiKey)) {
       return null
     }
 
@@ -124,7 +124,7 @@ function readDokployCliConfig(): DokployConfig | null {
       return null
     }
 
-    if (!record.url || !record.token) {
+    if (!(record.url && record.token)) {
       return null
     }
 
@@ -173,10 +173,7 @@ export interface ValidationResult {
  * Validates Dokploy credentials by making API requests.
  * Tries to detect the correct URL format and validates the API key.
  */
-export async function validateCredentials(
-  url: string,
-  apiKey: string,
-): Promise<ValidationResult> {
+export async function validateCredentials(url: string, apiKey: string): Promise<ValidationResult> {
   const normalizedUrl = url.replace(/\/+$/, '')
   const hasApiSuffix = normalizedUrl.endsWith('/api')
 
@@ -191,7 +188,11 @@ export async function validateCredentials(
       return result
     }
     // If we got an auth error (not a network/404 error), don't try the next URL
-    if (result.error && !result.error.includes('not reachable') && !result.error.includes('Not Found')) {
+    if (
+      result.error &&
+      !result.error.includes('not reachable') &&
+      !result.error.includes('Not Found')
+    ) {
       return result
     }
   }
@@ -202,79 +203,73 @@ export async function validateCredentials(
   }
 }
 
-async function tryValidate(
-  baseUrl: string,
-  apiKey: string,
-): Promise<ValidationResult> {
+function apiHeaders(apiKey: string): Record<string, string> {
+  return { Accept: 'application/json', 'x-api-key': apiKey }
+}
+
+function mapAuthError(status: number, statusText: string): ValidationResult {
+  if (status === 401 || status === 403) {
+    return { valid: false, error: 'Invalid API key. Check your key in Dokploy Settings > API.' }
+  }
+  if (status === 404) {
+    return { valid: false, error: 'Not Found' }
+  }
+  return { valid: false, error: `API returned HTTP ${status}: ${statusText}` }
+}
+
+function parseUser(data: unknown): string | undefined {
+  if (typeof data !== 'object' || data === null) return undefined
+  const record = data as Record<string, unknown>
+  if (typeof record.email === 'string') return record.email
+  if (typeof record.name === 'string') return record.name
+  return undefined
+}
+
+async function fetchVersion(baseUrl: string, apiKey: string): Promise<string | undefined> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 5_000)
+
+  try {
+    const response = await fetch(`${baseUrl}/settings.getDokployVersion`, {
+      method: 'GET',
+      headers: apiHeaders(apiKey),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) return undefined
+
+    const data: unknown = await response.json()
+    if (typeof data === 'string') return data
+    if (typeof data === 'object' && data !== null) {
+      const record = data as Record<string, unknown>
+      if (typeof record.version === 'string') return record.version
+    }
+    return undefined
+  } catch {
+    return undefined
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function tryValidate(baseUrl: string, apiKey: string): Promise<ValidationResult> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 10_000)
 
   try {
-    // Validate auth
     const authResponse = await fetch(`${baseUrl}/auth.get`, {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'x-api-key': apiKey,
-      },
+      headers: apiHeaders(apiKey),
       signal: controller.signal,
     })
 
     if (!authResponse.ok) {
-      const status = authResponse.status
-      if (status === 401 || status === 403) {
-        return { valid: false, error: 'Invalid API key. Check your key in Dokploy Settings > API.' }
-      }
-      if (status === 404) {
-        return { valid: false, error: 'Not Found' }
-      }
-      return { valid: false, error: `API returned HTTP ${status}: ${authResponse.statusText}` }
+      return mapAuthError(authResponse.status, authResponse.statusText)
     }
 
     const authData: unknown = await authResponse.json()
-    let user: string | undefined
-    if (typeof authData === 'object' && authData !== null) {
-      const record = authData as Record<string, unknown>
-      if (typeof record.email === 'string') {
-        user = record.email
-      } else if (typeof record.name === 'string') {
-        user = record.name
-      }
-    }
-
-    // Try to get version (non-critical)
-    let version: string | undefined
-    try {
-      const versionController = new AbortController()
-      const versionTimer = setTimeout(() => versionController.abort(), 5_000)
-
-      try {
-        const versionResponse = await fetch(`${baseUrl}/settings.getDokployVersion`, {
-          method: 'GET',
-          headers: {
-            Accept: 'application/json',
-            'x-api-key': apiKey,
-          },
-          signal: versionController.signal,
-        })
-
-        if (versionResponse.ok) {
-          const versionData: unknown = await versionResponse.json()
-          if (typeof versionData === 'string') {
-            version = versionData
-          } else if (typeof versionData === 'object' && versionData !== null) {
-            const record = versionData as Record<string, unknown>
-            if (typeof record.version === 'string') {
-              version = record.version
-            }
-          }
-        }
-      } finally {
-        clearTimeout(versionTimer)
-      }
-    } catch {
-      // Version check is non-critical, ignore errors
-    }
+    const user = parseUser(authData)
+    const version = await fetchVersion(baseUrl, apiKey)
 
     return { valid: true, resolvedUrl: baseUrl, user, version }
   } catch (error) {

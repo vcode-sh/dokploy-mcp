@@ -20,12 +20,14 @@ const create = postTool({
   title: 'Create Redirect Rule',
   description:
     'Create a new redirect rule for an application. Requires a regex pattern to match incoming requests, a replacement URL or path, a permanent flag indicating 301 vs 302 redirect, and the target applicationId. Returns the newly created redirect rule with its assigned ID.',
-  schema: z.object({
-    regex: z.string().min(1).describe('Regular expression pattern to match incoming requests'),
-    replacement: z.string().min(1).describe('Replacement URL or path for matched requests'),
-    permanent: z.boolean().describe('Whether the redirect is permanent (301) or temporary (302)'),
-    applicationId: z.string().min(1).describe('ID of the application to add the redirect to'),
-  }).strict(),
+  schema: z
+    .object({
+      regex: z.string().min(1).describe('Regular expression pattern to match incoming requests'),
+      replacement: z.string().min(1).describe('Replacement URL or path for matched requests'),
+      permanent: z.boolean().describe('Whether the redirect is permanent (301) or temporary (302)'),
+      applicationId: z.string().min(1).describe('ID of the application to add the redirect to'),
+    })
+    .strict(),
   endpoint: '/redirects.create',
 })
 
@@ -34,15 +36,17 @@ const update = postTool({
   title: 'Update Redirect Rule',
   description:
     'Update an existing redirect rule by its ID. Requires the redirectId and accepts optional fields: regex pattern, replacement URL, and permanent flag. Only provided fields will be updated; omitted fields remain unchanged. Returns the updated redirect rule.',
-  schema: z.object({
-    redirectId,
-    regex: z.string().optional().describe('New regular expression pattern'),
-    replacement: z.string().optional().describe('New replacement URL or path'),
-    permanent: z
-      .boolean()
-      .optional()
-      .describe('Whether the redirect is permanent (301) or temporary (302)'),
-  }).strict(),
+  schema: z
+    .object({
+      redirectId,
+      regex: z.string().optional().describe('New regular expression pattern'),
+      replacement: z.string().optional().describe('New replacement URL or path'),
+      permanent: z
+        .boolean()
+        .optional()
+        .describe('Whether the redirect is permanent (301) or temporary (302)'),
+    })
+    .strict(),
   endpoint: '/redirects.update',
 })
 

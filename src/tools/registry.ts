@@ -31,9 +31,11 @@ const one = getTool({
   title: 'Get Registry Details',
   description:
     'Get the full details of a specific container registry by its unique ID. Returns the registry name, URL, type, credentials, and image prefix configuration. Requires the registry ID. Useful for inspecting or verifying a registry setup before deploying.',
-  schema: z.object({
-    registryId: z.string().min(1).describe('Unique registry ID'),
-  }).strict(),
+  schema: z
+    .object({
+      registryId: z.string().min(1).describe('Unique registry ID'),
+    })
+    .strict(),
   endpoint: '/registry.one',
 })
 
@@ -42,9 +44,11 @@ const create = postTool({
   title: 'Create Registry',
   description:
     'Create a new container registry configuration in Dokploy. Requires the registry name, URL, username, password, and type (selfHosted or cloud). Optionally accepts an image prefix. Returns the newly created registry object.',
-  schema: z.object({
-    ...registryBaseSchema,
-  }).strict(),
+  schema: z
+    .object({
+      ...registryBaseSchema,
+    })
+    .strict(),
   endpoint: '/registry.create',
 })
 
@@ -53,10 +57,12 @@ const update = postTool({
   title: 'Update Registry',
   description:
     'Update an existing container registry configuration in Dokploy. Requires the registry ID along with the updated name, URL, username, password, and type. Optionally accepts an image prefix. Returns the updated registry object.',
-  schema: z.object({
-    registryId: z.string().min(1).describe('Unique registry ID to update'),
-    ...registryBaseSchema,
-  }).strict(),
+  schema: z
+    .object({
+      registryId: z.string().min(1).describe('Unique registry ID to update'),
+      ...registryBaseSchema,
+    })
+    .strict(),
   endpoint: '/registry.update',
 })
 
@@ -65,9 +71,11 @@ const remove = postTool({
   title: 'Remove Registry',
   description:
     'Permanently remove a container registry configuration from Dokploy. This action is irreversible and will delete all stored credentials for the registry. Requires the registry ID. Applications referencing this registry will need to be reconfigured.',
-  schema: z.object({
-    registryId: z.string().min(1).describe('Unique registry ID to remove'),
-  }).strict(),
+  schema: z
+    .object({
+      registryId: z.string().min(1).describe('Unique registry ID to remove'),
+    })
+    .strict(),
   endpoint: '/registry.remove',
   annotations: { destructiveHint: true },
 })
@@ -77,18 +85,13 @@ const testRegistry = postTool({
   title: 'Test Registry Connection',
   description:
     'Test the connection to a container registry using the provided credentials. Validates that Dokploy can authenticate and communicate with the registry. Requires the registry name, URL, username, password, and type. Returns a success or failure status.',
-  schema: z.object({
-    ...registryBaseSchema,
-  }).strict(),
+  schema: z
+    .object({
+      ...registryBaseSchema,
+    })
+    .strict(),
   endpoint: '/registry.testRegistry',
 })
 
 // ── export ───────────────────────────────────────────────────────────
-export const registryTools: ToolDefinition[] = [
-  all,
-  one,
-  create,
-  update,
-  remove,
-  testRegistry,
-]
+export const registryTools: ToolDefinition[] = [all, one, create, update, remove, testRegistry]

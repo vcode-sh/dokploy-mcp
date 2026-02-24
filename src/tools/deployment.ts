@@ -8,9 +8,11 @@ const all = getTool({
   title: 'List Application Deployments',
   description:
     'List all deployment records for a specific application in Dokploy. Each deployment includes build logs, status, timestamps, and the triggering event. Requires the application ID. Returns an array of deployment objects ordered by creation date.',
-  schema: z.object({
-    applicationId: z.string().min(1).describe('The unique application ID'),
-  }).strict(),
+  schema: z
+    .object({
+      applicationId: z.string().min(1).describe('The unique application ID'),
+    })
+    .strict(),
   endpoint: '/deployment.all',
 })
 
@@ -19,9 +21,11 @@ const allByCompose = getTool({
   title: 'List Compose Deployments',
   description:
     'List all deployment records for a specific Docker Compose service in Dokploy. Each deployment includes build logs, status, timestamps, and the triggering event. Requires the compose service ID. Returns an array of deployment objects ordered by creation date.',
-  schema: z.object({
-    composeId: z.string().min(1).describe('The unique compose service ID'),
-  }).strict(),
+  schema: z
+    .object({
+      composeId: z.string().min(1).describe('The unique compose service ID'),
+    })
+    .strict(),
   endpoint: '/deployment.allByCompose',
 })
 

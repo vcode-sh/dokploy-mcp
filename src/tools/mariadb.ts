@@ -21,18 +21,20 @@ const create = postTool({
   title: 'Create MariaDB Database',
   description:
     'Create a new MariaDB database instance inside a Dokploy project. Requires a display name, app-level identifier, database name, user credentials, root password, and the target project ID. Optionally specify a Docker image, description, or remote server. Returns the newly created database record.',
-  schema: z.object({
-    name: z.string().min(1).describe('Display name for the database'),
-    appName: z.string().min(1).describe('Unique app-level identifier'),
-    databaseName: z.string().min(1).describe('Name of the database to create'),
-    databaseUser: z.string().min(1).describe('Database user'),
-    databasePassword: z.string().min(1).describe('Database password'),
-    databaseRootPassword: z.string().min(1).describe('Root password for MariaDB'),
-    projectId: z.string().min(1).describe('Project ID to create the database in'),
-    dockerImage: z.string().optional().describe('Docker image (default: mariadb:11)'),
-    description: z.string().nullable().optional().describe('Optional description'),
-    serverId: z.string().nullable().optional().describe('Target server ID (null for local)'),
-  }).strict(),
+  schema: z
+    .object({
+      name: z.string().min(1).describe('Display name for the database'),
+      appName: z.string().min(1).describe('Unique app-level identifier'),
+      databaseName: z.string().min(1).describe('Name of the database to create'),
+      databaseUser: z.string().min(1).describe('Database user'),
+      databasePassword: z.string().min(1).describe('Database password'),
+      databaseRootPassword: z.string().min(1).describe('Root password for MariaDB'),
+      projectId: z.string().min(1).describe('Project ID to create the database in'),
+      dockerImage: z.string().optional().describe('Docker image (default: mariadb:11)'),
+      description: z.string().nullable().optional().describe('Optional description'),
+      serverId: z.string().nullable().optional().describe('Target server ID (null for local)'),
+    })
+    .strict(),
   endpoint: `${DB}.create`,
 })
 
@@ -41,20 +43,22 @@ const update = postTool({
   title: 'Update MariaDB Database',
   description:
     'Update the configuration of an existing MariaDB database in Dokploy. Requires the MariaDB database ID and accepts optional fields such as name, Docker image, resource limits (memory and CPU), custom start command, environment variables, and external port. Returns the updated database configuration.',
-  schema: z.object({
-    mariadbId: mdbId,
-    name: z.string().min(1).optional().describe('Display name'),
-    appName: z.string().min(1).optional().describe('App-level identifier'),
-    description: z.string().nullable().optional().describe('Description'),
-    dockerImage: z.string().optional().describe('Docker image'),
-    memoryReservation: z.number().nullable().optional().describe('Memory reservation in MB'),
-    memoryLimit: z.number().nullable().optional().describe('Memory limit in MB'),
-    cpuReservation: z.number().nullable().optional().describe('CPU reservation'),
-    cpuLimit: z.number().nullable().optional().describe('CPU limit'),
-    command: z.string().nullable().optional().describe('Custom start command'),
-    env: z.string().nullable().optional().describe('Environment variables'),
-    externalPort: z.number().nullable().optional().describe('External port'),
-  }).strict(),
+  schema: z
+    .object({
+      mariadbId: mdbId,
+      name: z.string().min(1).optional().describe('Display name'),
+      appName: z.string().min(1).optional().describe('App-level identifier'),
+      description: z.string().nullable().optional().describe('Description'),
+      dockerImage: z.string().optional().describe('Docker image'),
+      memoryReservation: z.number().nullable().optional().describe('Memory reservation in MB'),
+      memoryLimit: z.number().nullable().optional().describe('Memory limit in MB'),
+      cpuReservation: z.number().nullable().optional().describe('CPU reservation'),
+      cpuLimit: z.number().nullable().optional().describe('CPU limit'),
+      command: z.string().nullable().optional().describe('Custom start command'),
+      env: z.string().nullable().optional().describe('Environment variables'),
+      externalPort: z.number().nullable().optional().describe('External port'),
+    })
+    .strict(),
   endpoint: `${DB}.update`,
 })
 
@@ -73,10 +77,12 @@ const move = postTool({
   title: 'Move MariaDB Database',
   description:
     'Move a MariaDB database from its current project to a different project within Dokploy. Requires the MariaDB database ID and the destination project ID. The database configuration and data remain intact during the move. Returns the operation status.',
-  schema: z.object({
-    mariadbId: mdbId,
-    targetProjectId: z.string().min(1).describe('Destination project ID'),
-  }).strict(),
+  schema: z
+    .object({
+      mariadbId: mdbId,
+      targetProjectId: z.string().min(1).describe('Destination project ID'),
+    })
+    .strict(),
   endpoint: `${DB}.move`,
 })
 
@@ -113,10 +119,12 @@ const reload = postTool({
   title: 'Reload MariaDB Database',
   description:
     'Reload the MariaDB database container in Dokploy without performing a full rebuild. Requires the MariaDB database ID and the app-level identifier. This restarts the container with its current configuration. Returns the operation status.',
-  schema: z.object({
-    mariadbId: mdbId,
-    appName: z.string().min(1).describe('App-level identifier'),
-  }).strict(),
+  schema: z
+    .object({
+      mariadbId: mdbId,
+      appName: z.string().min(1).describe('App-level identifier'),
+    })
+    .strict(),
   endpoint: `${DB}.reload`,
 })
 
@@ -134,12 +142,14 @@ const changeStatus = postTool({
   title: 'Change MariaDB Status',
   description:
     'Manually set the application status of a MariaDB database in Dokploy. Requires the MariaDB database ID and the desired status (idle, running, done, or error). This is typically used for administrative overrides when the reported status does not match reality. Returns the updated status.',
-  schema: z.object({
-    mariadbId: mdbId,
-    applicationStatus: z
-      .enum(['idle', 'running', 'done', 'error'])
-      .describe('New application status'),
-  }).strict(),
+  schema: z
+    .object({
+      mariadbId: mdbId,
+      applicationStatus: z
+        .enum(['idle', 'running', 'done', 'error'])
+        .describe('New application status'),
+    })
+    .strict(),
   endpoint: `${DB}.changeStatus`,
 })
 
@@ -148,10 +158,12 @@ const saveExternalPort = postTool({
   title: 'Save MariaDB External Port',
   description:
     'Set or clear the external port mapping for a MariaDB database in Dokploy. Requires the MariaDB database ID and the desired external port number, or null to remove the external port mapping. This controls whether the database is accessible from outside the Docker network. Returns the operation status.',
-  schema: z.object({
-    mariadbId: mdbId,
-    externalPort: z.number().nullable().describe('External port number (null to remove)'),
-  }).strict(),
+  schema: z
+    .object({
+      mariadbId: mdbId,
+      externalPort: z.number().nullable().describe('External port number (null to remove)'),
+    })
+    .strict(),
   endpoint: `${DB}.saveExternalPort`,
 })
 
@@ -160,10 +172,12 @@ const saveEnvironment = postTool({
   title: 'Save MariaDB Environment',
   description:
     'Overwrite the environment variables for a MariaDB database in Dokploy. Requires the MariaDB database ID and the environment variables as a string. This replaces all existing environment variables with the provided values. Returns the operation status.',
-  schema: z.object({
-    mariadbId: mdbId,
-    env: z.string().nullable().optional().describe('Environment variables as a string'),
-  }).strict(),
+  schema: z
+    .object({
+      mariadbId: mdbId,
+      env: z.string().nullable().optional().describe('Environment variables as a string'),
+    })
+    .strict(),
   endpoint: `${DB}.saveEnvironment`,
 })
 

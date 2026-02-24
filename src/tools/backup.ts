@@ -20,23 +20,28 @@ const create = postTool({
   title: 'Create Backup Schedule',
   description:
     'Create a new scheduled backup configuration for a database service in Dokploy. Requires a cron schedule expression, file name prefix, destination ID, database name, and database type (postgres, mysql, mariadb, or mongo). Optionally accepts the specific database service ID and an enabled flag. Returns the created backup configuration.',
-  schema: z.object({
-    schedule: z.string().min(1).describe('Cron schedule expression for the backup'),
-    prefix: z.string().min(1).describe('Prefix for backup file names'),
-    destinationId: z.string().min(1).describe('Destination ID where backups will be stored'),
-    database: z.string().min(1).describe('Name of the database to back up'),
-    databaseType: z
-      .enum(['postgres', 'mariadb', 'mysql', 'mongo'])
-      .describe('Type of the database'),
-    enabled: z.boolean().optional().describe('Whether the backup is enabled'),
-    postgresId: z
-      .string()
-      .optional()
-      .describe('Postgres database ID (when databaseType is postgres)'),
-    mysqlId: z.string().optional().describe('MySQL database ID (when databaseType is mysql)'),
-    mariadbId: z.string().optional().describe('MariaDB database ID (when databaseType is mariadb)'),
-    mongoId: z.string().optional().describe('MongoDB database ID (when databaseType is mongo)'),
-  }).strict(),
+  schema: z
+    .object({
+      schedule: z.string().min(1).describe('Cron schedule expression for the backup'),
+      prefix: z.string().min(1).describe('Prefix for backup file names'),
+      destinationId: z.string().min(1).describe('Destination ID where backups will be stored'),
+      database: z.string().min(1).describe('Name of the database to back up'),
+      databaseType: z
+        .enum(['postgres', 'mariadb', 'mysql', 'mongo'])
+        .describe('Type of the database'),
+      enabled: z.boolean().optional().describe('Whether the backup is enabled'),
+      postgresId: z
+        .string()
+        .optional()
+        .describe('Postgres database ID (when databaseType is postgres)'),
+      mysqlId: z.string().optional().describe('MySQL database ID (when databaseType is mysql)'),
+      mariadbId: z
+        .string()
+        .optional()
+        .describe('MariaDB database ID (when databaseType is mariadb)'),
+      mongoId: z.string().optional().describe('MongoDB database ID (when databaseType is mongo)'),
+    })
+    .strict(),
   endpoint: '/backup.create',
 })
 
@@ -45,14 +50,16 @@ const update = postTool({
   title: 'Update Backup Schedule',
   description:
     'Update an existing backup schedule configuration. Requires the backupId along with the updated cron schedule, file name prefix, destination ID, and database name. Optionally accepts an enabled flag to activate or deactivate the schedule. Returns the updated backup configuration.',
-  schema: z.object({
-    backupId,
-    schedule: z.string().min(1).describe('Cron schedule expression for the backup'),
-    prefix: z.string().min(1).describe('Prefix for backup file names'),
-    destinationId: z.string().min(1).describe('Destination ID where backups will be stored'),
-    database: z.string().min(1).describe('Name of the database to back up'),
-    enabled: z.boolean().optional().describe('Whether the backup is enabled'),
-  }).strict(),
+  schema: z
+    .object({
+      backupId,
+      schedule: z.string().min(1).describe('Cron schedule expression for the backup'),
+      prefix: z.string().min(1).describe('Prefix for backup file names'),
+      destinationId: z.string().min(1).describe('Destination ID where backups will be stored'),
+      database: z.string().min(1).describe('Name of the database to back up'),
+      enabled: z.boolean().optional().describe('Whether the backup is enabled'),
+    })
+    .strict(),
   endpoint: '/backup.update',
 })
 

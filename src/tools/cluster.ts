@@ -35,9 +35,11 @@ const removeWorker = postTool({
   title: 'Remove Worker Node',
   description:
     'Remove a worker node from the Docker Swarm cluster. This action is irreversible and any services running on the node will be rescheduled to other available nodes. Requires the nodeId parameter identifying the worker to remove. Returns a confirmation of the removal.',
-  schema: z.object({
-    nodeId: z.string().min(1).describe('ID of the worker node to remove from the cluster'),
-  }).strict(),
+  schema: z
+    .object({
+      nodeId: z.string().min(1).describe('ID of the worker node to remove from the cluster'),
+    })
+    .strict(),
   endpoint: '/cluster.removeWorker',
   annotations: { destructiveHint: true },
 })
