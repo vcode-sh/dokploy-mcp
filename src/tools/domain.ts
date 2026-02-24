@@ -123,17 +123,6 @@ const generateDomain = postTool({
   endpoint: '/domain.generateDomain',
 })
 
-const generateWildcard = postTool({
-  name: 'dokploy_domain_generate_wildcard',
-  title: 'Generate Wildcard Domain',
-  description:
-    "Generate a wildcard domain for an application using the server's configured base domain. A wildcard domain matches all subdomains, enabling dynamic subdomain routing. Requires the application ID. Returns the generated wildcard domain configuration.",
-  schema: z.object({
-    applicationId: z.string().min(1).describe('The unique application ID'),
-  }).strict(),
-  endpoint: '/domain.generateWildcard',
-})
-
 // ── export ───────────────────────────────────────────────────────────
 export const domainTools: ToolDefinition[] = [
   create,
@@ -144,5 +133,4 @@ export const domainTools: ToolDefinition[] = [
   deleteDomain,
   validateDomain,
   generateDomain,
-  generateWildcard,
 ]

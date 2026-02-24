@@ -22,7 +22,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "docs:api": "node scripts/openapi-to-markdown.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.0",

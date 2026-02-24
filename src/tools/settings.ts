@@ -202,15 +202,6 @@ const updateMiddlewareTraefikConfig = postTool({
   endpoint: '/settings.updateMiddlewareTraefikConfig',
 })
 
-const checkAndUpdateImage = postTool({
-  name: 'dokploy_settings_check_and_update_image',
-  title: 'Check and Update Image',
-  description:
-    'Check for available Dokploy Docker image updates and apply them if found. No parameters required. Returns the current and latest image versions along with the update status. This may trigger a server restart if an update is applied.',
-  schema: z.object({}).strict(),
-  endpoint: '/settings.checkAndUpdateImage',
-})
-
 const updateServer = postTool({
   name: 'dokploy_settings_update_server',
   title: 'Update Server',
@@ -291,7 +282,6 @@ export const settingsTools: ToolDefinition[] = [
   updateWebServerTraefikConfig,
   readMiddlewareTraefikConfig,
   updateMiddlewareTraefikConfig,
-  checkAndUpdateImage,
   updateServer,
   getDokployVersion,
   readDirectories,

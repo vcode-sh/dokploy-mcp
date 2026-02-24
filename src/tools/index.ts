@@ -1,7 +1,6 @@
 import type { ToolDefinition } from './_factory.js'
 import { adminTools } from './admin.js'
 import { applicationTools } from './application.js'
-import { authTools } from './auth.js'
 import { backupTools } from './backup.js'
 import { certificatesTools } from './certificates.js'
 import { clusterTools } from './cluster.js'
@@ -46,7 +45,6 @@ export const allTools: ToolDefinition[] = [
   ...securityTools,
   ...clusterTools,
   ...settingsTools,
-  ...authTools,
   ...adminTools,
   ...userTools,
 ]

@@ -53,11 +53,12 @@ const duplicate = postTool({
   name: 'dokploy_project_duplicate',
   title: 'Duplicate Project',
   description:
-    'Duplicate an existing Dokploy project, creating a new project with the same configuration. Requires the source project ID and a name for the new project. Optionally include services from the original project, either all services or a selected subset specified by their IDs and types. Returns the newly created duplicate project.',
+    'Duplicate an existing Dokploy project, creating a new project with the same configuration. Requires the source environment ID and a name for the new project. Optionally include services from the original project, either all services or a selected subset specified by their IDs and types. Returns the newly created duplicate project.',
   schema: z.object({
-    sourceProjectId: z.string().min(1).describe('The ID of the project to duplicate'),
+    sourceEnvironmentId: z.string().min(1).describe('The ID of the source environment to duplicate'),
     name: z.string().min(1).describe('The name for the duplicated project'),
     description: z.string().optional().describe('Description for the duplicated project'),
+    duplicateInSameProject: z.boolean().optional().describe('Whether to duplicate within the same project'),
     includeServices: z
       .boolean()
       .optional()

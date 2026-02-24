@@ -83,15 +83,6 @@ const testRegistry = postTool({
   endpoint: '/registry.testRegistry',
 })
 
-const enableSelfHostedRegistry = postTool({
-  name: 'dokploy_registry_enable_self_hosted',
-  title: 'Enable Self-Hosted Registry',
-  description:
-    'Enable the built-in self-hosted container registry on the Dokploy server. This sets up a local Docker registry that can be used for storing and deploying images without relying on external services. Takes no parameters. Returns the registry configuration once enabled.',
-  schema: z.object({}).strict(),
-  endpoint: '/registry.enableSelfHostedRegistry',
-})
-
 // ── export ───────────────────────────────────────────────────────────
 export const registryTools: ToolDefinition[] = [
   all,
@@ -100,5 +91,4 @@ export const registryTools: ToolDefinition[] = [
   update,
   remove,
   testRegistry,
-  enableSelfHostedRegistry,
 ]

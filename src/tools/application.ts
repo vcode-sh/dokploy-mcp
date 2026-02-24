@@ -354,7 +354,7 @@ const saveGitProvider = postTool({
     enableSubmodules: z.boolean().optional().describe('Whether to initialize git submodules'),
     watchPaths: z.array(z.string()).optional().describe('Paths to watch for auto-deploy triggers'),
   }).strict(),
-  endpoint: '/application.saveGitProdiver',
+  endpoint: '/application.saveGitProvider',
 })
 
 const saveDockerProvider = postTool({
@@ -417,29 +417,6 @@ const updateTraefikConfig = postTool({
   endpoint: '/application.updateTraefikConfig',
 })
 
-const generateSSHKey = postTool({
-  name: 'dokploy_application_generate_ssh_key',
-  title: 'Generate SSH Key',
-  description:
-    'Generate a new SSH key pair for an application in Dokploy. The generated key can be used for authenticating with private Git repositories when pulling source code. Requires the application ID. Returns the public key.',
-  schema: z.object({
-    applicationId: z.string().min(1).describe('The unique application ID'),
-  }).strict(),
-  endpoint: '/application.generateSSHKey',
-})
-
-const removeSSHKey = postTool({
-  name: 'dokploy_application_remove_ssh_key',
-  title: 'Remove SSH Key',
-  description:
-    'Remove the SSH key associated with an application in Dokploy. After removal, the application will no longer be able to authenticate with private Git repositories using that key. Requires the application ID.',
-  schema: z.object({
-    applicationId: z.string().min(1).describe('The unique application ID'),
-  }).strict(),
-  endpoint: '/application.removeSSHKey',
-  annotations: { destructiveHint: true },
-})
-
 // ── export ───────────────────────────────────────────────────────────
 export const applicationTools: ToolDefinition[] = [
   create,
@@ -468,6 +445,4 @@ export const applicationTools: ToolDefinition[] = [
   readAppMonitoring,
   readTraefikConfig,
   updateTraefikConfig,
-  generateSSHKey,
-  removeSSHKey,
 ]

@@ -130,17 +130,6 @@ const cleanQueues = postTool({
   annotations: { destructiveHint: true },
 })
 
-const allServices = getTool({
-  name: 'dokploy_compose_all_services',
-  title: 'List Compose Services',
-  description:
-    'List all individual services defined within a Docker Compose deployment. Returns the service names, their status, and container details for each service in the compose stack. Requires the compose service ID.',
-  schema: z.object({
-    composeId: z.string().min(1).describe('The unique compose service ID'),
-  }).strict(),
-  endpoint: '/compose.allServices',
-})
-
 const randomizeCompose = postTool({
   name: 'dokploy_compose_randomize',
   title: 'Randomize Compose Names',
@@ -164,17 +153,6 @@ const getDefaultCommand = getTool({
   endpoint: '/compose.getDefaultCommand',
 })
 
-const generateSSHKey = postTool({
-  name: 'dokploy_compose_generate_ssh_key',
-  title: 'Generate SSH Key',
-  description:
-    'Generate a new SSH key pair for a compose service. The generated key can be used for authenticating with private Git repositories when pulling compose files. Requires the compose service ID. Returns the public key.',
-  schema: z.object({
-    composeId: z.string().min(1).describe('The unique compose service ID'),
-  }).strict(),
-  endpoint: '/compose.generateSSHKey',
-})
-
 const refreshToken = postTool({
   name: 'dokploy_compose_refresh_token',
   title: 'Refresh Webhook Token',
@@ -184,18 +162,6 @@ const refreshToken = postTool({
     composeId: z.string().min(1).describe('The unique compose service ID'),
   }).strict(),
   endpoint: '/compose.refreshToken',
-})
-
-const removeSSHKey = postTool({
-  name: 'dokploy_compose_remove_ssh_key',
-  title: 'Remove SSH Key',
-  description:
-    'Remove the SSH key associated with a compose service. After removal, the service will no longer be able to authenticate with private Git repositories using that key. Requires the compose service ID.',
-  schema: z.object({
-    composeId: z.string().min(1).describe('The unique compose service ID'),
-  }).strict(),
-  endpoint: '/compose.removeSSHKey',
-  annotations: { destructiveHint: true },
 })
 
 const deployTemplate = postTool({
@@ -242,12 +208,9 @@ export const composeTools: ToolDefinition[] = [
   redeploy,
   stop,
   cleanQueues,
-  allServices,
   randomizeCompose,
   getDefaultCommand,
-  generateSSHKey,
   refreshToken,
-  removeSSHKey,
   deployTemplate,
   templates,
   saveEnvironment,
