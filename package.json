@@ -1,6 +1,6 @@
 {
-  "name": "dokploy-mcp",
-  "version": "0.3.0",
+  "name": "@vibetools/dokploy-mcp",
+  "version": "0.4.0",
   "description": "MCP Server for the Dokploy API - complete coverage of all endpoints",
   "type": "module",
   "exports": {
@@ -23,7 +23,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
-    "docs:api": "node scripts/openapi-to-markdown.mjs"
+    "docs:api": "node scripts/openapi-to-markdown.mjs",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@clack/prompts": "^1.0.1",
@@ -39,5 +40,25 @@
     "node": ">=22.0.0"
   },
   "sideEffects": false,
-  "license": "MIT"
+  "license": "MIT",
+  "author": "Vibe Code <hello@vcode.sh>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vcode-sh/dokploy-mcp.git"
+  },
+  "homepage": "https://github.com/vcode-sh/dokploy-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/vcode-sh/dokploy-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "dokploy",
+    "model-context-protocol",
+    "devops",
+    "deployment",
+    "docker"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

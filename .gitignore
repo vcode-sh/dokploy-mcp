@@ -11,7 +11,6 @@ build
 # Environment variables
 .env
 .env*.local
-.env.awtrix
 
 # IDEs and editors
 .vscode/*
@@ -34,13 +33,6 @@ yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
 
-
-# Turbo
-.turbo
-
-# Better-T-Stack
-.alchemy
-
 # Testing
 coverage
 .nyc_output
@@ -52,8 +44,9 @@ tmp
 temp
 .old/**
 
-# next-agents-md
-.next-docs/
-
 .mcp.json
-voice-tone.md
+
+# Sensitive / local-only
+.claude/
+CLAUDE.md
+src/.env

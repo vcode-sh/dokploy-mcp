@@ -1,0 +1,21 @@
+# Source
+src/
+scripts/
+docs/
+
+# Config
+.github/
+.claude/
+.vscode/
+tsconfig.json
+biome.json*
+.npmrc
+.env*
+
+# Dev files
+CLAUDE.md
+CONTRIBUTING.md
+CHANGELOG.md
+coverage/
+*.config.ts
+.mcp.json

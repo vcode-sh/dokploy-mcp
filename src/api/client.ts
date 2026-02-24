@@ -14,7 +14,7 @@ function getConfig(): ClientConfig {
       [
         'Dokploy MCP is not configured. Set up credentials using one of these methods:',
         '',
-        '  1. Run: npx dokploy-mcp setup',
+        '  1. Run: npx @vibetools/dokploy-mcp setup',
         '  2. Set environment variables: DOKPLOY_URL and DOKPLOY_API_KEY',
         '',
         'Get your API key from Dokploy Settings > API.',

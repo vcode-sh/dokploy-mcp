@@ -20,7 +20,7 @@ export async function runCli(args: string[]): Promise<void> {
       const pkg = JSON.parse(
         readFileSync(join(currentDir, '..', '..', 'package.json'), 'utf8'),
       ) as { version: string }
-      console.log(`dokploy-mcp v${pkg.version}`)
+      console.log(`@vibetools/dokploy-mcp v${pkg.version}`)
       break
     }
 
@@ -32,12 +32,12 @@ export async function runCli(args: string[]): Promise<void> {
 
 function printHelp(): void {
   console.log(`
-dokploy-mcp - MCP server for the Dokploy API
+@vibetools/dokploy-mcp - MCP server for the Dokploy API
 
 Usage:
-  npx dokploy-mcp              Start MCP server (stdio transport)
-  npx dokploy-mcp setup        Configure credentials and MCP client
-  npx dokploy-mcp version      Show version
+  npx @vibetools/dokploy-mcp              Start MCP server (stdio transport)
+  npx @vibetools/dokploy-mcp setup        Configure credentials and MCP client
+  npx @vibetools/dokploy-mcp version      Show version
 
 Commands:
   setup, init, auth    Interactive setup wizard
@@ -49,6 +49,6 @@ Environment Variables:
   DOKPLOY_TIMEOUT      Request timeout in ms (default: 30000)
 
 Documentation:
-  https://github.com/Dokploy/dokploy-mcp
+  https://github.com/vcode-sh/dokploy-mcp
 `)
 }

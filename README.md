@@ -1,8 +1,8 @@
-# dokploy-mcp
+# @vibetools/dokploy-mcp
 
 MCP server for the Dokploy API.
 
-[![npm version](https://img.shields.io/npm/v/dokploy-mcp)](https://www.npmjs.com/package/dokploy-mcp)
+[![npm version](https://img.shields.io/npm/v/@vibetools/dokploy-mcp)](https://www.npmjs.com/package/@vibetools/dokploy-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node >= 22](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org/)
 
@@ -13,7 +13,7 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that p
 ## Features
 
 - **Complete API coverage** across all 24 Dokploy modules (224 tools)
-- **Interactive setup wizard** -- run `npx dokploy-mcp setup` and start using it in seconds
+- **Interactive setup wizard** -- run `npx @vibetools/dokploy-mcp setup` and start using it in seconds
 - **Auto-config detection** -- picks up credentials from env vars, config file, or Dokploy CLI
 - **Type-safe schemas** with Zod v4 validation on every parameter
 - **Tool annotations** (`readOnlyHint`, `destructiveHint`, `idempotentHint`) so clients can warn before destructive operations
@@ -24,19 +24,19 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that p
 ## Installation
 
 ```bash
-npm install dokploy-mcp
+npm install @vibetools/dokploy-mcp
 ```
 
 Or run directly:
 
 ```bash
-npx dokploy-mcp
+npx @vibetools/dokploy-mcp
 ```
 
 ## Quick Start
 
 ```bash
-npx dokploy-mcp setup
+npx @vibetools/dokploy-mcp setup
 ```
 
 The setup wizard will:
@@ -52,7 +52,7 @@ After setup, add this minimal config to your MCP client:
   "mcpServers": {
     "dokploy": {
       "command": "npx",
-      "args": ["dokploy-mcp"]
+      "args": ["@vibetools/dokploy-mcp"]
     }
   }
 }
@@ -84,9 +84,9 @@ For CI/CD pipelines or when you prefer environment variables over the config fil
 
 | Command | Description |
 |---|---|
-| `npx dokploy-mcp` | Start MCP server (stdio transport) |
-| `npx dokploy-mcp setup` | Interactive setup wizard |
-| `npx dokploy-mcp version` | Show version |
+| `npx @vibetools/dokploy-mcp` | Start MCP server (stdio transport) |
+| `npx @vibetools/dokploy-mcp setup` | Interactive setup wizard |
+| `npx @vibetools/dokploy-mcp version` | Show version |
 
 Aliases: `init` and `auth` are aliases for `setup`.
 
@@ -103,7 +103,7 @@ Add the following to your Claude Desktop configuration file (`claude_desktop_con
   "mcpServers": {
     "dokploy": {
       "command": "npx",
-      "args": ["dokploy-mcp"]
+      "args": ["@vibetools/dokploy-mcp"]
     }
   }
 }
@@ -116,7 +116,7 @@ Add the following to your Claude Desktop configuration file (`claude_desktop_con
   "mcpServers": {
     "dokploy": {
       "command": "npx",
-      "args": ["dokploy-mcp"],
+      "args": ["@vibetools/dokploy-mcp"],
       "env": {
         "DOKPLOY_URL": "https://panel.example.com",
         "DOKPLOY_API_KEY": "your-api-key"
@@ -137,7 +137,7 @@ Add the following to your `.mcp.json` configuration file:
   "mcpServers": {
     "dokploy": {
       "command": "npx",
-      "args": ["dokploy-mcp"]
+      "args": ["@vibetools/dokploy-mcp"]
     }
   }
 }
@@ -150,7 +150,7 @@ Add the following to your `.mcp.json` configuration file:
   "mcpServers": {
     "dokploy": {
       "command": "npx",
-      "args": ["dokploy-mcp"],
+      "args": ["@vibetools/dokploy-mcp"],
       "env": {
         "DOKPLOY_URL": "https://panel.example.com",
         "DOKPLOY_API_KEY": "your-api-key"
@@ -171,7 +171,7 @@ Add to `~/.cursor/mcp.json` or `.cursor/mcp.json` in your project:
   "mcpServers": {
     "dokploy": {
       "command": "npx",
-      "args": ["dokploy-mcp"]
+      "args": ["@vibetools/dokploy-mcp"]
     }
   }
 }
@@ -184,7 +184,7 @@ Add to `~/.cursor/mcp.json` or `.cursor/mcp.json` in your project:
   "mcpServers": {
     "dokploy": {
       "command": "npx",
-      "args": ["dokploy-mcp"],
+      "args": ["@vibetools/dokploy-mcp"],
       "env": {
         "DOKPLOY_URL": "https://panel.example.com",
         "DOKPLOY_API_KEY": "your-api-key"
@@ -205,7 +205,7 @@ Add to `.vscode/mcp.json`:
   "servers": {
     "dokploy": {
       "command": "npx",
-      "args": ["dokploy-mcp"]
+      "args": ["@vibetools/dokploy-mcp"]
     }
   }
 }
@@ -218,7 +218,7 @@ Add to `.vscode/mcp.json`:
   "servers": {
     "dokploy": {
       "command": "npx",
-      "args": ["dokploy-mcp"],
+      "args": ["@vibetools/dokploy-mcp"],
       "env": {
         "DOKPLOY_URL": "https://panel.example.com",
         "DOKPLOY_API_KEY": "your-api-key"

@@ -41,7 +41,7 @@ const sourceLabels: Record<string, string> = {
 }
 
 export async function runSetup(): Promise<void> {
-  p.intro('dokploy-mcp setup')
+  p.intro('@vibetools/dokploy-mcp setup')
 
   // 1. Check for existing configuration
   const existing = resolveConfig()
@@ -109,7 +109,7 @@ export async function runSetup(): Promise<void> {
       mcpServers: {
         dokploy: {
           command: 'npx',
-          args: ['dokploy-mcp'],
+          args: ['@vibetools/dokploy-mcp'],
         },
       },
     },
