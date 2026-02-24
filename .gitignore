@@ -72,3 +72,4 @@ backup/
 
 # Fumadocs auto-generated
 **/.source/
+.mcp.json
