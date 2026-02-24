@@ -44,7 +44,7 @@ Commands:
   version, -v          Show version number
 
 Environment Variables:
-  DOKPLOY_URL          Dokploy tRPC API base URL
+  DOKPLOY_URL          Dokploy panel URL (e.g. https://panel.example.com)
   DOKPLOY_API_KEY      API key from Dokploy Settings
   DOKPLOY_TIMEOUT      Request timeout in ms (default: 30000)
 

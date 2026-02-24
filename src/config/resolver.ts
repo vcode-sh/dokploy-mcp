@@ -6,11 +6,27 @@ import type { ConfigFile, DokployConfig, ResolvedConfig } from './types.js'
 import { getConfigDir, getConfigFilePath } from './types.js'
 
 /**
+ * Normalizes a Dokploy URL to the tRPC API base.
+ * Accepts any of these formats:
+ *   https://panel.example.com
+ *   https://panel.example.com/api
+ *   https://panel.example.com/api/trpc
+ * Always returns https://panel.example.com/api/trpc
+ */
+export function normalizeUrl(url: string): string {
+  const stripped = url.replace(/\/+$/, '')
+  if (stripped.endsWith('/api/trpc')) return stripped
+  if (stripped.endsWith('/api')) return `${stripped}/trpc`
+  return `${stripped}/api/trpc`
+}
+
+/**
  * Resolves Dokploy configuration from multiple sources in priority order:
  * 1. Environment variables (DOKPLOY_URL + DOKPLOY_API_KEY)
  * 2. Config file (~/.config/dokploy-mcp/config.json)
  * 3. Dokploy CLI config (@dokploy/cli global install)
  *
+ * URLs are automatically normalized to the tRPC API base path.
  * Returns null if no configuration is found.
  */
 export function resolveConfig(): ResolvedConfig | null {
@@ -22,7 +38,7 @@ export function resolveConfig(): ResolvedConfig | null {
 
   if (envUrl && envApiKey) {
     return {
-      url: envUrl,
+      url: normalizeUrl(envUrl),
       apiKey: envApiKey,
       source: 'env',
       timeout,
@@ -33,7 +49,7 @@ export function resolveConfig(): ResolvedConfig | null {
   const configFromFile = readConfigFile()
   if (configFromFile) {
     return {
-      url: configFromFile.url,
+      url: normalizeUrl(configFromFile.url),
       apiKey: configFromFile.apiKey,
       source: 'config-file',
       timeout,
@@ -44,7 +60,7 @@ export function resolveConfig(): ResolvedConfig | null {
   const configFromCli = readDokployCliConfig()
   if (configFromCli) {
     return {
-      url: configFromCli.url,
+      url: normalizeUrl(configFromCli.url),
       apiKey: configFromCli.apiKey,
       source: 'dokploy-cli',
       timeout,
@@ -95,8 +111,8 @@ function readConfigFile(): ConfigFile | null {
 
 /**
  * Reads the Dokploy CLI global config.
- * The CLI stores { url, token } where url is the panel URL (not the API URL).
- * Converts: appends /api/trpc to the URL and maps token to apiKey.
+ * The CLI stores { url, token } where url is the bare panel URL.
+ * Maps token to apiKey; URL normalization is handled by resolveConfig().
  */
 function readDokployCliConfig(): DokployConfig | null {
   try {
@@ -128,10 +144,7 @@ function readDokployCliConfig(): DokployConfig | null {
       return null
     }
 
-    // The CLI stores the panel URL; derive the tRPC API base URL
-    const url = `${record.url.replace(/\/+$/, '')}/api/trpc`
-
-    return { url, apiKey: record.token }
+    return { url: record.url, apiKey: record.token }
   } catch {
     return null
   }

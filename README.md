@@ -76,7 +76,7 @@ For CI/CD pipelines or when you prefer environment variables over the config fil
 
 | Variable | Required | Description | Default |
 |---|---|---|---|
-| `DOKPLOY_URL` | Yes | Dokploy tRPC API base URL (e.g., `https://panel.example.com/api/trpc`) | -- |
+| `DOKPLOY_URL` | Yes | Dokploy panel URL (e.g., `https://panel.example.com`) — automatically normalized | -- |
 | `DOKPLOY_API_KEY` | Yes | API key from Dokploy Settings > API | -- |
 | `DOKPLOY_TIMEOUT` | No | Request timeout in milliseconds | `30000` |
 
@@ -118,7 +118,7 @@ Add the following to your Claude Desktop configuration file (`claude_desktop_con
       "command": "npx",
       "args": ["dokploy-mcp"],
       "env": {
-        "DOKPLOY_URL": "https://panel.example.com/api/trpc",
+        "DOKPLOY_URL": "https://panel.example.com",
         "DOKPLOY_API_KEY": "your-api-key"
       }
     }
@@ -152,7 +152,7 @@ Add the following to your `.mcp.json` configuration file:
       "command": "npx",
       "args": ["dokploy-mcp"],
       "env": {
-        "DOKPLOY_URL": "https://panel.example.com/api/trpc",
+        "DOKPLOY_URL": "https://panel.example.com",
         "DOKPLOY_API_KEY": "your-api-key"
       }
     }
@@ -186,7 +186,7 @@ Add to `~/.cursor/mcp.json` or `.cursor/mcp.json` in your project:
       "command": "npx",
       "args": ["dokploy-mcp"],
       "env": {
-        "DOKPLOY_URL": "https://panel.example.com/api/trpc",
+        "DOKPLOY_URL": "https://panel.example.com",
         "DOKPLOY_API_KEY": "your-api-key"
       }
     }
@@ -220,7 +220,7 @@ Add to `.vscode/mcp.json`:
       "command": "npx",
       "args": ["dokploy-mcp"],
       "env": {
-        "DOKPLOY_URL": "https://panel.example.com/api/trpc",
+        "DOKPLOY_URL": "https://panel.example.com",
         "DOKPLOY_API_KEY": "your-api-key"
       }
     }
@@ -245,7 +245,7 @@ Then point your MCP client at the local build:
       "command": "node",
       "args": ["/path/to/dokploy-mcp/dist/index.js"],
       "env": {
-        "DOKPLOY_URL": "https://panel.example.com/api/trpc",
+        "DOKPLOY_URL": "https://panel.example.com",
         "DOKPLOY_API_KEY": "your-api-key"
       }
     }
@@ -660,7 +660,7 @@ npx @modelcontextprotocol/inspector node dist/index.js
 Pass environment variables via the inspector UI or prefix the command:
 
 ```bash
-DOKPLOY_URL=https://panel.example.com/api/trpc DOKPLOY_API_KEY=your-key npx @modelcontextprotocol/inspector node dist/index.js
+DOKPLOY_URL=https://panel.example.com DOKPLOY_API_KEY=your-key npx @modelcontextprotocol/inspector node dist/index.js
 ```
 
 ## Adding a New Tool
