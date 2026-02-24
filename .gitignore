@@ -34,8 +34,6 @@ yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
 
-# Debug logs (AI IDE agent file sink)
-.spreadu/
 
 # Turbo
 .turbo
@@ -54,22 +52,8 @@ tmp
 temp
 .old/**
 
-# GeoIP database (downloaded from R2, ~60MB)
-data/geoip/
-
-# Demo photos (downloaded from CDN, ~200MB)
-apps/web/public/demo-photos/
-tmp-img/
-test-logic/
-test-shuffle/
-backup/
-
-
-
-
 # next-agents-md
 .next-docs/
 
-# Fumadocs auto-generated
-**/.source/
 .mcp.json
+voice-tone.md
