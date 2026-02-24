@@ -4,8 +4,10 @@ import { getTool, postTool, type ToolDefinition } from './_factory.js'
 // ── tools ────────────────────────────────────────────────────────────
 
 const create = postTool({
-  name: 'application-create',
-  description: 'Create a new application within a project.',
+  name: 'dokploy_application_create',
+  title: 'Create Application',
+  description:
+    'Create a new application within a Dokploy project. Requires a project ID and application name. Optionally specify a custom app name, description, and target server for deployment. Returns the created application object with its generated ID.',
   schema: z.object({
     name: z.string().min(1).describe('The name of the application'),
     projectId: z.string().min(1).describe('The project ID to create the application in'),
@@ -17,8 +19,10 @@ const create = postTool({
 })
 
 const one = getTool({
-  name: 'application-one',
-  description: 'Get detailed information about a single application.',
+  name: 'dokploy_application_one',
+  title: 'Get Application Details',
+  description:
+    'Retrieve detailed information about a single Dokploy application by its unique ID. Returns the full application object including its configuration, build settings, source provider, environment variables, resource limits, deployment status, and associated domains.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
   }),
@@ -26,8 +30,10 @@ const one = getTool({
 })
 
 const update = postTool({
-  name: 'application-update',
-  description: "Update an existing application's configuration.",
+  name: 'dokploy_application_update',
+  title: 'Update Application',
+  description:
+    "Update an existing application's configuration in Dokploy. Requires the application ID and accepts a wide range of optional fields including name, environment variables, resource limits (CPU and memory), build settings, Docker Swarm configuration, and deployment options. Only provided fields are modified; omitted fields remain unchanged.",
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     name: z.string().optional().describe('Application name'),
@@ -105,9 +111,10 @@ const update = postTool({
 })
 
 const deleteApp = postTool({
-  name: 'application-delete',
+  name: 'dokploy_application_delete',
+  title: 'Delete Application',
   description:
-    'Delete an application. This action is irreversible and will remove all associated data.',
+    'Permanently delete an application from Dokploy. This action is irreversible and will remove all associated data including deployments, logs, environment variables, and domain configurations. Requires the application ID.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID to delete'),
   }),
@@ -116,8 +123,10 @@ const deleteApp = postTool({
 })
 
 const move = postTool({
-  name: 'application-move',
-  description: 'Move an application to a different project.',
+  name: 'dokploy_application_move',
+  title: 'Move Application',
+  description:
+    'Move an application from its current project to a different Dokploy project. Requires both the application ID and the target project ID. The application retains all its configuration and deployment settings after the move.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID to move'),
     targetProjectId: z.string().min(1).describe('The target project ID'),
@@ -126,8 +135,10 @@ const move = postTool({
 })
 
 const deploy = postTool({
-  name: 'application-deploy',
-  description: 'Deploy an application.',
+  name: 'dokploy_application_deploy',
+  title: 'Deploy Application',
+  description:
+    'Trigger a new deployment for an application in Dokploy. Builds the application from its configured source (GitHub, Docker image, Git, etc.) and deploys it to the target server. Requires the application ID. Returns deployment status information.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID to deploy'),
   }),
@@ -135,8 +146,10 @@ const deploy = postTool({
 })
 
 const redeploy = postTool({
-  name: 'application-redeploy',
-  description: 'Redeploy an application (rebuild and restart).',
+  name: 'dokploy_application_redeploy',
+  title: 'Redeploy Application',
+  description:
+    'Force a full redeploy of an application in Dokploy, rebuilding it from source and restarting all containers. Unlike a regular deploy, this always triggers a fresh build regardless of whether the source has changed. Requires the application ID.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID to redeploy'),
   }),
@@ -144,8 +157,10 @@ const redeploy = postTool({
 })
 
 const start = postTool({
-  name: 'application-start',
-  description: 'Start a stopped application.',
+  name: 'dokploy_application_start',
+  title: 'Start Application',
+  description:
+    'Start a previously stopped application in Dokploy. Brings up the application containers using the last successful deployment configuration. Requires the application ID. The application must have been deployed at least once before it can be started.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID to start'),
   }),
@@ -153,8 +168,10 @@ const start = postTool({
 })
 
 const stop = postTool({
-  name: 'application-stop',
-  description: 'Stop a running application.',
+  name: 'dokploy_application_stop',
+  title: 'Stop Application',
+  description:
+    'Stop a running application in Dokploy, shutting down all its containers. The application configuration and data are preserved and it can be restarted later. Requires the application ID. This is a destructive action as it causes downtime.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID to stop'),
   }),
@@ -163,8 +180,10 @@ const stop = postTool({
 })
 
 const cancelDeployment = postTool({
-  name: 'application-cancelDeployment',
-  description: 'Cancel an in-progress deployment.',
+  name: 'dokploy_application_cancel_deployment',
+  title: 'Cancel Deployment',
+  description:
+    'Cancel an in-progress deployment for an application in Dokploy. Stops the current build or deployment process and leaves the application in its previous state. Requires the application ID. Useful when a deployment is stuck or was triggered accidentally.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
   }),
@@ -172,8 +191,10 @@ const cancelDeployment = postTool({
 })
 
 const reload = postTool({
-  name: 'application-reload',
-  description: 'Reload an application without a full redeploy.',
+  name: 'dokploy_application_reload',
+  title: 'Reload Application',
+  description:
+    'Reload an application in Dokploy without performing a full redeploy. Restarts the application containers using the existing built image, which is faster than a complete rebuild. Requires both the application ID and the app name.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     appName: z.string().min(1).describe('The app name to reload'),
@@ -182,8 +203,10 @@ const reload = postTool({
 })
 
 const markRunning = postTool({
-  name: 'application-markRunning',
-  description: 'Manually mark an application as running.',
+  name: 'dokploy_application_mark_running',
+  title: 'Mark Application Running',
+  description:
+    'Manually mark an application as running in Dokploy. This is an administrative action used to correct the application status when it becomes out of sync with the actual container state. Requires the application ID.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
   }),
@@ -191,8 +214,10 @@ const markRunning = postTool({
 })
 
 const cleanQueues = postTool({
-  name: 'application-cleanQueues',
-  description: 'Clean the deployment queues for an application.',
+  name: 'dokploy_application_clean_queues',
+  title: 'Clean Deployment Queues',
+  description:
+    'Clean the deployment queues for an application in Dokploy. Removes any pending or stuck deployment jobs from the queue. Requires the application ID. Useful when deployments are queued but not processing correctly.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
   }),
@@ -200,8 +225,10 @@ const cleanQueues = postTool({
 })
 
 const refreshToken = postTool({
-  name: 'application-refreshToken',
-  description: 'Refresh the webhook token for an application.',
+  name: 'dokploy_application_refresh_token',
+  title: 'Refresh Webhook Token',
+  description:
+    'Refresh the webhook token for an application in Dokploy. Generates a new unique token used for triggering deployments via webhook URLs. The previous token will be invalidated immediately. Requires the application ID.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
   }),
@@ -209,8 +236,10 @@ const refreshToken = postTool({
 })
 
 const saveBuildType = postTool({
-  name: 'application-saveBuildType',
-  description: 'Set the build type and related settings for an application.',
+  name: 'dokploy_application_save_build_type',
+  title: 'Save Build Type',
+  description:
+    'Set the build type and related build settings for an application in Dokploy. Requires the application ID and a build type (dockerfile, heroku, nixpacks, buildpacks, or docker). Optionally configure the Docker build context path and multi-stage build target stage.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     buildType: z
@@ -223,8 +252,10 @@ const saveBuildType = postTool({
 })
 
 const saveEnvironment = postTool({
-  name: 'application-saveEnvironment',
-  description: 'Save environment variables and build arguments for an application.',
+  name: 'dokploy_application_save_environment',
+  title: 'Save Environment Variables',
+  description:
+    'Save environment variables and Docker build arguments for an application in Dokploy. Requires the application ID. Environment variables are set at runtime while build arguments are available during the Docker build process. Both fields accept newline-separated key=value pairs.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     env: z.string().nullable().optional().describe('Environment variables'),
@@ -234,8 +265,10 @@ const saveEnvironment = postTool({
 })
 
 const saveGithubProvider = postTool({
-  name: 'application-saveGithubProvider',
-  description: 'Configure a GitHub repository as the source for an application.',
+  name: 'dokploy_application_save_github_provider',
+  title: 'Configure GitHub Provider',
+  description:
+    'Configure a GitHub repository as the source for an application in Dokploy. Requires the application ID and the GitHub repository owner. Optionally specify the repository name, branch, build path, GitHub App installation ID, submodule support, watch paths for auto-deploy, and trigger type (push or tag).',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     owner: z.string().min(1).describe('GitHub repository owner'),
@@ -251,8 +284,10 @@ const saveGithubProvider = postTool({
 })
 
 const saveGitlabProvider = postTool({
-  name: 'application-saveGitlabProvider',
-  description: 'Configure a GitLab repository as the source for an application.',
+  name: 'dokploy_application_save_gitlab_provider',
+  title: 'Configure GitLab Provider',
+  description:
+    'Configure a GitLab repository as the source for an application in Dokploy. Requires the application ID. Optionally specify the GitLab branch, build path, repository owner and name, integration ID, project ID, path namespace, submodule support, and watch paths for auto-deploy triggers.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     gitlabBranch: z.string().optional().describe('GitLab branch'),
@@ -269,8 +304,10 @@ const saveGitlabProvider = postTool({
 })
 
 const saveBitbucketProvider = postTool({
-  name: 'application-saveBitbucketProvider',
-  description: 'Configure a Bitbucket repository as the source for an application.',
+  name: 'dokploy_application_save_bitbucket_provider',
+  title: 'Configure Bitbucket Provider',
+  description:
+    'Configure a Bitbucket repository as the source for an application in Dokploy. Requires the application ID. Optionally specify the Bitbucket branch, build path, repository owner and name, integration ID, submodule support, and watch paths for auto-deploy triggers.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     bitbucketBranch: z.string().optional().describe('Bitbucket branch'),
@@ -285,8 +322,10 @@ const saveBitbucketProvider = postTool({
 })
 
 const saveGiteaProvider = postTool({
-  name: 'application-saveGiteaProvider',
-  description: 'Configure a Gitea repository as the source for an application.',
+  name: 'dokploy_application_save_gitea_provider',
+  title: 'Configure Gitea Provider',
+  description:
+    'Configure a Gitea repository as the source for an application in Dokploy. Requires the application ID. Optionally specify the Gitea branch, build path, repository owner and name, integration ID, submodule support, and watch paths for auto-deploy triggers.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     giteaBranch: z.string().optional().describe('Gitea branch'),
@@ -301,8 +340,10 @@ const saveGiteaProvider = postTool({
 })
 
 const saveGitProvider = postTool({
-  name: 'application-saveGitProvider',
-  description: 'Configure a custom Git repository as the source for an application.',
+  name: 'dokploy_application_save_git_provider',
+  title: 'Configure Custom Git Provider',
+  description:
+    'Configure a custom Git repository as the source for an application in Dokploy. Requires the application ID. Optionally specify the Git URL, branch, build path, SSH key ID for authentication, submodule support, and watch paths for auto-deploy triggers. Supports any Git-compatible repository.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     customGitUrl: z.string().optional().describe('Custom Git repository URL'),
@@ -316,8 +357,10 @@ const saveGitProvider = postTool({
 })
 
 const saveDockerProvider = postTool({
-  name: 'application-saveDockerProvider',
-  description: 'Configure a Docker image as the source for an application.',
+  name: 'dokploy_application_save_docker_provider',
+  title: 'Configure Docker Provider',
+  description:
+    'Configure a Docker image as the source for an application in Dokploy. Requires the application ID and a Docker image name (e.g., nginx:latest). Optionally provide registry credentials (username and password) for pulling from private registries.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     dockerImage: z.string().min(1).describe('Docker image name (e.g., nginx:latest)'),
@@ -328,8 +371,10 @@ const saveDockerProvider = postTool({
 })
 
 const disconnectGitProvider = postTool({
-  name: 'application-disconnectGitProvider',
-  description: 'Disconnect the current git provider from an application.',
+  name: 'dokploy_application_disconnect_git_provider',
+  title: 'Disconnect Git Provider',
+  description:
+    'Disconnect the current Git provider from an application in Dokploy. Removes the source repository configuration (GitHub, GitLab, Bitbucket, Gitea, or custom Git) from the application. Requires the application ID. The application will need a new source configured before it can be deployed again.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
   }),
@@ -337,8 +382,10 @@ const disconnectGitProvider = postTool({
 })
 
 const readAppMonitoring = getTool({
-  name: 'application-readAppMonitoring',
-  description: 'Read monitoring data for an application.',
+  name: 'dokploy_application_read_app_monitoring',
+  title: 'Read Application Monitoring',
+  description:
+    'Read monitoring data for an application in Dokploy. Returns resource usage metrics including CPU utilization, memory consumption, network I/O, and disk usage. Requires the app name (not the application ID). Useful for monitoring application health and performance.',
   schema: z.object({
     appName: z.string().min(1).describe('The app name to read monitoring for'),
   }),
@@ -346,8 +393,10 @@ const readAppMonitoring = getTool({
 })
 
 const readTraefikConfig = getTool({
-  name: 'application-readTraefikConfig',
-  description: 'Read the Traefik reverse proxy configuration for an application.',
+  name: 'dokploy_application_read_traefik_config',
+  title: 'Read Traefik Configuration',
+  description:
+    'Read the Traefik reverse proxy configuration for an application in Dokploy. Returns the current Traefik routing rules, middleware settings, and TLS configuration associated with the application. Requires the application ID.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
   }),
@@ -355,8 +404,10 @@ const readTraefikConfig = getTool({
 })
 
 const updateTraefikConfig = postTool({
-  name: 'application-updateTraefikConfig',
-  description: 'Update the Traefik reverse proxy configuration for an application.',
+  name: 'dokploy_application_update_traefik_config',
+  title: 'Update Traefik Configuration',
+  description:
+    'Update the Traefik reverse proxy configuration for an application in Dokploy. Requires the application ID and the new Traefik configuration content as a string. Allows customization of routing rules, middleware, TLS settings, and other Traefik-specific options.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
     traefikConfig: z.string().min(1).describe('The new Traefik configuration content'),

@@ -4,8 +4,10 @@ import { getTool, postTool, type ToolDefinition } from './_factory.js'
 // ── tools ────────────────────────────────────────────────────────────
 
 const create = postTool({
-  name: 'compose-create',
-  description: 'Create a new Docker Compose service within a project.',
+  name: 'dokploy_compose_create',
+  title: 'Create Compose Service',
+  description:
+    'Create a new Docker Compose service within a project. Requires a service name and project ID. Optionally specify the compose type (docker-compose or stack), a custom app name, and a target server ID. Returns the newly created compose service object.',
   schema: z.object({
     name: z.string().min(1).describe('The name of the compose service'),
     projectId: z.string().min(1).describe('The project ID to create the compose service in'),
@@ -21,8 +23,10 @@ const create = postTool({
 })
 
 const one = getTool({
-  name: 'compose-one',
-  description: 'Get detailed information about a single compose service.',
+  name: 'dokploy_compose_one',
+  title: 'Get Compose Service',
+  description:
+    'Get detailed information about a single compose service by its ID. Returns the full compose service configuration including its source type, environment variables, deployment status, and associated project.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
   }),
@@ -30,8 +34,10 @@ const one = getTool({
 })
 
 const update = postTool({
-  name: 'compose-update',
-  description: 'Update an existing compose service configuration.',
+  name: 'dokploy_compose_update',
+  title: 'Update Compose Service',
+  description:
+    'Update an existing compose service configuration. Accepts the compose service ID and any combination of fields to modify, including name, environment variables, compose file content, source type, Git repository settings, and auto-deploy preferences. Returns the updated compose service object.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
     name: z.string().optional().describe('Compose service name'),
@@ -67,9 +73,10 @@ const update = postTool({
 })
 
 const deleteCompose = postTool({
-  name: 'compose-delete',
+  name: 'dokploy_compose_delete',
+  title: 'Delete Compose Service',
   description:
-    'Delete a compose service. This action is irreversible and will remove all associated data.',
+    'Permanently delete a compose service and all of its associated data, including containers, volumes, and configuration. This action is irreversible. Requires the compose service ID.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID to delete'),
   }),
@@ -78,8 +85,10 @@ const deleteCompose = postTool({
 })
 
 const deploy = postTool({
-  name: 'compose-deploy',
-  description: 'Deploy a compose service.',
+  name: 'dokploy_compose_deploy',
+  title: 'Deploy Compose Service',
+  description:
+    'Deploy a Docker Compose service by triggering a build and run cycle. Requires the compose service ID. Returns the deployment status and any build logs produced during the deployment process.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID to deploy'),
   }),
@@ -87,8 +96,10 @@ const deploy = postTool({
 })
 
 const redeploy = postTool({
-  name: 'compose-redeploy',
-  description: 'Redeploy a compose service (rebuild and restart).',
+  name: 'dokploy_compose_redeploy',
+  title: 'Redeploy Compose Service',
+  description:
+    'Redeploy a compose service by rebuilding all containers and restarting them. This is useful when you need to pick up configuration changes or force a fresh deployment. Requires the compose service ID.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID to redeploy'),
   }),
@@ -96,8 +107,10 @@ const redeploy = postTool({
 })
 
 const stop = postTool({
-  name: 'compose-stop',
-  description: 'Stop a running compose service.',
+  name: 'dokploy_compose_stop',
+  title: 'Stop Compose Service',
+  description:
+    'Stop all running containers in a compose service. The containers and their data are preserved but will no longer be running or serving traffic. Requires the compose service ID.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID to stop'),
   }),
@@ -106,8 +119,10 @@ const stop = postTool({
 })
 
 const cleanQueues = postTool({
-  name: 'compose-cleanQueues',
-  description: 'Clean the deployment queues for a compose service.',
+  name: 'dokploy_compose_clean_queues',
+  title: 'Clean Compose Queues',
+  description:
+    'Clean the pending deployment queues for a compose service. This removes any queued deployment tasks that have not yet started. Useful for clearing stuck or unwanted deployments. Requires the compose service ID.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
   }),
@@ -115,8 +130,10 @@ const cleanQueues = postTool({
 })
 
 const allServices = getTool({
-  name: 'compose-allServices',
-  description: 'List all services within a compose deployment.',
+  name: 'dokploy_compose_all_services',
+  title: 'List Compose Services',
+  description:
+    'List all individual services defined within a Docker Compose deployment. Returns the service names, their status, and container details for each service in the compose stack. Requires the compose service ID.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
   }),
@@ -124,8 +141,10 @@ const allServices = getTool({
 })
 
 const randomizeCompose = postTool({
-  name: 'compose-randomizeCompose',
-  description: 'Randomize the compose service names with an optional prefix.',
+  name: 'dokploy_compose_randomize',
+  title: 'Randomize Compose Names',
+  description:
+    'Randomize the service names within a compose deployment to avoid naming conflicts. An optional prefix can be provided to prepend to the randomized names. Requires the compose service ID. Returns the updated compose configuration.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
     prefix: z.string().optional().describe('Optional prefix for randomized names'),
@@ -134,8 +153,10 @@ const randomizeCompose = postTool({
 })
 
 const getDefaultCommand = getTool({
-  name: 'compose-getDefaultCommand',
-  description: 'Get the default deploy command for a compose service.',
+  name: 'dokploy_compose_get_default_command',
+  title: 'Get Default Command',
+  description:
+    'Retrieve the default deployment command for a compose service. This is the command that Dokploy uses to bring up the compose stack during deployment. Requires the compose service ID. Returns the command string.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
   }),
@@ -143,8 +164,10 @@ const getDefaultCommand = getTool({
 })
 
 const generateSSHKey = postTool({
-  name: 'compose-generateSSHKey',
-  description: 'Generate an SSH key pair for a compose service.',
+  name: 'dokploy_compose_generate_ssh_key',
+  title: 'Generate SSH Key',
+  description:
+    'Generate a new SSH key pair for a compose service. The generated key can be used for authenticating with private Git repositories when pulling compose files. Requires the compose service ID. Returns the public key.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
   }),
@@ -152,8 +175,10 @@ const generateSSHKey = postTool({
 })
 
 const refreshToken = postTool({
-  name: 'compose-refreshToken',
-  description: 'Refresh the webhook token for a compose service.',
+  name: 'dokploy_compose_refresh_token',
+  title: 'Refresh Webhook Token',
+  description:
+    'Refresh the webhook token for a compose service. This invalidates the previous webhook URL and generates a new one. Useful when the existing webhook token has been compromised. Requires the compose service ID.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
   }),
@@ -161,8 +186,10 @@ const refreshToken = postTool({
 })
 
 const removeSSHKey = postTool({
-  name: 'compose-removeSSHKey',
-  description: 'Remove the SSH key from a compose service.',
+  name: 'dokploy_compose_remove_ssh_key',
+  title: 'Remove SSH Key',
+  description:
+    'Remove the SSH key associated with a compose service. After removal, the service will no longer be able to authenticate with private Git repositories using that key. Requires the compose service ID.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
   }),
@@ -170,8 +197,10 @@ const removeSSHKey = postTool({
 })
 
 const deployTemplate = postTool({
-  name: 'compose-deployTemplate',
-  description: 'Deploy a compose service from a predefined template.',
+  name: 'dokploy_compose_deploy_template',
+  title: 'Deploy Compose Template',
+  description:
+    'Deploy a compose service from a predefined template. Templates provide pre-configured compose stacks for common applications. Requires a project ID and the template ID. Returns the created compose service with deployment status.',
   schema: z.object({
     projectId: z.string().min(1).describe('The project ID to deploy the template in'),
     id: z.string().min(1).describe('The template ID to deploy'),
@@ -180,15 +209,19 @@ const deployTemplate = postTool({
 })
 
 const templates = getTool({
-  name: 'compose-templates',
-  description: 'List all available compose templates.',
+  name: 'dokploy_compose_templates',
+  title: 'List Compose Templates',
+  description:
+    'List all available compose templates that can be deployed. Templates are pre-configured Docker Compose stacks for popular applications and services. Returns an array of template objects with their IDs, names, and descriptions.',
   schema: z.object({}),
   endpoint: '/compose.templates',
 })
 
 const saveEnvironment = postTool({
-  name: 'compose-saveEnvironment',
-  description: 'Save environment variables and build arguments for a compose service.',
+  name: 'dokploy_compose_save_environment',
+  title: 'Save Environment Variables',
+  description:
+    'Save environment variables and Docker build arguments for a compose service. Environment variables are injected at runtime while build arguments are passed during the image build phase. Requires the compose service ID.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
     env: z.string().nullable().optional().describe('Environment variables'),

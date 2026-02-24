@@ -4,8 +4,10 @@ import { getTool, postTool, type ToolDefinition } from './_factory.js'
 // ── tools ────────────────────────────────────────────────────────────
 
 const create = postTool({
-  name: 'domain-create',
-  description: 'Create a new domain configuration for an application or compose service.',
+  name: 'dokploy_domain_create',
+  title: 'Create Domain',
+  description:
+    'Create a new domain configuration for an application or compose service. Requires the hostname, HTTPS setting, and certificate type. Optionally specify path-based routing, a target port, and the application or compose service to attach it to. Returns the created domain object.',
   schema: z.object({
     host: z.string().min(1).describe('The domain hostname (e.g., app.example.com)'),
     https: z.boolean().describe('Whether to enable HTTPS'),
@@ -29,8 +31,10 @@ const create = postTool({
 })
 
 const one = getTool({
-  name: 'domain-one',
-  description: 'Get detailed information about a single domain.',
+  name: 'dokploy_domain_one',
+  title: 'Get Domain',
+  description:
+    'Get detailed information about a single domain by its ID. Returns the full domain configuration including hostname, HTTPS settings, certificate type, routing rules, and the associated application or compose service.',
   schema: z.object({
     domainId: z.string().min(1).describe('The unique domain ID'),
   }),
@@ -38,8 +42,10 @@ const one = getTool({
 })
 
 const byApplicationId = getTool({
-  name: 'domain-byApplicationId',
-  description: 'List all domains attached to an application.',
+  name: 'dokploy_domain_by_application_id',
+  title: 'List Domains by Application',
+  description:
+    'List all domains attached to a specific application. Requires the application ID. Returns an array of domain objects with their hostnames, HTTPS settings, certificate types, and routing configurations.',
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
   }),
@@ -47,8 +53,10 @@ const byApplicationId = getTool({
 })
 
 const byComposeId = getTool({
-  name: 'domain-byComposeId',
-  description: 'List all domains attached to a compose service.',
+  name: 'dokploy_domain_by_compose_id',
+  title: 'List Domains by Compose Service',
+  description:
+    'List all domains attached to a specific compose service. Requires the compose service ID. Returns an array of domain objects with their hostnames, HTTPS settings, certificate types, and routing configurations.',
   schema: z.object({
     composeId: z.string().min(1).describe('The unique compose service ID'),
   }),
@@ -56,8 +64,10 @@ const byComposeId = getTool({
 })
 
 const update = postTool({
-  name: 'domain-update',
-  description: 'Update an existing domain configuration.',
+  name: 'dokploy_domain_update',
+  title: 'Update Domain',
+  description:
+    'Update an existing domain configuration. Requires the domain ID along with the hostname, HTTPS setting, certificate type, and strip path option. Optionally modify the path prefix, port, certificate resolver, service name, and routing settings. Returns the updated domain object.',
   schema: z.object({
     domainId: z.string().min(1).describe('The unique domain ID'),
     host: z.string().min(1).describe('The domain hostname'),
@@ -79,8 +89,10 @@ const update = postTool({
 })
 
 const deleteDomain = postTool({
-  name: 'domain-delete',
-  description: 'Delete a domain configuration. This action is irreversible.',
+  name: 'dokploy_domain_delete',
+  title: 'Delete Domain',
+  description:
+    'Permanently delete a domain configuration. This removes the domain routing and any associated SSL certificates. This action is irreversible. Requires the domain ID.',
   schema: z.object({
     domainId: z.string().min(1).describe('The unique domain ID to delete'),
   }),
@@ -89,8 +101,10 @@ const deleteDomain = postTool({
 })
 
 const validateDomain = postTool({
-  name: 'domain-validateDomain',
-  description: "Validate that a domain's DNS is correctly configured and pointing to the server.",
+  name: 'dokploy_domain_validate',
+  title: 'Validate Domain DNS',
+  description:
+    "Validate that a domain's DNS records are correctly configured and pointing to the expected server. Requires the domain name and optionally accepts the expected server IP address. Returns the validation result indicating whether DNS resolution matches.",
   schema: z.object({
     domain: z.string().min(1).describe('The domain name to validate'),
     serverIp: z.string().optional().describe('Expected server IP address for DNS validation'),
@@ -99,8 +113,10 @@ const validateDomain = postTool({
 })
 
 const generateDomain = postTool({
-  name: 'domain-generateDomain',
-  description: "Generate a default domain for an application using the server's base domain.",
+  name: 'dokploy_domain_generate',
+  title: 'Generate Domain',
+  description:
+    "Generate a default domain for an application using the server's configured base domain. This automatically creates and attaches a subdomain to the specified application. Requires the application ID. Returns the generated domain configuration.",
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
   }),
@@ -108,8 +124,10 @@ const generateDomain = postTool({
 })
 
 const generateWildcard = postTool({
-  name: 'domain-generateWildcard',
-  description: 'Generate a wildcard domain for an application.',
+  name: 'dokploy_domain_generate_wildcard',
+  title: 'Generate Wildcard Domain',
+  description:
+    "Generate a wildcard domain for an application using the server's configured base domain. A wildcard domain matches all subdomains, enabling dynamic subdomain routing. Requires the application ID. Returns the generated wildcard domain configuration.",
   schema: z.object({
     applicationId: z.string().min(1).describe('The unique application ID'),
   }),

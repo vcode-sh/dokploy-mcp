@@ -14,6 +14,7 @@ export interface ToolAnnotations {
 
 export interface ToolDefinition {
   name: string
+  title: string
   description: string
   schema: AnyZodObject
   annotations: ToolAnnotations
@@ -61,6 +62,7 @@ function mapApiError(err: ApiError) {
 
 export function createTool<T extends AnyZodObject>(def: {
   name: string
+  title: string
   description: string
   schema: T
   annotations: ToolAnnotations
@@ -68,6 +70,7 @@ export function createTool<T extends AnyZodObject>(def: {
 }): ToolDefinition {
   return {
     name: def.name,
+    title: def.title,
     description: def.description,
     schema: def.schema,
     annotations: { openWorldHint: true, ...def.annotations },
@@ -90,6 +93,7 @@ export function createTool<T extends AnyZodObject>(def: {
 
 export function postTool<T extends AnyZodObject>(opts: {
   name: string
+  title: string
   description: string
   schema: T
   endpoint: string
@@ -97,6 +101,7 @@ export function postTool<T extends AnyZodObject>(opts: {
 }): ToolDefinition {
   return createTool({
     name: opts.name,
+    title: opts.title,
     description: opts.description,
     schema: opts.schema,
     annotations: { openWorldHint: true, ...opts.annotations },
@@ -106,6 +111,7 @@ export function postTool<T extends AnyZodObject>(opts: {
 
 export function getTool<T extends AnyZodObject>(opts: {
   name: string
+  title: string
   description: string
   schema: T
   endpoint: string
@@ -113,6 +119,7 @@ export function getTool<T extends AnyZodObject>(opts: {
 }): ToolDefinition {
   return createTool({
     name: opts.name,
+    title: opts.title,
     description: opts.description,
     schema: opts.schema,
     annotations: {

@@ -26,11 +26,11 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.0",
-    "zod": "^4.0.0"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@types/node": "^22.15.21",
+    "@types/node": "^22.19.11",
     "typescript": "^5.9.3"
   },
   "engines": {

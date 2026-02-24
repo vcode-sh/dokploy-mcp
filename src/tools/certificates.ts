@@ -4,15 +4,19 @@ import { getTool, postTool, type ToolDefinition } from './_factory.js'
 // ── tools ────────────────────────────────────────────────────────────
 
 const all = getTool({
-  name: 'certificates-all',
-  description: 'List all SSL/TLS certificates managed by Dokploy.',
+  name: 'dokploy_certificate_all',
+  title: 'List Certificates',
+  description:
+    'List all SSL/TLS certificates managed by Dokploy. Returns an array of certificate objects including their names, expiration dates, associated domains, and auto-renewal status. Takes no parameters. Useful for auditing certificate coverage across your deployments.',
   schema: z.object({}),
   endpoint: '/certificates.all',
 })
 
 const one = getTool({
-  name: 'certificates-one',
-  description: 'Get details of a specific certificate by its ID.',
+  name: 'dokploy_certificate_one',
+  title: 'Get Certificate Details',
+  description:
+    'Get the full details of a specific SSL/TLS certificate by its unique ID. Returns the certificate name, PEM data, private key reference, associated domain, expiration date, and auto-renewal configuration. Requires the certificate ID.',
   schema: z.object({
     certificateId: z.string().min(1).describe('Unique certificate ID'),
   }),
@@ -20,8 +24,10 @@ const one = getTool({
 })
 
 const create = postTool({
-  name: 'certificates-create',
-  description: 'Create a new SSL/TLS certificate.',
+  name: 'dokploy_certificate_create',
+  title: 'Create Certificate',
+  description:
+    'Create a new SSL/TLS certificate in Dokploy. Requires the certificate name, PEM-encoded certificate data, and private key. Optionally accepts a certificate ID, filesystem path, and auto-renewal flag. Returns the newly created certificate object.',
   schema: z.object({
     name: z.string().min(1).describe('Display name for the certificate'),
     certificateData: z.string().min(1).describe('The certificate data (PEM format)'),
@@ -34,8 +40,10 @@ const create = postTool({
 })
 
 const remove = postTool({
-  name: 'certificates-remove',
-  description: 'Remove a certificate permanently. This action is irreversible.',
+  name: 'dokploy_certificate_remove',
+  title: 'Remove Certificate',
+  description:
+    'Permanently remove an SSL/TLS certificate from Dokploy. This action is irreversible and will delete the certificate data and private key. Requires the certificate ID. Any domains using this certificate will lose their TLS configuration.',
   schema: z.object({
     certificateId: z.string().min(1).describe('Unique certificate ID to remove'),
   }),

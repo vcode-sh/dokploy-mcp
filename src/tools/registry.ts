@@ -18,15 +18,19 @@ const registryBaseSchema = {
 // ── tools ────────────────────────────────────────────────────────────
 
 const all = getTool({
-  name: 'registry-all',
-  description: 'List all container registries configured in Dokploy.',
+  name: 'dokploy_registry_all',
+  title: 'List Registries',
+  description:
+    'List all container registries configured in Dokploy. Returns an array of registry objects including their names, URLs, types (selfHosted or cloud), and authentication details. Takes no parameters. Useful for reviewing which registries are available for deploying container images.',
   schema: z.object({}),
   endpoint: '/registry.all',
 })
 
 const one = getTool({
-  name: 'registry-one',
-  description: 'Get details of a specific container registry by its ID.',
+  name: 'dokploy_registry_one',
+  title: 'Get Registry Details',
+  description:
+    'Get the full details of a specific container registry by its unique ID. Returns the registry name, URL, type, credentials, and image prefix configuration. Requires the registry ID. Useful for inspecting or verifying a registry setup before deploying.',
   schema: z.object({
     registryId: z.string().min(1).describe('Unique registry ID'),
   }),
@@ -34,8 +38,10 @@ const one = getTool({
 })
 
 const create = postTool({
-  name: 'registry-create',
-  description: 'Create a new container registry configuration.',
+  name: 'dokploy_registry_create',
+  title: 'Create Registry',
+  description:
+    'Create a new container registry configuration in Dokploy. Requires the registry name, URL, username, password, and type (selfHosted or cloud). Optionally accepts an image prefix. Returns the newly created registry object.',
   schema: z.object({
     ...registryBaseSchema,
   }),
@@ -43,8 +49,10 @@ const create = postTool({
 })
 
 const update = postTool({
-  name: 'registry-update',
-  description: 'Update an existing container registry configuration.',
+  name: 'dokploy_registry_update',
+  title: 'Update Registry',
+  description:
+    'Update an existing container registry configuration in Dokploy. Requires the registry ID along with the updated name, URL, username, password, and type. Optionally accepts an image prefix. Returns the updated registry object.',
   schema: z.object({
     registryId: z.string().min(1).describe('Unique registry ID to update'),
     ...registryBaseSchema,
@@ -53,8 +61,10 @@ const update = postTool({
 })
 
 const remove = postTool({
-  name: 'registry-remove',
-  description: 'Remove a container registry permanently. This action is irreversible.',
+  name: 'dokploy_registry_remove',
+  title: 'Remove Registry',
+  description:
+    'Permanently remove a container registry configuration from Dokploy. This action is irreversible and will delete all stored credentials for the registry. Requires the registry ID. Applications referencing this registry will need to be reconfigured.',
   schema: z.object({
     registryId: z.string().min(1).describe('Unique registry ID to remove'),
   }),
@@ -63,8 +73,10 @@ const remove = postTool({
 })
 
 const testRegistry = postTool({
-  name: 'registry-testRegistry',
-  description: 'Test connection to a container registry with the provided credentials.',
+  name: 'dokploy_registry_test',
+  title: 'Test Registry Connection',
+  description:
+    'Test the connection to a container registry using the provided credentials. Validates that Dokploy can authenticate and communicate with the registry. Requires the registry name, URL, username, password, and type. Returns a success or failure status.',
   schema: z.object({
     ...registryBaseSchema,
   }),
@@ -72,8 +84,10 @@ const testRegistry = postTool({
 })
 
 const enableSelfHostedRegistry = postTool({
-  name: 'registry-enableSelfHostedRegistry',
-  description: 'Enable the self-hosted container registry on the server.',
+  name: 'dokploy_registry_enable_self_hosted',
+  title: 'Enable Self-Hosted Registry',
+  description:
+    'Enable the built-in self-hosted container registry on the Dokploy server. This sets up a local Docker registry that can be used for storing and deploying images without relying on external services. Takes no parameters. Returns the registry configuration once enabled.',
   schema: z.object({}),
   endpoint: '/registry.enableSelfHostedRegistry',
 })

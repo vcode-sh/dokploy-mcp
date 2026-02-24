@@ -7,15 +7,19 @@ const securityId = z.string().min(1).describe('Unique security entry ID')
 // ── tools ────────────────────────────────────────────────────────────
 
 const one = getTool({
-  name: 'security-one',
-  description: 'Get details of a specific HTTP basic-auth security entry by its ID.',
+  name: 'dokploy_security_one',
+  title: 'Get Security Entry',
+  description:
+    'Get details of a specific HTTP basic-auth security entry by its unique ID. Requires the securityId parameter. Returns the full security configuration including the associated application, username, and authentication settings.',
   schema: z.object({ securityId }),
   endpoint: '/security.one',
 })
 
 const create = postTool({
-  name: 'security-create',
-  description: 'Create a new HTTP basic-auth security entry for an application.',
+  name: 'dokploy_security_create',
+  title: 'Create Security Entry',
+  description:
+    'Create a new HTTP basic-auth security entry to protect an application with username and password authentication. Requires the applicationId, username, and password parameters. Returns the newly created security entry with its assigned ID.',
   schema: z.object({
     applicationId: z.string().min(1).describe('ID of the application to protect'),
     username: z.string().min(1).describe('Username for basic-auth access'),
@@ -25,8 +29,10 @@ const create = postTool({
 })
 
 const update = postTool({
-  name: 'security-update',
-  description: 'Update an existing HTTP basic-auth security entry.',
+  name: 'dokploy_security_update',
+  title: 'Update Security Entry',
+  description:
+    'Update an existing HTTP basic-auth security entry by its ID. Requires the securityId and accepts optional username and password fields. Only provided fields will be updated; omitted fields remain unchanged. Returns the updated security entry.',
   schema: z.object({
     securityId,
     username: z.string().optional().describe('New username for basic-auth access'),
@@ -36,8 +42,10 @@ const update = postTool({
 })
 
 const deleteTool = postTool({
-  name: 'security-delete',
-  description: 'Delete an HTTP basic-auth security entry permanently. This action is irreversible.',
+  name: 'dokploy_security_delete',
+  title: 'Delete Security Entry',
+  description:
+    'Delete an HTTP basic-auth security entry permanently by its ID. This action is irreversible and will immediately remove authentication protection from the associated application. Requires the securityId parameter. Returns a confirmation of the deletion.',
   schema: z.object({ securityId }),
   endpoint: '/security.delete',
   annotations: { destructiveHint: true },

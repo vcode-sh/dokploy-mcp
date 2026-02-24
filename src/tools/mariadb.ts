@@ -8,15 +8,19 @@ const DB = 'mariadb'
 // ── tools ────────────────────────────────────────────────────────────
 
 const one = getTool({
-  name: `${DB}-one`,
-  description: 'Get details of a MariaDB database by its ID.',
+  name: `dokploy_${DB}_one`,
+  title: 'Get MariaDB Details',
+  description:
+    'Retrieve the full configuration and status details of a MariaDB database managed by Dokploy. Requires the unique MariaDB database ID. Returns all metadata including name, image, resource limits, environment variables, and current application status.',
   schema: z.object({ mariadbId: mdbId }),
   endpoint: `${DB}.one`,
 })
 
 const create = postTool({
-  name: `${DB}-create`,
-  description: 'Create a new MariaDB database inside a project.',
+  name: `dokploy_${DB}_create`,
+  title: 'Create MariaDB Database',
+  description:
+    'Create a new MariaDB database instance inside a Dokploy project. Requires a display name, app-level identifier, database name, user credentials, root password, and the target project ID. Optionally specify a Docker image, description, or remote server. Returns the newly created database record.',
   schema: z.object({
     name: z.string().min(1).describe('Display name for the database'),
     appName: z.string().min(1).describe('Unique app-level identifier'),
@@ -33,8 +37,10 @@ const create = postTool({
 })
 
 const update = postTool({
-  name: `${DB}-update`,
-  description: 'Update an existing MariaDB database configuration.',
+  name: `dokploy_${DB}_update`,
+  title: 'Update MariaDB Database',
+  description:
+    'Update the configuration of an existing MariaDB database in Dokploy. Requires the MariaDB database ID and accepts optional fields such as name, Docker image, resource limits (memory and CPU), custom start command, environment variables, and external port. Returns the updated database configuration.',
   schema: z.object({
     mariadbId: mdbId,
     name: z.string().min(1).optional().describe('Display name'),
@@ -53,16 +59,20 @@ const update = postTool({
 })
 
 const remove = postTool({
-  name: `${DB}-remove`,
-  description: 'Delete a MariaDB database permanently.',
+  name: `dokploy_${DB}_remove`,
+  title: 'Remove MariaDB Database',
+  description:
+    'Permanently delete a MariaDB database from Dokploy. Requires the MariaDB database ID. This is a destructive operation that removes the container, all associated data, and configuration. Returns the operation status confirming deletion.',
   schema: z.object({ mariadbId: mdbId }),
   endpoint: `${DB}.remove`,
   annotations: { destructiveHint: true },
 })
 
 const move = postTool({
-  name: `${DB}-move`,
-  description: 'Move a MariaDB database to a different project.',
+  name: `dokploy_${DB}_move`,
+  title: 'Move MariaDB Database',
+  description:
+    'Move a MariaDB database from its current project to a different project within Dokploy. Requires the MariaDB database ID and the destination project ID. The database configuration and data remain intact during the move. Returns the operation status.',
   schema: z.object({
     mariadbId: mdbId,
     targetProjectId: z.string().min(1).describe('Destination project ID'),
@@ -71,30 +81,38 @@ const move = postTool({
 })
 
 const deploy = postTool({
-  name: `${DB}-deploy`,
-  description: 'Deploy the MariaDB database.',
+  name: `dokploy_${DB}_deploy`,
+  title: 'Deploy MariaDB Database',
+  description:
+    'Deploy a MariaDB database in Dokploy, pulling the configured Docker image and starting the container. Requires the MariaDB database ID. This triggers a full deployment lifecycle including image pull, container creation, and startup. Returns the deployment operation status.',
   schema: z.object({ mariadbId: mdbId }),
   endpoint: `${DB}.deploy`,
 })
 
 const start = postTool({
-  name: `${DB}-start`,
-  description: 'Start a stopped MariaDB database.',
+  name: `dokploy_${DB}_start`,
+  title: 'Start MariaDB Database',
+  description:
+    'Start a previously stopped MariaDB database container in Dokploy. Requires the MariaDB database ID. The container will resume with its existing data and configuration. Returns the operation status.',
   schema: z.object({ mariadbId: mdbId }),
   endpoint: `${DB}.start`,
 })
 
 const stop = postTool({
-  name: `${DB}-stop`,
-  description: 'Stop a running MariaDB database.',
+  name: `dokploy_${DB}_stop`,
+  title: 'Stop MariaDB Database',
+  description:
+    'Stop a currently running MariaDB database container in Dokploy. Requires the MariaDB database ID. The container will be gracefully stopped but its data and configuration are preserved for future restarts. Returns the operation status.',
   schema: z.object({ mariadbId: mdbId }),
   endpoint: `${DB}.stop`,
   annotations: { destructiveHint: true },
 })
 
 const reload = postTool({
-  name: `${DB}-reload`,
-  description: 'Reload the MariaDB database container.',
+  name: `dokploy_${DB}_reload`,
+  title: 'Reload MariaDB Database',
+  description:
+    'Reload the MariaDB database container in Dokploy without performing a full rebuild. Requires the MariaDB database ID and the app-level identifier. This restarts the container with its current configuration. Returns the operation status.',
   schema: z.object({
     mariadbId: mdbId,
     appName: z.string().min(1).describe('App-level identifier'),
@@ -103,15 +121,19 @@ const reload = postTool({
 })
 
 const rebuild = postTool({
-  name: `${DB}-rebuild`,
-  description: 'Rebuild the MariaDB database container from scratch.',
+  name: `dokploy_${DB}_rebuild`,
+  title: 'Rebuild MariaDB Database',
+  description:
+    'Rebuild the MariaDB database container from scratch in Dokploy. Requires the MariaDB database ID. This tears down the existing container and recreates it using the current configuration, which is useful when the container state has become inconsistent. Returns the operation status.',
   schema: z.object({ mariadbId: mdbId }),
   endpoint: `${DB}.rebuild`,
 })
 
 const changeStatus = postTool({
-  name: `${DB}-changeStatus`,
-  description: 'Manually set the MariaDB database application status.',
+  name: `dokploy_${DB}_change_status`,
+  title: 'Change MariaDB Status',
+  description:
+    'Manually set the application status of a MariaDB database in Dokploy. Requires the MariaDB database ID and the desired status (idle, running, done, or error). This is typically used for administrative overrides when the reported status does not match reality. Returns the updated status.',
   schema: z.object({
     mariadbId: mdbId,
     applicationStatus: z
@@ -122,8 +144,10 @@ const changeStatus = postTool({
 })
 
 const saveExternalPort = postTool({
-  name: `${DB}-saveExternalPort`,
-  description: 'Set or clear the external port for a MariaDB database.',
+  name: `dokploy_${DB}_save_external_port`,
+  title: 'Save MariaDB External Port',
+  description:
+    'Set or clear the external port mapping for a MariaDB database in Dokploy. Requires the MariaDB database ID and the desired external port number, or null to remove the external port mapping. This controls whether the database is accessible from outside the Docker network. Returns the operation status.',
   schema: z.object({
     mariadbId: mdbId,
     externalPort: z.number().nullable().describe('External port number (null to remove)'),
@@ -132,8 +156,10 @@ const saveExternalPort = postTool({
 })
 
 const saveEnvironment = postTool({
-  name: `${DB}-saveEnvironment`,
-  description: 'Overwrite the environment variables for a MariaDB database.',
+  name: `dokploy_${DB}_save_environment`,
+  title: 'Save MariaDB Environment',
+  description:
+    'Overwrite the environment variables for a MariaDB database in Dokploy. Requires the MariaDB database ID and the environment variables as a string. This replaces all existing environment variables with the provided values. Returns the operation status.',
   schema: z.object({
     mariadbId: mdbId,
     env: z.string().nullable().optional().describe('Environment variables as a string'),
