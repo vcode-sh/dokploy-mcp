@@ -1,6 +1,6 @@
 # Tool Reference
 
-Complete reference for all 224 tools in dokploy-mcp, organized by module.
+Complete reference for all 196 tools in dokploy-mcp, organized by module.
 
 **Legend:**
 
@@ -13,9 +13,9 @@ Complete reference for all 224 tools in dokploy-mcp, organized by module.
 ## Table of Contents
 
 1. [Project](#project) (6 tools)
-2. [Application](#application) (25 tools)
-3. [Compose](#compose) (17 tools)
-4. [Domain](#domain) (9 tools)
+2. [Application](#application) (26 tools)
+3. [Compose](#compose) (14 tools)
+4. [Domain](#domain) (8 tools)
 5. [PostgreSQL](#postgresql) (13 tools)
 6. [MySQL](#mysql) (13 tools)
 7. [MariaDB](#mariadb) (13 tools)
@@ -24,7 +24,7 @@ Complete reference for all 224 tools in dokploy-mcp, organized by module.
 10. [Deployment](#deployment) (2 tools)
 11. [Docker](#docker) (4 tools)
 12. [Certificates](#certificates) (4 tools)
-13. [Registry](#registry) (7 tools)
+13. [Registry](#registry) (6 tools)
 14. [Destination](#destination) (6 tools)
 15. [Backup](#backup) (8 tools)
 16. [Mounts](#mounts) (4 tools)
@@ -32,10 +32,9 @@ Complete reference for all 224 tools in dokploy-mcp, organized by module.
 18. [Redirects](#redirects) (4 tools)
 19. [Security](#security) (4 tools)
 20. [Cluster](#cluster) (4 tools)
-21. [Settings](#settings) (23 tools)
-22. [Auth](#auth) (14 tools)
-23. [Admin](#admin) (9 tools)
-24. [User](#user) (3 tools)
+21. [Settings](#settings) (25 tools)
+22. [Admin](#admin) (1 tool)
+23. [User](#user) (1 tool)
 
 ---
 
@@ -786,23 +785,6 @@ Clean the pending deployment queues for a compose service.
 
 ---
 
-### `dokploy_compose_all_services`
-
-**Title:** List Compose Services
-**Type:** Read-only
-
-List all individual services defined within a Docker Compose deployment. Returns the service names, their status, and container details.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `composeId` | string | Yes | The unique compose service ID |
-
-**Annotations:** `readOnlyHint`, `idempotentHint`
-
----
-
 ### `dokploy_compose_randomize`
 
 **Title:** Randomize Compose Names
@@ -836,42 +818,12 @@ Retrieve the default deployment command for a compose service.
 
 ---
 
-### `dokploy_compose_generate_ssh_key`
-
-**Title:** Generate SSH Key
-**Type:** Mutating
-
-Generate a new SSH key pair for a compose service. The generated key can be used for authenticating with private Git repositories.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `composeId` | string | Yes | The unique compose service ID |
-
----
-
 ### `dokploy_compose_refresh_token`
 
 **Title:** Refresh Webhook Token
 **Type:** Mutating
 
 Refresh the webhook token for a compose service. Invalidates the previous webhook URL.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `composeId` | string | Yes | The unique compose service ID |
-
----
-
-### `dokploy_compose_remove_ssh_key`
-
-**Title:** Remove SSH Key
-**Type:** Mutating
-
-Remove the SSH key associated with a compose service. The service will no longer be able to authenticate with private Git repositories using that key.
 
 **Parameters:**
 
@@ -1073,21 +1025,6 @@ Validate that a domain's DNS records are correctly configured and pointing to th
 **Type:** Mutating
 
 Generate a default domain for an application using the server's configured base domain.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `applicationId` | string | Yes | The unique application ID |
-
----
-
-### `dokploy_domain_generate_wildcard`
-
-**Title:** Generate Wildcard Domain
-**Type:** Mutating
-
-Generate a wildcard domain for an application using the server's configured base domain.
 
 **Parameters:**
 
@@ -2530,17 +2467,6 @@ Test the connection to a container registry using the provided credentials.
 
 ---
 
-### `dokploy_registry_enable_self_hosted`
-
-**Title:** Enable Self-Hosted Registry
-**Type:** Mutating
-
-Enable the built-in self-hosted container registry on the Dokploy server.
-
-**Parameters:** None
-
----
-
 ## Destination
 
 Tools for managing S3-compatible backup destinations.
@@ -3411,17 +3337,6 @@ Update the Traefik middleware configuration that controls request processing rul
 
 ---
 
-### `dokploy_settings_check_and_update_image`
-
-**Title:** Check and Update Image
-**Type:** Mutating
-
-Check for available Dokploy Docker image updates and apply them if found. May trigger a server restart.
-
-**Parameters:** None
-
----
-
 ### `dokploy_settings_update_server`
 
 **Title:** Update Server
@@ -3472,360 +3387,70 @@ Get the Dokploy OpenAPI specification document describing all available API endp
 
 ---
 
-## Auth
+### `dokploy_settings_read_traefik_file`
 
-Tools for authentication, user management, API tokens, and two-factor authentication.
-
-### `dokploy_auth_create_admin`
-
-**Title:** Create Admin Account
-**Type:** Mutating
-
-Create the initial admin account for a fresh Dokploy installation. Should only be called once during initial setup.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `email` | string (email) | Yes | Email address for the admin account |
-| `password` | string | Yes | Password for the admin account (min 8 characters) |
-
----
-
-### `dokploy_auth_create_user`
-
-**Title:** Create User Account
-**Type:** Mutating
-
-Create a new user account from an invitation token and password.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `password` | string | Yes | Password for the new user (min 8 characters) |
-| `id` | string | Yes | The invitation or user ID |
-| `token` | string | Yes | The invitation token |
-
----
-
-### `dokploy_auth_login`
-
-**Title:** Login
-**Type:** Mutating
-
-Log in to Dokploy with an email address and password. If 2FA is enabled, a subsequent call to `dokploy_auth_verify_login_2fa` will be required.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `email` | string (email) | Yes | Email address of the account |
-| `password` | string | Yes | Account password (min 8 characters) |
-
----
-
-### `dokploy_auth_get`
-
-**Title:** Get Current User
+**Title:** Read Traefik File
 **Type:** Read-only
 
-Get the currently authenticated user's profile information.
+Read a specific Traefik configuration file from the server file system. Useful for inspecting individual Traefik config files beyond the main config.
 
-**Parameters:** None
+**Parameters:**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `path` | string | Yes | Path to the Traefik configuration file to read |
 
 **Annotations:** `readOnlyHint`, `idempotentHint`
 
 ---
 
-### `dokploy_auth_logout`
+### `dokploy_settings_update_traefik_file`
 
-**Title:** Logout
+**Title:** Update Traefik File
 **Type:** Mutating
 
-Log out the current user session and invalidate the active authentication token.
-
-**Parameters:** None
-
----
-
-### `dokploy_auth_update`
-
-**Title:** Update Current User
-**Type:** Mutating
-
-Update the currently authenticated user's profile information.
+Update a specific Traefik configuration file on the server. A Traefik reload may be needed to apply changes.
 
 **Parameters:**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `email` | string (email) \| null | Yes | New email address, or null to clear |
-| `password` | string \| null | Yes | New password, or null to keep current |
-| `id` | string | No | The auth ID to update |
-| `rol` | enum | No | Role to assign: `admin` or `user` |
-| `image` | string | No | Profile image URL |
-| `is2FAEnabled` | boolean | No | Whether two-factor authentication is enabled |
-
----
-
-### `dokploy_auth_generate_token`
-
-**Title:** Generate API Token
-**Type:** Mutating
-
-Generate a new API token for the currently authenticated user. The token can be used for programmatic API access via the `x-api-key` header.
-
-**Parameters:** None
-
----
-
-### `dokploy_auth_one`
-
-**Title:** Get User Auth Info
-**Type:** Read-only
-
-Get a specific user's authentication information by their auth ID.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `id` | string | Yes | The auth ID of the user to retrieve |
-
-**Annotations:** `readOnlyHint`, `idempotentHint`
-
----
-
-### `dokploy_auth_update_by_admin`
-
-**Title:** Update User as Admin
-**Type:** Mutating
-
-Update any user's profile information with admin privileges.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `id` | string | Yes | The auth ID of the user to update |
-| `email` | string (email) \| null | Yes | New email address, or null to clear |
-| `password` | string \| null | Yes | New password, or null to keep current |
-| `rol` | enum | No | Role to assign: `admin` or `user` |
-| `image` | string | No | Profile image URL |
-| `is2FAEnabled` | boolean | No | Whether two-factor authentication is enabled |
-
----
-
-### `dokploy_auth_generate_2fa_secret`
-
-**Title:** Generate 2FA Secret
-**Type:** Read-only
-
-Generate a new two-factor authentication secret for the current user. Returns the secret key and a QR code URL for an authenticator app.
-
-**Parameters:** None
-
-**Annotations:** `readOnlyHint`, `idempotentHint`
-
----
-
-### `dokploy_auth_verify_2fa_setup`
-
-**Title:** Verify 2FA Setup
-**Type:** Mutating
-
-Verify and complete the two-factor authentication setup by providing a PIN from the authenticator app.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `pin` | string | Yes | The 6-digit PIN from the authenticator app |
-| `secret` | string | Yes | The 2FA secret to verify against |
-
----
-
-### `dokploy_auth_verify_login_2fa`
-
-**Title:** Verify 2FA Login
-**Type:** Mutating
-
-Verify a two-factor authentication PIN during the login process.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `pin` | string | Yes | The 6-digit PIN from the authenticator app |
-| `id` | string | Yes | The auth ID of the user logging in |
-
----
-
-### `dokploy_auth_disable_2fa`
-
-**Title:** Disable 2FA
-**Type:** Mutating
-
-Disable two-factor authentication for the currently authenticated user's account.
-
-**Parameters:** None
-
----
-
-### `dokploy_auth_verify_token`
-
-**Title:** Verify Auth Token
-**Type:** Mutating
-
-Verify the validity of the current authentication token.
-
-**Parameters:** None
+| `path` | string | Yes | Path to the Traefik configuration file to update |
+| `traefikConfig` | string | Yes | The new file content |
 
 ---
 
 ## Admin
 
-Tools for admin operations including user management, permissions, and GitHub App integration.
+Tools for Dokploy admin operations.
 
-### `dokploy_admin_one`
+### `dokploy_admin_setup_monitoring`
 
-**Title:** Get Admin Info
-**Type:** Read-only
-
-Get the current admin's profile and configuration information.
-
-**Parameters:** None
-
-**Annotations:** `readOnlyHint`, `idempotentHint`
-
----
-
-### `dokploy_admin_create_user_invitation`
-
-**Title:** Create User Invitation
+**Title:** Setup Monitoring
 **Type:** Mutating
 
-Create an invitation for a new user by sending them an email with a registration link.
+Configure server and container monitoring metrics. Sets up refresh rates, retention policies, callback URLs, resource thresholds, and container service filters.
 
 **Parameters:**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `email` | string (email) | Yes | Email address to send the invitation to |
-
----
-
-### `dokploy_admin_remove_user`
-
-**Title:** Remove User
-**Type:** Destructive
-
-Permanently remove a user from the Dokploy system. This action is irreversible.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `authId` | string | Yes | The auth ID of the user to remove |
-
-**Annotations:** `destructiveHint`
-
----
-
-### `dokploy_admin_get_user_by_token`
-
-**Title:** Get User by Invitation Token
-**Type:** Read-only
-
-Look up a user by their invitation token to verify the invitation is valid.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `token` | string | Yes | The invitation token to look up |
-
-**Annotations:** `readOnlyHint`, `idempotentHint`
-
----
-
-### `dokploy_admin_assign_permissions`
-
-**Title:** Assign User Permissions
-**Type:** Mutating
-
-Assign granular permissions to a specific user.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `userId` | string | Yes | The user ID to assign permissions to |
-| `canCreateProjects` | boolean | Yes | Whether the user can create projects |
-| `canCreateServices` | boolean | Yes | Whether the user can create services |
-| `canDeleteProjects` | boolean | Yes | Whether the user can delete projects |
-| `canDeleteServices` | boolean | Yes | Whether the user can delete services |
-| `accesedProjects` | string[] | Yes | List of project IDs the user can access |
-| `accesedServices` | string[] | Yes | List of service IDs the user can access |
-| `canAccessToTraefikFiles` | boolean | Yes | Whether the user can access Traefik configuration files |
-| `canAccessToDocker` | boolean | Yes | Whether the user can access Docker |
-| `canAccessToAPI` | boolean | Yes | Whether the user can access the API |
-
----
-
-### `dokploy_admin_clean_github_app`
-
-**Title:** Remove GitHub App Integration
-**Type:** Mutating
-
-Remove the currently configured GitHub App integration from Dokploy.
-
-**Parameters:** None
-
----
-
-### `dokploy_admin_get_repositories`
-
-**Title:** List GitHub Repositories
-**Type:** Read-only
-
-List all repositories accessible through the configured GitHub App integration.
-
-**Parameters:** None
-
-**Annotations:** `readOnlyHint`, `idempotentHint`
-
----
-
-### `dokploy_admin_get_branches`
-
-**Title:** List GitHub Branches
-**Type:** Read-only
-
-List all branches for a specific GitHub repository accessible through the configured GitHub App.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `repo` | string | Yes | The repository name |
-| `owner` | string | Yes | The repository owner or organization |
-
-**Annotations:** `readOnlyHint`, `idempotentHint`
-
----
-
-### `dokploy_admin_have_github_configured`
-
-**Title:** Check GitHub App Configuration
-**Type:** Read-only
-
-Check whether a GitHub App integration is currently configured in Dokploy.
-
-**Parameters:** None
-
-**Annotations:** `readOnlyHint`, `idempotentHint`
+| `metricsConfig` | object | Yes | Top-level monitoring configuration object |
+| `metricsConfig.server` | object | Yes | Server-level metrics settings |
+| `metricsConfig.server.refreshRate` | number | Yes | Metrics refresh rate in seconds (minimum 2) |
+| `metricsConfig.server.port` | number | Yes | Monitoring port number |
+| `metricsConfig.server.token` | string | Yes | Authentication token for metrics endpoint |
+| `metricsConfig.server.urlCallback` | string | Yes | Callback URL for metrics data |
+| `metricsConfig.server.retentionDays` | number | Yes | Number of days to retain metrics data |
+| `metricsConfig.server.cronJob` | string | Yes | Cron expression for scheduled metrics collection |
+| `metricsConfig.server.thresholds` | object | Yes | Resource usage thresholds |
+| `metricsConfig.server.thresholds.cpu` | number | Yes | CPU usage threshold percentage |
+| `metricsConfig.server.thresholds.memory` | number | Yes | Memory usage threshold percentage |
+| `metricsConfig.containers` | object | Yes | Container-level metrics settings |
+| `metricsConfig.containers.refreshRate` | number | Yes | Container metrics refresh rate in seconds (minimum 2) |
+| `metricsConfig.containers.services` | object | Yes | Service filter configuration |
+| `metricsConfig.containers.services.include` | string[] | No | Service names to include in monitoring |
+| `metricsConfig.containers.services.exclude` | string[] | No | Service names to exclude from monitoring |
 
 ---
 
@@ -3838,42 +3463,8 @@ Tools for reading user information.
 **Title:** List All Users
 **Type:** Read-only
 
-List all users registered in the Dokploy instance.
+List all users registered in the Dokploy instance. Returns an array of user objects including IDs, emails, roles, and permissions.
 
 **Parameters:** None
-
-**Annotations:** `readOnlyHint`, `idempotentHint`
-
----
-
-### `dokploy_user_by_auth_id`
-
-**Title:** Get User by Auth ID
-**Type:** Read-only
-
-Get a specific user by their authentication ID.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `authId` | string | Yes | The auth ID of the user to retrieve |
-
-**Annotations:** `readOnlyHint`, `idempotentHint`
-
----
-
-### `dokploy_user_by_user_id`
-
-**Title:** Get User by User ID
-**Type:** Read-only
-
-Get a specific user by their user ID.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `userId` | string | Yes | The user ID of the user to retrieve |
 
 **Annotations:** `readOnlyHint`, `idempotentHint`
