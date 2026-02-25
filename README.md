@@ -147,7 +147,7 @@ Already ran `setup` or have Dokploy CLI authenticated? Drop the `env` block enti
 | Settings | 25 | Admin | 1 |
 | User | 1 | | |
 
-Full reference with parameters and descriptions: **[docs/TOOLS.md](docs/TOOLS.md)**
+Full reference with parameters and descriptions: **[docs/tools.md](docs/tools.md)**
 
 API coverage report: **[docs/coverage.md](docs/coverage.md)**
 

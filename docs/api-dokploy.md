@@ -1,8 +1,6 @@
 # Dokploy API Reference
 
-Generated from OpenAPI 3.0.3 — Dokploy API v1.0.0
-
-Endpoints for dokploy
+Auto-generated from the OpenAPI 3.0.3 spec. This is the raw Dokploy API -- every endpoint, every parameter. If you're looking for what this MCP server actually implements, see [TOOLS.md](TOOLS.md) and [coverage.md](coverage.md) instead.
 
 **Base URL:** `https://panel.example.com/api`
 
