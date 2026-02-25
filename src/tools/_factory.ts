@@ -2,6 +2,7 @@ import type { ZodObject, z } from 'zod'
 
 import { ApiError, api } from '../api/client.js'
 
+/** Zod object type alias used throughout the tool factory */
 type AnyZodObject = ZodObject
 
 export interface ToolAnnotations {
