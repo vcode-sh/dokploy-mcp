@@ -107,7 +107,7 @@ jobs:
           size=$(du -h "dist/index.js" | cut -f1)
           echo "| \`dist/index.js\` | $size |" >> $GITHUB_STEP_SUMMARY
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: dist
           path: dist/
