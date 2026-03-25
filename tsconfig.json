@@ -4,6 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["ESNext"],
+    "types": ["node"],
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
@@ -18,6 +19,15 @@
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true
   },
-  "include": ["src"],
+  "include": [
+    "src/index.ts",
+    "src/server.ts",
+    "src/api/**/*.ts",
+    "src/cli/**/*.ts",
+    "src/codemode/**/*.ts",
+    "src/config/**/*.ts",
+    "src/generated/**/*.ts",
+    "src/mcp/**/*.ts"
+  ],
   "exclude": ["node_modules", "dist", ".old"]
 }

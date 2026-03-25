@@ -1,7 +1,7 @@
 {
   "name": "@vibetools/dokploy-mcp",
-  "version": "1.2.0",
-  "description": "MCP Server for the Dokploy API - complete coverage of all endpoints",
+  "version": "2.0.0",
+  "description": "Dokploy MCP server with Code Mode by default",
   "type": "module",
   "exports": {
     ".": {
@@ -16,8 +16,19 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run clean:dist && npm run build:v2:artifacts && tsc",
+    "build:v2:artifacts": "node scripts/v2/resolve-openapi.mjs && node scripts/v2/build-openapi-index.mjs && node scripts/v2/build-runtime-schemas.mjs && node scripts/v2/build-sandbox-sdk.mjs",
+    "bench:protocol": "node scripts/v2/measure-tools-list.mjs",
+    "bench:search": "node scripts/v2/bench-search.mjs",
+    "bench:execute": "node scripts/v2/bench-execute.mjs",
+    "bench:sandbox-startup": "node scripts/v2/bench-sandbox-startup.mjs",
+    "ci:budgets": "node scripts/v2/check-budgets.mjs",
+    "ci:full": "npm test && npm run lint && npm run build && npm run ci:budgets && npm run smoke:mcp && npm run smoke:search && npm run smoke:execute",
+    "clean:dist": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "tsc --watch",
+    "smoke:mcp": "npx -y @modelcontextprotocol/inspector --cli node dist/index.js --method tools/list",
+    "smoke:search": "node scripts/v2/smoke-search-live.mjs",
+    "smoke:execute": "node scripts/v2/smoke-execute-live.mjs",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -30,19 +41,19 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@clack/prompts": "^1.0.1",
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@clack/prompts": "^1.1.0",
+    "@modelcontextprotocol/sdk": "^1.28.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
-    "@types/node": "^22.19.11",
-    "@vitest/coverage-v8": "^4.0.18",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "@biomejs/biome": "^2.4.9",
+    "@types/node": "^24.0.10",
+    "@vitest/coverage-v8": "^4.1.1",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.1"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.0.0"
   },
   "sideEffects": false,
   "license": "MIT",

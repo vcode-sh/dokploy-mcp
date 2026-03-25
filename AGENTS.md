@@ -2,15 +2,19 @@
 
 ## What this is
 
-MCP (Model Context Protocol) server for the Dokploy API. 23 modules, 196 tools, full endpoint coverage. TypeScript, ES modules, Node >= 22.
+MCP (Model Context Protocol) server for the Dokploy API. v2 is Code Mode only: two public tools, `search` and `execute`, backed by generated OpenAPI artifacts, a sandboxed runtime, and a generated Dokploy SDK. TypeScript, ES modules, Node >= 24.
 
 ## Architecture
 
-- Entry: `src/index.ts` (routes CLI vs MCP server)
-- Server: `src/server.ts` (registers all tools with McpServer)
-- Tools: `src/tools/{module}.ts` -- each module exports tools via factory
-- Factory: `src/tools/_factory.ts` (shared tool builder)
-- Database helpers: `src/tools/_database.ts` (shared across postgres, mysql, mariadb, mongo, redis)
+- Entry: `src/index.ts` (CLI vs MCP server)
+- Server: `src/server.ts` (registers Code Mode tools with `McpServer`)
+- Public tools: `src/codemode/tools/search.ts`, `src/codemode/tools/execute.ts`
+- Tool factory: `src/mcp/tool-factory.ts`
+- Search context: `src/codemode/context/search-context.ts`
+- Execute context: `src/codemode/context/execute-context.ts`
+- Gateway: `src/codemode/gateway/*.ts`
+- Sandbox: `src/codemode/sandbox/*.ts`
+- Generated artifacts: `src/generated/*`
 - Config: `src/config/resolver.ts` (env vars > config file > Dokploy CLI config)
 - CLI: `src/cli/setup.ts` (interactive wizard using @clack/prompts)
 
@@ -51,6 +55,6 @@ npm run test:coverage # vitest run --coverage
 
 - Watch for unused imports/variables (Biome catches these, but still)
 - API client calls must go through `src/api/client.ts` -- no raw fetch
-- Tool definitions follow the factory pattern -- don't create one-off tool registrations
+- Public MCP tools should use `src/mcp/tool-factory.ts`
 - No `any` unless truly unavoidable (warn, don't block)
 - Security: no hardcoded credentials, no secrets in code, no command injection

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.9/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -79,6 +79,7 @@
   },
   "files": {
     "includes": ["src/**", "tests/**"],
+    "maxSize": 6000000,
     "ignoreUnknown": true
   },
   "assist": {
@@ -97,6 +98,15 @@
             "useFilenamingConvention": "off"
           }
         }
+      }
+    },
+    {
+      "includes": ["src/generated/**"],
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
+        "enabled": false
       }
     }
   ]

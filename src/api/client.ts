@@ -1,3 +1,4 @@
+import { buildTrpcPostBody, buildTrpcQueryString } from '../codemode/gateway/request-normalizer.js'
 import { resolveConfig } from '../config/resolver.js'
 
 const DEFAULT_TIMEOUT = 30_000
@@ -89,18 +90,7 @@ export class ApiError extends Error {
   }
 }
 
-export function buildQueryString(body: unknown): string {
-  if (body == null) return ''
-  if (typeof body !== 'object') return ''
-
-  const params = Object.fromEntries(
-    Object.entries(body as Record<string, unknown>).filter(([, value]) => value != null),
-  )
-
-  return new URLSearchParams({
-    input: JSON.stringify({ json: params }),
-  }).toString()
-}
+export const buildQueryString = buildTrpcQueryString
 
 /**
  * Checks whether an error was caused by an aborted fetch.
@@ -132,7 +122,7 @@ async function request<T = unknown>(
         Accept: 'application/json',
         'x-api-key': apiKey,
       },
-      body: method === 'POST' && body ? JSON.stringify({ json: body }) : undefined,
+      body: method === 'POST' ? buildTrpcPostBody(body) : undefined,
       signal: controller.signal,
     })
 

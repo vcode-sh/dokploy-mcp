@@ -47,6 +47,7 @@ Environment Variables:
   DOKPLOY_URL          Dokploy panel URL (e.g. https://panel.example.com)
   DOKPLOY_API_KEY      API key from Dokploy Settings
   DOKPLOY_TIMEOUT      Request timeout in ms (default: 30000)
+  DOKPLOY_MCP_SANDBOX_RUNTIME subprocess or local (default: subprocess)
 
 Documentation:
   https://github.com/vcode-sh/dokploy-mcp
