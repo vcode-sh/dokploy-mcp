@@ -8,7 +8,15 @@ import { runSearchInSubprocess } from '../sandbox/subprocess-runner.js'
 
 const searchSchema = z
   .object({
-    code: z.string().min(1).describe('Async JavaScript function to search the Dokploy API catalog'),
+    code: z
+      .string()
+      .min(1)
+      .describe(
+        'An async arrow function receiving ({ catalog }). ' +
+          'Example: async ({ catalog }) => catalog.searchText("application deploy"). ' +
+          'catalog methods: searchText(query), get(procedure), getByTag(tag), ' +
+          'endpoints (array of all procedures), byTag (grouped by module).',
+      ),
   })
   .strict()
 
@@ -53,7 +61,12 @@ export const searchTool: ToolDefinition = createTool({
   name: 'search',
   title: 'Search Dokploy API',
   description:
-    'Search the Dokploy API catalog by executing sandboxed code against a compact API index.',
+    'Search the Dokploy API catalog to discover procedures, parameters, and modules. ' +
+    'The code parameter must be an async arrow function: async ({ catalog }) => { ... }. ' +
+    'Use catalog.searchText("query") to find procedures by keyword, ' +
+    'catalog.getByTag("application") to list all procedures in a module, ' +
+    'catalog.get("application.one") to get details of a specific procedure. ' +
+    'Returns procedure names, required/optional parameters, and HTTP methods.',
   schema: searchSchema,
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async ({ input }) => {

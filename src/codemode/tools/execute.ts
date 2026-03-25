@@ -12,7 +12,15 @@ import { runExecuteInSubprocess } from '../sandbox/subprocess-runner.js'
 
 const executeSchema = z
   .object({
-    code: z.string().min(1).describe('Async JavaScript function to execute a Dokploy workflow'),
+    code: z
+      .string()
+      .min(1)
+      .describe(
+        'An async arrow function receiving ({ dokploy, helpers }). ' +
+          'Example: async ({ dokploy }) => { const p = await dokploy.project.all(); return p }. ' +
+          'dokploy.<module>.<method>(params) calls the Dokploy API. ' +
+          'helpers: sleep(ms), assert(cond, msg), pick(obj, keys), limit(arr, n), selectOne(arr, pred).',
+      ),
   })
   .strict()
 
@@ -61,7 +69,14 @@ export async function runExecuteWithHost(code: string, host: SandboxHost) {
 export const executeTool: ToolDefinition = createTool({
   name: 'execute',
   title: 'Execute Dokploy Workflow',
-  description: 'Execute a sandboxed Dokploy workflow against the generated Dokploy SDK.',
+  description:
+    'Execute a sandboxed Dokploy workflow. ' +
+    'The code parameter must be an async arrow function: async ({ dokploy, helpers }) => { ... }. ' +
+    'Use dokploy.<module>.<method>(params) to call any Dokploy API procedure ' +
+    '(e.g. dokploy.application.one({ applicationId }), dokploy.project.all()). ' +
+    'Available modules: project, environment, application, compose, domain, postgres, mysql, mariadb, mongo, redis, ' +
+    'deployment, docker, server, settings, user, notification, backup, mounts, registry, certificates, and more. ' +
+    'Use search tool first to discover exact procedure names and required parameters.',
   schema: executeSchema,
   annotations: { openWorldHint: true },
   handler: async ({ input }) => {
