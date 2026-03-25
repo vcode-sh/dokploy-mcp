@@ -2,9 +2,9 @@
 
 [![npm version](https://img.shields.io/npm/v/@vibetools/dokploy-mcp)](https://www.npmjs.com/package/@vibetools/dokploy-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Node >= 22](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org/)
+[![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org/)
 
-MCP server for the Dokploy API. 377 tools across 35 modules. Your AI agent can now deploy apps, manage databases, configure domains, and handle backups -- without you touching a dashboard.
+MCP server for the Dokploy API. The default surface is now Code Mode with `search` and `execute`, while the classic compatibility surface still exposes 377 tools across 35 modules.
 
 Forked from [Dokploy/mcp](https://github.com/Dokploy/mcp) and rebuilt with expanded API coverage, tool annotations, Zod v4 schemas, lazy config loading, and a setup wizard. The original had 67 tools. This one has 377. Standing on shoulders, etc.
 
@@ -45,7 +45,8 @@ If you already have the [Dokploy CLI](https://github.com/Dokploy/cli) installed 
 
 ## Features
 
-- **377 tools, 35 modules** -- applications, compose, environments, servers, Git providers, notifications, databases (Postgres/MySQL/MariaDB/MongoDB/Redis), domains, backups, deployment queues, rollback, patching, Docker, settings, preview deployments, schedules, and more
+- **Default Code Mode surface** -- compact `search` / `execute` tooling backed by generated OpenAPI artifacts and a compact API catalog
+- **Classic compatibility surface** -- 377 tools across 35 modules for endpoint-per-tool workflows
 - **Tool annotations** -- `readOnlyHint`, `destructiveHint`, `idempotentHint` so clients can warn before you nuke something
 - **Type-safe schemas** -- Zod v4 validation on every parameter
 - **Lazy config loading** -- validates credentials on first API call, not at startup
@@ -166,15 +167,89 @@ API coverage report: **[docs/coverage.md](docs/coverage.md)**
 | `DOKPLOY_URL` | Yes | Dokploy panel URL -- automatically normalized to `/api/trpc` |
 | `DOKPLOY_API_KEY` | Yes | API key from Dokploy Settings > API |
 | `DOKPLOY_TIMEOUT` | No | Request timeout in ms (default: `30000`) |
+| `DOKPLOY_MCP_MODE` | No | `codemode` or `classic` (default: `codemode`) |
+| `DOKPLOY_MCP_SANDBOX_RUNTIME` | No | `subprocess` or `local` (default: `subprocess`) |
+| `DOKPLOY_MCP_SANDBOX_TIMEOUT_MS` | No | Code Mode timeout in ms (default: `5000`) |
+| `DOKPLOY_MCP_SANDBOX_MAX_CALLS` | No | Max Dokploy API calls per `execute` run (default: `25`) |
+| `DOKPLOY_MCP_SANDBOX_MAX_RESULT_BYTES` | No | Max serialized result bytes (default: `131072`) |
+| `DOKPLOY_MCP_SANDBOX_MAX_LOG_BYTES` | No | Max captured log bytes (default: `8192`) |
+| `DOKPLOY_MCP_SANDBOX_MAX_RESPONSE_BYTES` | No | Max cumulative Dokploy response bytes per run (default: `2097152`) |
 
 Resolution order: env vars > `~/.config/dokploy-mcp/config.json` > Dokploy CLI config.
+
+### Mode Selection
+
+The current package ships with two server surfaces:
+
+- `codemode` -- the default v2 surface
+- `classic` -- the current endpoint-based compatibility surface
+
+Mode selection:
+
+- default: `codemode`
+- environment variable: `DOKPLOY_MCP_MODE=classic|codemode`
+- CLI flag: `--mode classic|codemode`
+
+The `codemode` surface is intentionally tiny and currently exposes:
+
+- `search`
+- `execute`
+
+Use `classic` only when you explicitly need the legacy endpoint-per-tool MCP surface.
+
+Current benchmark snapshot:
+
+- classic `tools/list`: about `92,354` tokens
+- codemode `tools/list`: about `218` tokens
+- `search` p95 in the current budget run: about `51.87ms`
+- `execute` p95 in the current budget run: about `47.92ms`
+- broad `search` result: about `26.9 KB`
+- sandbox startup p95 in the current benchmark: about `1.05ms`
+
+### Code Mode workflow
+
+Recommended agent workflow in `codemode`:
+
+1. call `search`
+2. narrow the Dokploy API surface to the relevant procedures
+3. call `execute`
+4. let the sandboxed workflow perform multiple Dokploy API calls in one run
+5. return only the final result, logs, and call trace
+
+The goal is to avoid pushing every intermediate Dokploy response back through the model.
+
+### Sandbox limits
+
+The current Code Mode sandbox:
+
+- blocks direct access to `process`
+- blocks direct access to `fetch`
+- blocks direct access to `require`
+- blocks direct access to `Function`, `eval`, `WebAssembly`, and `SharedArrayBuffer`
+- enforces limits on:
+  - execution timeout
+  - number of Dokploy API calls
+  - log bytes
+  - serialized result bytes
+  - cumulative Dokploy response bytes
+
+The default runtime is `subprocess`, with `local` available as an explicit fallback for deterministic tests or constrained environments.
 
 ## CLI
 
 ```bash
 npx @vibetools/dokploy-mcp              # Start MCP server (stdio)
+npx @vibetools/dokploy-mcp --mode classic
 npx @vibetools/dokploy-mcp setup        # Interactive setup wizard (aliases: init, auth)
 npx @vibetools/dokploy-mcp version      # Show version
+```
+
+Local binaries after build:
+
+```bash
+npm run start           # Default Code Mode surface
+npm run start:classic   # Classic endpoint-based MCP surface
+npm run start:codemode  # Explicit Code Mode surface
 ```
 
 ## Development
@@ -207,6 +282,8 @@ npm run dev        # Watch mode
 npm run typecheck  # Type-check
 npm run lint       # Lint with Biome
 npm run lint:fix   # Auto-fix
+npm run ci:budgets # Protocol and runtime budgets
+npm run ci:full    # Full local validation with live Dokploy smoke calls
 ```
 
 Test with the MCP Inspector:
@@ -214,6 +291,26 @@ Test with the MCP Inspector:
 ```bash
 npx @modelcontextprotocol/inspector node dist/index.js
 ```
+
+Classic mode in Inspector:
+
+```bash
+npx @modelcontextprotocol/inspector node dist/index.js --mode classic
+```
+
+Code Mode example:
+
+```bash
+node dist/index.js
+```
+
+Classic compatibility example:
+
+```bash
+node dist/index-classic.js
+```
+
+v2 migration notes: **[docs/migration-v2.md](docs/migration-v2.md)**
 
 ## Standing on the Shoulders of People Who Actually Did the Work
 

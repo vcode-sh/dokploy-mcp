@@ -19,7 +19,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
 
       - run: npm ci
@@ -35,6 +35,15 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Budget checks
+        run: npm run ci:budgets
+
+      - name: MCP smoke test (codemode)
+        run: npm run smoke:mcp:codemode
+
+      - name: MCP smoke test (classic)
+        run: npm run smoke:mcp:classic
 
       - name: PR Summary
         if: always()
@@ -63,7 +72,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
 
       - run: npm ci
@@ -81,7 +90,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
 
       - run: npm ci

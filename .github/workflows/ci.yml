@@ -20,7 +20,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
 
       - run: npm ci
@@ -36,7 +36,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
 
       - run: npm ci
@@ -52,7 +52,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
 
       - run: npm ci
@@ -86,7 +86,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
 
       - run: npm ci
@@ -122,15 +122,24 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
 
       - run: npm ci
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v6
         with:
           name: dist
           path: dist/
+
+      - name: Budget checks
+        run: npm run ci:budgets
+
+      - name: MCP smoke test (codemode)
+        run: npm run smoke:mcp:codemode
+
+      - name: MCP smoke test (classic)
+        run: npm run smoke:mcp:classic
 
       - name: Smoke test --version
         run: node dist/index.js --version
