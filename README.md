@@ -4,11 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org/)
 
-MCP server for the [Dokploy](https://dokploy.com) API. Two tools. Full API coverage. 99.8% fewer tokens than the alternative.
+MCP server for the [Dokploy](https://dokploy.com) API. Two tools. Full Dokploy API model available through Code Mode. 99.8% fewer tokens than the endpoint-per-tool approach.
 
-The default surface ships **Code Mode** -- `search` and `execute` -- which replaced 377 individual endpoint tools with a sandboxed SDK that runs multi-step workflows in a single call. Your agent searches the API catalog, writes a workflow, and the sandbox handles the rest. No more burning context window on tool definitions nobody reads.
-
-Classic mode (377 tools, 35 modules) is still there for clients that need it. Think of it as the emergency exit you hope you'll never use.
+The public surface is **Code Mode** only: `search` and `execute`. Your agent searches the generated Dokploy API catalog, writes a workflow, and the sandbox runs multi-step operations in one call.
 
 ## Quick start
 
@@ -59,15 +57,6 @@ One `execute` call can create an app, set env vars, mount volumes, deploy, verif
 
 That's not a typo. 99.8% reduction. The context window can finally be used for things that matter.
 
-## Modes
-
-| Mode | Tools | Use case |
-|---|---|---|
-| `codemode` (default) | `search`, `execute` | Agent workflows, production |
-| `classic` | 377 endpoint tools | Legacy clients, debugging |
-
-Switch modes: `DOKPLOY_MCP_MODE=classic` or `--mode classic`.
-
 ## Configuration
 
 | Variable | Required | Description |
@@ -75,7 +64,6 @@ Switch modes: `DOKPLOY_MCP_MODE=classic` or `--mode classic`.
 | `DOKPLOY_URL` | Yes | Dokploy panel URL |
 | `DOKPLOY_API_KEY` | Yes | API key |
 | `DOKPLOY_TIMEOUT` | No | Request timeout in ms (default: `30000`) |
-| `DOKPLOY_MCP_MODE` | No | `codemode` or `classic` (default: `codemode`) |
 
 <details>
 <summary>Sandbox tuning (rarely needed)</summary>
@@ -93,15 +81,22 @@ Switch modes: `DOKPLOY_MCP_MODE=classic` or `--mode classic`.
 
 Resolution order: env vars > `~/.config/dokploy-mcp/config.json` > Dokploy CLI config.
 
-## API coverage
+## API model coverage
 
-377 tools across 35 modules. 81% of the Dokploy OpenAPI surface. Full breakdown: **[docs/tools.md](docs/tools.md)**
+The generated Code Mode catalog covers the full Dokploy OpenAPI model from `.openapi/openapi`.
+
+Current snapshot:
+
+- OpenAPI procedures in catalog: `463`
+- Public MCP tools: `2`
+- `tools/list`: about `218` tokens
+
+Details: **[docs/coverage.md](docs/coverage.md)**
 
 ## CLI
 
 ```bash
 npx @vibetools/dokploy-mcp              # Code Mode (default)
-npx @vibetools/dokploy-mcp --mode classic
 npx @vibetools/dokploy-mcp setup        # Setup wizard
 npx @vibetools/dokploy-mcp version
 ```
@@ -121,10 +116,7 @@ Test with MCP Inspector:
 
 ```bash
 npx @modelcontextprotocol/inspector node dist/index.js
-npx @modelcontextprotocol/inspector node dist/index.js --mode classic
 ```
-
-Migration from v1: **[docs/migration-v2.md](docs/migration-v2.md)**
 
 ## Credits
 

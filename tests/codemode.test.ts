@@ -4,20 +4,11 @@ import { runSandboxedFunction } from '../src/codemode/sandbox/runner.js'
 import { buildExecuteContext } from '../src/codemode/tools/execute.js'
 import { searchTool } from '../src/codemode/tools/search.js'
 import { dokployCatalog } from '../src/generated/dokploy-catalog.js'
-import { createServer, resolveServerMode } from '../src/server.js'
+import { createServer } from '../src/server.js'
 
 describe('codemode runtime', () => {
-  it('resolves codemode by default', () => {
-    expect(resolveServerMode(undefined)).toBe('codemode')
-  })
-
-  it('resolves codemode explicitly', () => {
-    expect(resolveServerMode('codemode')).toBe('codemode')
-    expect(resolveServerMode('classic')).toBe('classic')
-  })
-
   it('creates a codemode server instance', () => {
-    const server = createServer('codemode')
+    const server = createServer()
     expect(server).toBeDefined()
   })
 

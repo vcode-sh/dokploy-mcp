@@ -1,7 +1,7 @@
 {
   "name": "@vibetools/dokploy-mcp",
   "version": "2.0.0",
-  "description": "Dokploy MCP server with Code Mode by default and classic compatibility",
+  "description": "Dokploy MCP server with Code Mode by default",
   "type": "module",
   "exports": {
     ".": {
@@ -10,15 +10,13 @@
     }
   },
   "bin": {
-    "dokploy-mcp": "dist/index.js",
-    "dokploy-mcp-classic": "dist/index-classic.js",
-    "dokploy-mcp-codemode": "dist/index-codemode.js"
+    "dokploy-mcp": "dist/index.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "npm run build:v2:artifacts && tsc",
+    "build": "npm run clean:dist && npm run build:v2:artifacts && tsc",
     "build:v2:artifacts": "node scripts/v2/resolve-openapi.mjs && node scripts/v2/build-openapi-index.mjs && node scripts/v2/build-runtime-schemas.mjs && node scripts/v2/build-sandbox-sdk.mjs",
     "bench:protocol": "node scripts/v2/measure-tools-list.mjs",
     "bench:search": "node scripts/v2/bench-search.mjs",
@@ -26,15 +24,13 @@
     "bench:classic-vs-codemode": "node scripts/v2/bench-classic-vs-codemode.mjs",
     "bench:sandbox-startup": "node scripts/v2/bench-sandbox-startup.mjs",
     "ci:budgets": "node scripts/v2/check-budgets.mjs",
-    "ci:full": "npm test && npm run lint && npm run build && npm run ci:budgets && npm run smoke:mcp:codemode && npm run smoke:mcp:classic && npm run smoke:search:codemode && npm run smoke:execute:codemode",
+    "ci:full": "npm test && npm run lint && npm run build && npm run ci:budgets && npm run smoke:mcp && npm run smoke:search && npm run smoke:execute",
+    "clean:dist": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "tsc --watch",
-    "smoke:mcp:classic": "npx -y @modelcontextprotocol/inspector --cli node dist/index-classic.js --method tools/list",
-    "smoke:mcp:codemode": "npx -y @modelcontextprotocol/inspector --cli node dist/index-codemode.js --method tools/list",
-    "smoke:search:codemode": "node scripts/v2/smoke-search-live.mjs",
-    "smoke:execute:codemode": "node scripts/v2/smoke-execute-live.mjs",
+    "smoke:mcp": "npx -y @modelcontextprotocol/inspector --cli node dist/index.js --method tools/list",
+    "smoke:search": "node scripts/v2/smoke-search-live.mjs",
+    "smoke:execute": "node scripts/v2/smoke-execute-live.mjs",
     "start": "node dist/index.js",
-    "start:classic": "node dist/index-classic.js",
-    "start:codemode": "node dist/index-codemode.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

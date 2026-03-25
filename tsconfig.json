@@ -19,6 +19,15 @@
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true
   },
-  "include": ["src"],
+  "include": [
+    "src/index.ts",
+    "src/server.ts",
+    "src/api/**/*.ts",
+    "src/cli/**/*.ts",
+    "src/codemode/**/*.ts",
+    "src/config/**/*.ts",
+    "src/generated/**/*.ts",
+    "src/tools/_factory.ts"
+  ],
   "exclude": ["node_modules", "dist", ".old"]
 }

@@ -36,8 +36,6 @@ function printHelp(): void {
 
 Usage:
   npx @vibetools/dokploy-mcp              Start MCP server (stdio transport)
-  npx @vibetools/dokploy-mcp --mode classic
-  npx @vibetools/dokploy-mcp --mode codemode
   npx @vibetools/dokploy-mcp setup        Configure credentials and MCP client
   npx @vibetools/dokploy-mcp version      Show version
 
@@ -49,7 +47,6 @@ Environment Variables:
   DOKPLOY_URL          Dokploy panel URL (e.g. https://panel.example.com)
   DOKPLOY_API_KEY      API key from Dokploy Settings
   DOKPLOY_TIMEOUT      Request timeout in ms (default: 30000)
-  DOKPLOY_MCP_MODE     codemode or classic (default: codemode)
   DOKPLOY_MCP_SANDBOX_RUNTIME subprocess or local (default: subprocess)
 
 Documentation:

@@ -41,11 +41,8 @@ jobs:
       - name: Budget checks
         run: npm run ci:budgets
 
-      - name: MCP smoke test (codemode)
-        run: npm run smoke:mcp:codemode
-
-      - name: MCP smoke test (classic)
-        run: npm run smoke:mcp:classic
+      - name: MCP smoke test
+        run: npm run smoke:mcp
 
       - name: Verify dist/index.js exists
         run: |
