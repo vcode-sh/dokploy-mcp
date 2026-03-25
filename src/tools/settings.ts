@@ -3,6 +3,9 @@ import { getTool, postTool, type ToolDefinition } from './_factory.js'
 
 // ── tools ────────────────────────────────────────────────────────────
 
+const optionalServerId = z.string().optional().describe('Optional server ID')
+const protocolSchema = z.enum(['tcp', 'udp', 'sctp']).describe('Port protocol')
+
 const reloadServer = postTool({
   name: 'dokploy_settings_reload_server',
   title: 'Reload Server',
@@ -280,6 +283,263 @@ const updateTraefikFile = postTool({
   endpoint: '/settings.updateTraefikFile',
 })
 
+const readTraefikEnv = getTool({
+  name: 'dokploy_settings_read_traefik_env',
+  title: 'Read Traefik Environment',
+  description:
+    'Read the Traefik environment configuration from Dokploy. Optionally scope the request to a specific server.',
+  schema: z
+    .object({
+      serverId: optionalServerId,
+    })
+    .strict(),
+  endpoint: '/settings.readTraefikEnv',
+})
+
+const writeTraefikEnv = postTool({
+  name: 'dokploy_settings_write_traefik_env',
+  title: 'Write Traefik Environment',
+  description:
+    'Write the Traefik environment configuration in Dokploy. Requires the environment content and optionally accepts a server ID.',
+  schema: z
+    .object({
+      env: z.string().describe('Traefik environment content'),
+      serverId: optionalServerId,
+    })
+    .strict(),
+  endpoint: '/settings.writeTraefikEnv',
+})
+
+const updateTraefikPorts = postTool({
+  name: 'dokploy_settings_update_traefik_ports',
+  title: 'Update Traefik Ports',
+  description:
+    'Update additional Traefik ports in Dokploy. Requires the list of additional ports and optionally accepts a server ID.',
+  schema: z
+    .object({
+      serverId: optionalServerId,
+      additionalPorts: z
+        .array(
+          z
+            .object({
+              targetPort: z.number().describe('Target port'),
+              publishedPort: z.number().describe('Published port'),
+              protocol: protocolSchema,
+            })
+            .strict(),
+        )
+        .describe('Additional Traefik ports'),
+    })
+    .strict(),
+  endpoint: '/settings.updateTraefikPorts',
+})
+
+const getTraefikPorts = getTool({
+  name: 'dokploy_settings_get_traefik_ports',
+  title: 'Get Traefik Ports',
+  description:
+    'Get Traefik ports configured in Dokploy. Optionally scope the request to a specific server.',
+  schema: z
+    .object({
+      serverId: optionalServerId,
+    })
+    .strict(),
+  endpoint: '/settings.getTraefikPorts',
+})
+
+const haveTraefikDashboardPortEnabled = getTool({
+  name: 'dokploy_settings_have_traefik_dashboard_port_enabled',
+  title: 'Check Traefik Dashboard Port',
+  description:
+    'Check whether the Traefik dashboard port is enabled in Dokploy. Optionally scope the request to a specific server.',
+  schema: z
+    .object({
+      serverId: optionalServerId,
+    })
+    .strict(),
+  endpoint: '/settings.haveTraefikDashboardPortEnabled',
+})
+
+const toggleDashboard = postTool({
+  name: 'dokploy_settings_toggle_dashboard',
+  title: 'Toggle Traefik Dashboard',
+  description:
+    'Enable or disable the Traefik dashboard in Dokploy. Optionally scope the request to a specific server.',
+  schema: z
+    .object({
+      enableDashboard: z.boolean().optional().describe('Whether to enable the dashboard'),
+      serverId: optionalServerId,
+    })
+    .strict(),
+  endpoint: '/settings.toggleDashboard',
+})
+
+const health = getTool({
+  name: 'dokploy_settings_health',
+  title: 'Get Dokploy Health',
+  description: 'Get the current health status of the Dokploy installation.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.health',
+})
+
+const getIp = getTool({
+  name: 'dokploy_settings_get_ip',
+  title: 'Get Server IP',
+  description: 'Get the server IP address known to Dokploy.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.getIp',
+})
+
+const updateServerIp = postTool({
+  name: 'dokploy_settings_update_server_ip',
+  title: 'Update Server IP',
+  description: 'Update the server IP address used by Dokploy.',
+  schema: z
+    .object({
+      serverIp: z.string().describe('Server IP address'),
+    })
+    .strict(),
+  endpoint: '/settings.updateServerIp',
+})
+
+const getWebServerSettings = getTool({
+  name: 'dokploy_settings_get_web_server_settings',
+  title: 'Get Web Server Settings',
+  description: 'Get web server settings configured in Dokploy.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.getWebServerSettings',
+})
+
+const getUpdateData = postTool({
+  name: 'dokploy_settings_get_update_data',
+  title: 'Get Update Data',
+  description: 'Get update metadata for the current Dokploy installation.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.getUpdateData',
+})
+
+const getReleaseTag = getTool({
+  name: 'dokploy_settings_get_release_tag',
+  title: 'Get Release Tag',
+  description: 'Get the latest Dokploy release tag visible to the current installation.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.getReleaseTag',
+})
+
+const cleanRedis = postTool({
+  name: 'dokploy_settings_clean_redis',
+  title: 'Clean Redis',
+  description: 'Clean Dokploy Redis data. This is a destructive maintenance action.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.cleanRedis',
+  annotations: { destructiveHint: true },
+})
+
+const reloadRedis = postTool({
+  name: 'dokploy_settings_reload_redis',
+  title: 'Reload Redis',
+  description: 'Reload Dokploy Redis.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.reloadRedis',
+})
+
+const cleanAllDeploymentQueue = postTool({
+  name: 'dokploy_settings_clean_all_deployment_queue',
+  title: 'Clean Deployment Queue',
+  description: 'Clear the Dokploy deployment queue. This is a destructive maintenance action.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.cleanAllDeploymentQueue',
+  annotations: { destructiveHint: true },
+})
+
+const updateLogCleanup = postTool({
+  name: 'dokploy_settings_update_log_cleanup',
+  title: 'Update Log Cleanup Schedule',
+  description: 'Update the Dokploy log cleanup schedule.',
+  schema: z
+    .object({
+      cronExpression: z.string().nullable().describe('Cron expression for log cleanup'),
+    })
+    .strict(),
+  endpoint: '/settings.updateLogCleanup',
+})
+
+const getLogCleanupStatus = getTool({
+  name: 'dokploy_settings_get_log_cleanup_status',
+  title: 'Get Log Cleanup Status',
+  description: 'Get the current Dokploy log cleanup configuration and status.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.getLogCleanupStatus',
+})
+
+const setupGpu = postTool({
+  name: 'dokploy_settings_setup_gpu',
+  title: 'Setup GPU',
+  description: 'Run Dokploy GPU setup. Optionally scope the request to a specific server.',
+  schema: z
+    .object({
+      serverId: optionalServerId,
+    })
+    .strict(),
+  endpoint: '/settings.setupGPU',
+})
+
+const checkGpuStatus = getTool({
+  name: 'dokploy_settings_check_gpu_status',
+  title: 'Check GPU Status',
+  description: 'Check Dokploy GPU status. Optionally scope the request to a specific server.',
+  schema: z
+    .object({
+      serverId: optionalServerId,
+    })
+    .strict(),
+  endpoint: '/settings.checkGPUStatus',
+})
+
+const isCloud = getTool({
+  name: 'dokploy_settings_is_cloud',
+  title: 'Check Cloud Mode',
+  description: 'Check whether the current Dokploy installation runs in cloud mode.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.isCloud',
+})
+
+const isUserSubscribed = getTool({
+  name: 'dokploy_settings_is_user_subscribed',
+  title: 'Check Subscription Status',
+  description: 'Check whether the current Dokploy user has an active subscription.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.isUserSubscribed',
+})
+
+const haveActivateRequests = getTool({
+  name: 'dokploy_settings_have_activate_requests',
+  title: 'Check Request Logging',
+  description: 'Check whether request handling features are enabled in Dokploy.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.haveActivateRequests',
+})
+
+const toggleRequests = postTool({
+  name: 'dokploy_settings_toggle_requests',
+  title: 'Toggle Requests',
+  description: 'Enable or disable request handling features in Dokploy.',
+  schema: z
+    .object({
+      enable: z.boolean().describe('Whether to enable requests'),
+    })
+    .strict(),
+  endpoint: '/settings.toggleRequests',
+})
+
+const getDokployCloudIps = getTool({
+  name: 'dokploy_settings_get_dokploy_cloud_ips',
+  title: 'Get Dokploy Cloud IPs',
+  description: 'Get Dokploy Cloud IP ranges.',
+  schema: z.object({}).strict(),
+  endpoint: '/settings.getDokployCloudIps',
+})
+
 // ── export ───────────────────────────────────────────────────────────
 export const settingsTools: ToolDefinition[] = [
   reloadServer,
@@ -307,4 +567,28 @@ export const settingsTools: ToolDefinition[] = [
   getOpenApiDocument,
   readTraefikFile,
   updateTraefikFile,
+  readTraefikEnv,
+  writeTraefikEnv,
+  updateTraefikPorts,
+  getTraefikPorts,
+  haveTraefikDashboardPortEnabled,
+  toggleDashboard,
+  health,
+  getIp,
+  updateServerIp,
+  getWebServerSettings,
+  getUpdateData,
+  getReleaseTag,
+  cleanRedis,
+  reloadRedis,
+  cleanAllDeploymentQueue,
+  updateLogCleanup,
+  getLogCleanupStatus,
+  setupGpu,
+  checkGpuStatus,
+  isCloud,
+  isUserSubscribed,
+  haveActivateRequests,
+  toggleRequests,
+  getDokployCloudIps,
 ]

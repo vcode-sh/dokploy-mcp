@@ -18,6 +18,18 @@ const one = getTool({
   endpoint: '/mounts.one',
 })
 
+const allNamedByApplicationId = getTool({
+  name: 'dokploy_mount_all_named_by_application_id',
+  title: 'List Named Mounts by Application',
+  description: 'List named mounts attached to a Dokploy application. Requires the application ID.',
+  schema: z
+    .object({
+      applicationId: z.string().min(1).describe('Application ID'),
+    })
+    .strict(),
+  endpoint: '/mounts.allNamedByApplicationId',
+})
+
 const create = postTool({
   name: 'dokploy_mount_create',
   title: 'Create Mount',
@@ -31,13 +43,13 @@ const create = postTool({
         .min(1)
         .describe('Path inside the container where the mount is attached'),
       serviceId: z.string().min(1).describe('ID of the service to attach the mount to'),
-      hostPath: z.string().optional().describe('Host path for bind mounts'),
-      volumeName: z.string().optional().describe('Volume name for volume mounts'),
-      content: z.string().optional().describe('File content for file mounts'),
+      hostPath: z.string().nullable().optional().describe('Host path for bind mounts'),
+      volumeName: z.string().nullable().optional().describe('Volume name for volume mounts'),
+      content: z.string().nullable().optional().describe('File content for file mounts'),
+      filePath: z.string().nullable().optional().describe('File path for file mounts'),
       serviceType: z
         .enum(['application', 'postgres', 'mysql', 'mariadb', 'mongo', 'redis', 'compose'])
         .optional()
-        .default('application')
         .describe('Type of service the mount belongs to'),
     })
     .strict(),
@@ -53,13 +65,40 @@ const update = postTool({
     .object({
       mountId,
       type: mountTypeEnum.optional().describe('New mount type'),
-      mountPath: z.string().optional().describe('New path inside the container'),
-      hostPath: z.string().optional().describe('New host path for bind mounts'),
-      volumeName: z.string().optional().describe('New volume name for volume mounts'),
-      content: z.string().optional().describe('New file content for file mounts'),
+      mountPath: z.string().min(1).optional().describe('New path inside the container'),
+      hostPath: z.string().nullable().optional().describe('New host path for bind mounts'),
+      volumeName: z.string().nullable().optional().describe('New volume name for volume mounts'),
+      filePath: z.string().nullable().optional().describe('New file path for file mounts'),
+      content: z.string().nullable().optional().describe('New file content for file mounts'),
+      serviceType: z
+        .enum(['application', 'postgres', 'mysql', 'mariadb', 'mongo', 'redis', 'compose'])
+        .optional()
+        .describe('Type of service the mount belongs to'),
+      applicationId: z.string().nullable().optional().describe('Application ID'),
+      postgresId: z.string().nullable().optional().describe('Postgres ID'),
+      mariadbId: z.string().nullable().optional().describe('MariaDB ID'),
+      mongoId: z.string().nullable().optional().describe('MongoDB ID'),
+      mysqlId: z.string().nullable().optional().describe('MySQL ID'),
+      redisId: z.string().nullable().optional().describe('Redis ID'),
+      composeId: z.string().nullable().optional().describe('Compose ID'),
     })
     .strict(),
   endpoint: '/mounts.update',
+})
+
+const listByServiceId = getTool({
+  name: 'dokploy_mount_list_by_service_id',
+  title: 'List Mounts by Service',
+  description: 'List mounts for a Dokploy service. Requires the service ID and the service type.',
+  schema: z
+    .object({
+      serviceId: z.string().min(1).describe('Service ID'),
+      serviceType: z
+        .enum(['application', 'postgres', 'mysql', 'mariadb', 'mongo', 'redis', 'compose'])
+        .describe('Service type'),
+    })
+    .strict(),
+  endpoint: '/mounts.listByServiceId',
 })
 
 const remove = postTool({
@@ -73,4 +112,11 @@ const remove = postTool({
 })
 
 // ── export ───────────────────────────────────────────────────────────
-export const mountsTools: ToolDefinition[] = [one, create, update, remove]
+export const mountsTools: ToolDefinition[] = [
+  one,
+  allNamedByApplicationId,
+  create,
+  update,
+  listByServiceId,
+  remove,
+]

@@ -11,6 +11,6 @@ export const mysqlTools = createDatabaseTools({
     databaseName: z.string().min(1).describe('Name of the database to create'),
     databaseUser: z.string().min(1).describe('Database user'),
     databasePassword: z.string().min(1).describe('Database password'),
-    databaseRootPassword: z.string().min(1).describe('Root password for MySQL'),
+    databaseRootPassword: z.string().min(1).optional().describe('Root password for MySQL'),
   }),
 })

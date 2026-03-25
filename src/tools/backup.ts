@@ -109,6 +109,39 @@ const manualBackupMongo = postTool({
   endpoint: '/backup.manualBackupMongo',
 })
 
+const manualBackupCompose = postTool({
+  name: 'dokploy_backup_manual_compose',
+  title: 'Manual Compose Backup',
+  description:
+    'Trigger an immediate manual backup for a compose service backup configuration. Requires the backup ID.',
+  schema: z.object({ backupId }).strict(),
+  endpoint: '/backup.manualBackupCompose',
+})
+
+const manualBackupWebServer = postTool({
+  name: 'dokploy_backup_manual_web_server',
+  title: 'Manual Web Server Backup',
+  description:
+    'Trigger an immediate manual backup for the Dokploy web server backup configuration. Requires the backup ID.',
+  schema: z.object({ backupId }).strict(),
+  endpoint: '/backup.manualBackupWebServer',
+})
+
+const listBackupFiles = getTool({
+  name: 'dokploy_backup_list_backup_files',
+  title: 'List Backup Files',
+  description:
+    'List backup files available at a destination. Requires the destination ID and a search prefix. Optionally filter by server ID.',
+  schema: z
+    .object({
+      destinationId: z.string().describe('Destination ID'),
+      search: z.string().describe('Search prefix'),
+      serverId: z.string().optional().describe('Optional server ID'),
+    })
+    .strict(),
+  endpoint: '/backup.listBackupFiles',
+})
+
 // ── export ───────────────────────────────────────────────────────────
 export const backupTools: ToolDefinition[] = [
   one,
@@ -119,4 +152,7 @@ export const backupTools: ToolDefinition[] = [
   manualBackupMySql,
   manualBackupMariadb,
   manualBackupMongo,
+  manualBackupCompose,
+  manualBackupWebServer,
+  listBackupFiles,
 ]

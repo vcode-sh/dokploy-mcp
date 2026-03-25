@@ -25,7 +25,7 @@ export function createDatabaseTools(config: DatabaseConfig): ToolDefinition[] {
     schema: AnyZodObject,
     opts: { get?: boolean; annotations?: Partial<ToolAnnotations> } = {},
   ): ToolDefinition {
-    const endpoint = `${type}.${action}`
+    const endpoint = `/${type}.${action}`
     const name = `dokploy_${type}_${action.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`
     if (opts.get) {
       return getTool({ name, title, description, schema, endpoint, annotations: opts.annotations })
@@ -44,13 +44,19 @@ export function createDatabaseTools(config: DatabaseConfig): ToolDefinition[] {
   const create = tool(
     'create',
     `Create ${displayName} Database`,
-    `Create a new ${displayName} database instance inside a Dokploy project. Requires a display name, app-level identifier, and the target project ID. Optionally specify a Docker image, description, or remote server. Returns the newly created database record.`,
+    `Create a new ${displayName} database instance inside a Dokploy environment. Requires a display name and the target environment ID. Optionally specify an app-level identifier, Docker image, description, or remote server. Returns the newly created database record.`,
     z
       .object({
         name: z.string().min(1).describe('Display name for the database'),
-        appName: z.string().min(1).describe('Unique app-level identifier'),
+        appName: z
+          .string()
+          .min(1)
+          .max(63)
+          .regex(/^[a-zA-Z0-9._-]+$/)
+          .optional()
+          .describe('Unique app-level identifier'),
         ...createFields.shape,
-        projectId: z.string().min(1).describe('Project ID to create the database in'),
+        environmentId: z.string().min(1).describe('Environment ID to create the database in'),
         dockerImage: z.string().optional().describe(`Docker image (default: ${defaultImage})`),
         description: z.string().nullable().optional().describe('Optional description'),
         serverId: z.string().nullable().optional().describe('Target server ID (null for local)'),
@@ -91,11 +97,11 @@ export function createDatabaseTools(config: DatabaseConfig): ToolDefinition[] {
   const move = tool(
     'move',
     `Move ${displayName} Database`,
-    `Move a ${displayName} database from its current project to a different project within Dokploy. Requires the ${displayName} database ID and the destination project ID. The database configuration and data are preserved during the move.`,
+    `Move a ${displayName} database from its current environment to a different environment within Dokploy. Requires the ${displayName} database ID and the destination environment ID. The database configuration and data are preserved during the move.`,
     z
       .object({
         [idField]: z.string().min(1).describe(`Unique ${displayName} database ID`),
-        targetProjectId: z.string().min(1).describe('Destination project ID'),
+        targetEnvironmentId: z.string().min(1).describe('Destination environment ID'),
       })
       .strict(),
   )
@@ -179,6 +185,25 @@ export function createDatabaseTools(config: DatabaseConfig): ToolDefinition[] {
       .strict(),
   )
 
+  const search = tool(
+    'search',
+    `Search ${displayName} Databases`,
+    `Search ${displayName} databases in Dokploy by free text or field-specific filters. Supports pagination through limit and offset.`,
+    z
+      .object({
+        q: z.string().optional().describe('Free-text query'),
+        name: z.string().optional().describe('Display name'),
+        appName: z.string().optional().describe('App-level identifier'),
+        description: z.string().optional().describe('Description'),
+        projectId: z.string().optional().describe('Project ID'),
+        environmentId: z.string().optional().describe('Environment ID'),
+        limit: z.number().min(1).max(100).optional().describe('Maximum number of results'),
+        offset: z.number().min(0).optional().describe('Number of results to skip'),
+      })
+      .strict(),
+    { get: true },
+  )
+
   return [
     one,
     create,
@@ -193,5 +218,6 @@ export function createDatabaseTools(config: DatabaseConfig): ToolDefinition[] {
     changeStatus,
     saveExternalPort,
     saveEnvironment,
+    search,
   ]
 }

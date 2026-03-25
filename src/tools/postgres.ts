@@ -6,7 +6,7 @@ export const postgresTools = createDatabaseTools({
   type: 'postgres',
   idField: 'postgresId',
   displayName: 'Postgres',
-  defaultImage: 'postgres:15',
+  defaultImage: 'postgres:18',
   createFields: z.object({
     databaseName: z.string().min(1).describe('Name of the database to create'),
     databaseUser: z.string().min(1).describe('Database user'),

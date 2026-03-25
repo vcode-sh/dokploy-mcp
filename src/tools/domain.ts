@@ -130,13 +130,27 @@ const generateDomain = postTool({
   name: 'dokploy_domain_generate',
   title: 'Generate Domain',
   description:
-    "Generate a default domain for an application using the server's configured base domain. This automatically creates and attaches a subdomain to the specified application. Requires the application ID. Returns the generated domain configuration.",
+    "Generate a default domain for an app name using the server's configured base domain. Optionally scope generation to a specific server.",
   schema: z
     .object({
-      applicationId: z.string().min(1).describe('The unique application ID'),
+      appName: z.string().min(1).describe('App name'),
+      serverId: z.string().optional().describe('Optional server ID'),
     })
     .strict(),
   endpoint: '/domain.generateDomain',
+})
+
+const canGenerateTraefikMeDomains = getTool({
+  name: 'dokploy_domain_can_generate_traefik_me_domains',
+  title: 'Check Traefik.me Availability',
+  description:
+    'Check whether Dokploy can generate `traefik.me` domains for a given server. Requires the server ID.',
+  schema: z
+    .object({
+      serverId: z.string().describe('Server ID'),
+    })
+    .strict(),
+  endpoint: '/domain.canGenerateTraefikMeDomains',
 })
 
 // ── export ───────────────────────────────────────────────────────────
@@ -145,6 +159,7 @@ export const domainTools: ToolDefinition[] = [
   one,
   byApplicationId,
   byComposeId,
+  canGenerateTraefikMeDomains,
   update,
   deleteDomain,
   validateDomain,

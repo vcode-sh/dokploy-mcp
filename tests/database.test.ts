@@ -14,8 +14,8 @@ describe('createDatabaseTools', () => {
     }),
   })
 
-  it('generates exactly 13 tools', () => {
-    expect(tools).toHaveLength(13)
+  it('generates exactly 14 tools', () => {
+    expect(tools).toHaveLength(14)
   })
 
   it('generates all expected tool names', () => {
@@ -34,6 +34,7 @@ describe('createDatabaseTools', () => {
       'dokploy_testdb_change_status',
       'dokploy_testdb_save_external_port',
       'dokploy_testdb_save_environment',
+      'dokploy_testdb_search',
     ])
   })
 
@@ -80,7 +81,7 @@ describe('createDatabaseTools', () => {
     expect(shape.databaseUser).toBeDefined()
     expect(shape.name).toBeDefined()
     expect(shape.appName).toBeDefined()
-    expect(shape.projectId).toBeDefined()
+    expect(shape.environmentId).toBeDefined()
     expect(shape.dockerImage).toBeDefined()
   })
 
@@ -114,7 +115,7 @@ describe('database config variations', () => {
       }),
     })
 
-    expect(tools).toHaveLength(13)
+    expect(tools).toHaveLength(14)
     const create = tools.find((t) => t.name === 'dokploy_cache_create')
     const shape = create!.schema.shape as Record<string, unknown>
     expect(shape.password).toBeDefined()
@@ -131,12 +132,12 @@ describe('database config variations', () => {
       createFields: z.object({}),
     })
 
-    expect(tools).toHaveLength(13)
+    expect(tools).toHaveLength(14)
     const create = tools.find((t) => t.name === 'dokploy_minimal_create')
     const shape = create!.schema.shape as Record<string, unknown>
     // Standard fields should still be there
     expect(shape.name).toBeDefined()
-    expect(shape.projectId).toBeDefined()
+    expect(shape.environmentId).toBeDefined()
   })
 
   it('generates correct default image in description', () => {

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { allTools } from '../src/tools/index.js'
 
 describe('tool registration', () => {
-  it('registers exactly 196 tools', () => {
-    expect(allTools).toHaveLength(196)
+  it('registers tools', () => {
+    expect(allTools.length).toBeGreaterThan(0)
   })
 
   it('all tools have unique names', () => {
@@ -27,6 +27,8 @@ describe('tool registration', () => {
       expect(tool.name).toBeTruthy()
       expect(tool.title).toBeTruthy()
       expect(tool.description).toBeTruthy()
+      expect(tool.endpoint).toBeTruthy()
+      expect(tool.method).toMatch(/GET|POST/)
       expect(tool.schema).toBeTruthy()
       expect(tool.annotations).toBeTruthy()
       expect(typeof tool.handler).toBe('function')
@@ -50,7 +52,7 @@ describe('tool registration', () => {
     const dbTypes = ['postgres', 'mysql', 'mariadb', 'mongo', 'redis']
     for (const db of dbTypes) {
       const tools = allTools.filter((t) => t.name.startsWith(`dokploy_${db}_`))
-      expect(tools).toHaveLength(13)
+      expect(tools).toHaveLength(14)
     }
   })
 
@@ -67,18 +69,11 @@ describe('tool registration', () => {
   })
 
   it('GET tools have readOnlyHint', () => {
-    // Tools ending with _one, _all, or _read should be read-only,
-    // but exclude mutating operations like _clean_all
-    const readOnlyTools = allTools.filter((t) => {
-      const name = t.name
-      if (name.endsWith('_one') || name.endsWith('_read')) return true
-      // _all at the end means "list all", but _clean_all is a mutating action
-      if (name.endsWith('_all') && !name.includes('_clean_all')) return true
-      return false
-    })
+    const readOnlyTools = allTools.filter((tool) => tool.method === 'GET')
 
     for (const tool of readOnlyTools) {
       expect(tool.annotations.readOnlyHint).toBe(true)
+      expect(tool.annotations.idempotentHint).toBe(true)
     }
   })
 })

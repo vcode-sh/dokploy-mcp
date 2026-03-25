@@ -4,9 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node >= 22](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org/)
 
-MCP server for the Dokploy API. 196 tools across 23 modules. Your AI agent can now deploy apps, manage databases, configure domains, and handle backups -- without you touching a dashboard.
+MCP server for the Dokploy API. 377 tools across 35 modules. Your AI agent can now deploy apps, manage databases, configure domains, and handle backups -- without you touching a dashboard.
 
-Forked from [Dokploy/mcp](https://github.com/Dokploy/mcp) and rebuilt with expanded API coverage, tool annotations, Zod v4 schemas, lazy config loading, and a setup wizard. The original had 67 tools. This one has 196. Standing on shoulders, etc.
+Forked from [Dokploy/mcp](https://github.com/Dokploy/mcp) and rebuilt with expanded API coverage, tool annotations, Zod v4 schemas, lazy config loading, and a setup wizard. The original had 67 tools. This one has 377. Standing on shoulders, etc.
 
 ## Quick Start
 
@@ -45,7 +45,7 @@ If you already have the [Dokploy CLI](https://github.com/Dokploy/cli) installed 
 
 ## Features
 
-- **196 tools, 23 modules** -- applications, compose, databases (Postgres/MySQL/MariaDB/MongoDB/Redis), domains, backups, Docker, settings, and more
+- **377 tools, 35 modules** -- applications, compose, environments, servers, Git providers, notifications, databases (Postgres/MySQL/MariaDB/MongoDB/Redis), domains, backups, deployment queues, rollback, patching, Docker, settings, preview deployments, schedules, and more
 - **Tool annotations** -- `readOnlyHint`, `destructiveHint`, `idempotentHint` so clients can warn before you nuke something
 - **Type-safe schemas** -- Zod v4 validation on every parameter
 - **Lazy config loading** -- validates credentials on first API call, not at startup
@@ -136,18 +136,24 @@ Already ran `setup` or have Dokploy CLI authenticated? Drop the `env` block enti
 
 | Module | Tools | Module | Tools |
 |--------|-------|--------|-------|
-| Project | 6 | Deployment | 2 |
-| Application | 26 | Docker | 4 |
-| Compose | 14 | Certificates | 4 |
-| Domain | 8 | Registry | 6 |
-| PostgreSQL | 13 | Destination | 6 |
-| MySQL | 13 | Backup | 8 |
-| MariaDB | 13 | Mounts | 4 |
-| MongoDB | 13 | Port | 4 |
-| Redis | 13 | Redirects | 4 |
+| Project | 8 | Deployment | 8 |
+| Environment | 7 | Docker | 7 |
+| Application | 29 | Server | 16 |
+| Compose | 28 | Certificates | 4 |
+| Domain | 9 | Registry | 6 |
+| Patch | 12 | SSH Key | 6 |
+| Git Provider | 2 | GitHub | 6 |
+| GitLab | 7 | PostgreSQL | 14 |
+| Notification | 38 | MySQL | 14 |
+| Destination | 6 | MariaDB | 14 |
+| Backup | 11 | MongoDB | 14 |
+| Mounts | 6 | Redis | 14 |
+| Port | 4 | Volume Backups | 6 |
+| Redirects | 4 | Rollback | 2 |
+| Preview Deployment | 4 | Schedule | 6 |
 | Security | 4 | Cluster | 4 |
-| Settings | 25 | Admin | 1 |
-| User | 1 | | |
+| Settings | 49 | Admin | 1 |
+| User | 7 | | |
 
 Full reference with parameters and descriptions: **[docs/tools.md](docs/tools.md)**
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ApiError } from '../src/api/client.js'
+import { ApiError, buildQueryString, unwrapTrpcResponse } from '../src/api/client.js'
 
 describe('ApiError', () => {
   it('extracts message from body object', () => {
@@ -27,6 +27,25 @@ describe('ApiError', () => {
     expect(err.body).toEqual({ errors: ['field required'] })
   })
 
+  it('extracts nested tRPC error messages', () => {
+    const err = new ApiError(
+      400,
+      'Bad Request',
+      {
+        error: {
+          json: {
+            message: 'Invalid input: expected object, received undefined',
+          },
+        },
+      },
+      'test.one',
+    )
+
+    expect(err.message).toBe(
+      'Dokploy API error (400): Invalid input: expected object, received undefined',
+    )
+  })
+
   it('is instanceof Error', () => {
     const err = new ApiError(404, 'Not Found', null, 'test.one')
     expect(err).toBeInstanceOf(Error)
@@ -37,5 +56,52 @@ describe('ApiError', () => {
     const body = { code: 'VALIDATION', fields: { name: 'required' } }
     const err = new ApiError(422, 'Unprocessable', body, 'test.create')
     expect(err.body).toBe(body)
+  })
+})
+
+describe('buildQueryString', () => {
+  it('returns empty string for empty input', () => {
+    expect(buildQueryString(undefined)).toBe('')
+    expect(buildQueryString({})).toBe('input=%7B%22json%22%3A%7B%7D%7D')
+  })
+
+  it('serializes GET params using the tRPC input envelope', () => {
+    expect(buildQueryString({ projectId: 'abc123' })).toBe(
+      'input=%7B%22json%22%3A%7B%22projectId%22%3A%22abc123%22%7D%7D',
+    )
+  })
+
+  it('filters nullish values and preserves arrays', () => {
+    expect(
+      buildQueryString({
+        q: 'app',
+        limit: 20,
+        watchPaths: ['src', 'package.json'],
+        owner: null,
+      }),
+    ).toBe(
+      'input=%7B%22json%22%3A%7B%22q%22%3A%22app%22%2C%22limit%22%3A20%2C%22watchPaths%22%3A%5B%22src%22%2C%22package.json%22%5D%7D%7D',
+    )
+  })
+})
+
+describe('unwrapTrpcResponse', () => {
+  it('unwraps the standard tRPC response envelope', () => {
+    expect(
+      unwrapTrpcResponse({
+        result: {
+          data: {
+            json: {
+              projectId: 'abc123',
+            },
+          },
+        },
+      }),
+    ).toEqual({ projectId: 'abc123' })
+  })
+
+  it('returns non-tRPC payloads unchanged', () => {
+    const payload = [{ projectId: 'abc123' }]
+    expect(unwrapTrpcResponse(payload)).toBe(payload)
   })
 })

@@ -16,6 +16,8 @@ export interface ToolDefinition {
   name: string
   title: string
   description: string
+  endpoint?: string
+  method?: 'GET' | 'POST'
   schema: AnyZodObject
   annotations: ToolAnnotations
   handler: (input: Record<string, unknown>) => Promise<{
@@ -25,10 +27,16 @@ export interface ToolDefinition {
   }>
 }
 
+function wrapStructured(data: unknown): Record<string, unknown> {
+  if (Array.isArray(data)) return { items: data }
+  if (data === null || data === undefined || typeof data !== 'object') return { value: data }
+  return data as Record<string, unknown>
+}
+
 function success(data: unknown) {
   return {
     content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
-    structuredContent: data as Record<string, unknown>,
+    structuredContent: wrapStructured(data),
   }
 }
 
@@ -103,7 +111,7 @@ export function postTool<T extends AnyZodObject>(opts: {
   endpoint: string
   annotations?: Partial<ToolAnnotations>
 }): ToolDefinition {
-  return createTool({
+  const tool = createTool({
     name: opts.name,
     title: opts.title,
     description: opts.description,
@@ -111,6 +119,12 @@ export function postTool<T extends AnyZodObject>(opts: {
     annotations: opts.annotations,
     handler: async ({ input, api }) => api.post(opts.endpoint, input),
   })
+
+  return {
+    ...tool,
+    endpoint: opts.endpoint,
+    method: 'POST',
+  }
 }
 
 export function getTool<T extends AnyZodObject>(opts: {
@@ -121,7 +135,7 @@ export function getTool<T extends AnyZodObject>(opts: {
   endpoint: string
   annotations?: Partial<ToolAnnotations>
 }): ToolDefinition {
-  return createTool({
+  const tool = createTool({
     name: opts.name,
     title: opts.title,
     description: opts.description,
@@ -138,7 +152,13 @@ export function getTool<T extends AnyZodObject>(opts: {
           params[k] = v
         }
       }
-      return api.get(opts.endpoint, Object.keys(params).length > 0 ? params : undefined)
+      return api.get(opts.endpoint, params)
     },
   })
+
+  return {
+    ...tool,
+    endpoint: opts.endpoint,
+    method: 'GET',
+  }
 }

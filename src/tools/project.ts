@@ -12,6 +12,14 @@ const all = getTool({
   endpoint: '/project.all',
 })
 
+const allForPermissions = getTool({
+  name: 'dokploy_project_all_for_permissions',
+  title: 'List Projects for Permissions',
+  description: 'List projects in the format used by Dokploy permission assignment workflows.',
+  schema: z.object({}).strict(),
+  endpoint: '/project.allForPermissions',
+})
+
 const one = getTool({
   name: 'dokploy_project_one',
   title: 'Get Project Details',
@@ -106,5 +114,31 @@ const remove = postTool({
   annotations: { destructiveHint: true },
 })
 
+const search = getTool({
+  name: 'dokploy_project_search',
+  title: 'Search Projects',
+  description:
+    'Search Dokploy projects by free text or field-specific filters. Supports pagination through limit and offset.',
+  schema: z
+    .object({
+      q: z.string().optional().describe('Free-text query'),
+      name: z.string().optional().describe('Project name'),
+      description: z.string().optional().describe('Project description'),
+      limit: z.number().min(1).max(100).optional().describe('Maximum number of results'),
+      offset: z.number().min(0).optional().describe('Number of results to skip'),
+    })
+    .strict(),
+  endpoint: '/project.search',
+})
+
 // ── export ───────────────────────────────────────────────────────────
-export const projectTools: ToolDefinition[] = [all, one, create, update, duplicate, remove]
+export const projectTools: ToolDefinition[] = [
+  all,
+  allForPermissions,
+  one,
+  create,
+  update,
+  duplicate,
+  remove,
+  search,
+]

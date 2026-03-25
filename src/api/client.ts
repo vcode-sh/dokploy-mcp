@@ -8,6 +8,45 @@ interface ClientConfig {
   timeout: number
 }
 
+function getErrorMessage(body: unknown, statusText: string): string {
+  if (typeof body !== 'object' || body === null) {
+    return statusText
+  }
+
+  if ('message' in body && typeof body.message === 'string') {
+    return body.message
+  }
+
+  if ('error' in body && typeof body.error === 'object' && body.error !== null) {
+    const error = body.error as Record<string, unknown>
+    if ('message' in error && typeof error.message === 'string') {
+      return error.message
+    }
+
+    if ('json' in error && typeof error.json === 'object' && error.json !== null) {
+      const json = error.json as Record<string, unknown>
+      if ('message' in json && typeof json.message === 'string') {
+        return json.message
+      }
+    }
+  }
+
+  return statusText
+}
+
+export function unwrapTrpcResponse(data: unknown): unknown {
+  if (typeof data !== 'object' || data === null) return data
+
+  const outer = data as Record<string, unknown>
+  if (typeof outer.result !== 'object' || outer.result === null) return data
+
+  const result = outer.result as Record<string, unknown>
+  if (typeof result.data !== 'object' || result.data === null) return data
+
+  const inner = result.data as Record<string, unknown>
+  return 'json' in inner ? inner.json : data
+}
+
 function getConfig(): ClientConfig {
   const resolved = resolveConfig()
 
@@ -44,21 +83,23 @@ export class ApiError extends Error {
     public readonly body: unknown,
     public readonly endpoint: string,
   ) {
-    const msg =
-      typeof body === 'object' && body !== null && 'message' in body
-        ? (body as { message: string }).message
-        : statusText
+    const msg = getErrorMessage(body, statusText)
     super(`Dokploy API error (${status}): ${msg}`)
     this.name = 'ApiError'
   }
 }
 
-function buildQueryString(body: unknown): string {
-  if (!body || typeof body !== 'object') return ''
-  const entries = Object.entries(body as Record<string, unknown>)
-    .filter(([, v]) => v != null)
-    .map(([k, v]): [string, string] => [k, String(v)])
-  return entries.length > 0 ? new URLSearchParams(entries).toString() : ''
+export function buildQueryString(body: unknown): string {
+  if (body == null) return ''
+  if (typeof body !== 'object') return ''
+
+  const params = Object.fromEntries(
+    Object.entries(body as Record<string, unknown>).filter(([, value]) => value != null),
+  )
+
+  return new URLSearchParams({
+    input: JSON.stringify({ json: params }),
+  }).toString()
 }
 
 /**
@@ -91,7 +132,7 @@ async function request<T = unknown>(
         Accept: 'application/json',
         'x-api-key': apiKey,
       },
-      body: method === 'POST' && body ? JSON.stringify(body) : undefined,
+      body: method === 'POST' && body ? JSON.stringify({ json: body }) : undefined,
       signal: controller.signal,
     })
 
@@ -107,7 +148,7 @@ async function request<T = unknown>(
       throw new ApiError(response.status, response.statusText, data, path)
     }
 
-    return data as T
+    return unwrapTrpcResponse(data) as T
   } catch (error) {
     if (error instanceof ApiError) {
       throw error

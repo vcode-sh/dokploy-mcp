@@ -1,6 +1,6 @@
 # Tool Reference
 
-196 tools across 23 modules. All tool names are prefixed with `dokploy_` (omitted below for sanity). The 5 database modules share the same interface, so they're grouped into one section below.
+377 tools across 35 modules. All tool names are prefixed with `dokploy_` (omitted below for sanity). The 5 database modules share the same interface, so they're grouped into one section below.
 
 **Types:** Read (safe, no side effects) -- Write (creates or changes things) -- Destroy (irreversible -- deletes data or stops services)
 
