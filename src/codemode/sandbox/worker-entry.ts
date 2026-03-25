@@ -1,8 +1,8 @@
 import { createExecuteContext } from '../context/execute-context.js'
-import type { GatewayCallResult } from '../gateway/api-gateway.js'
 import { createSearchCatalogView } from '../context/search-context.js'
-import { runSandboxedFunction } from './runner.js'
+import type { GatewayCallResult } from '../gateway/api-gateway.js'
 import { resolveSandboxLimits } from './limits.js'
+import { runSandboxedFunction } from './runner.js'
 import type { SandboxLimits } from './types.js'
 
 const pendingCalls = new Map<

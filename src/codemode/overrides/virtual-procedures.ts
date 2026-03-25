@@ -247,7 +247,6 @@ function getArray(value: unknown) {
   return Array.isArray(value) ? value : []
 }
 
-
 function buildProjectOverviewApplication(value: unknown) {
   if (!isRecord(value)) {
     return {
