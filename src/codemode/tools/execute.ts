@@ -16,14 +16,11 @@ const executeSchema = z
       .string()
       .min(1)
       .describe(
-        'JavaScript code to run. Can be a simple expression, statements, or an async function. ' +
-          'dokploy and helpers are available as globals. ' +
-          'Examples: ' +
-          '`await dokploy.project.all()` | ' +
-          '`const app = await dokploy.application.one({ applicationId: "id" }); return app.name` | ' +
-          '`async ({ dokploy }) => dokploy.settings.health()`. ' +
+        'JavaScript code. `dokploy` and `helpers` are globals -- do NOT wrap in a function. ' +
+          'Simple: `await dokploy.project.all()`. ' +
+          'Multi-step: `const app = await dokploy.application.one({ applicationId: "abc" }); return app.name`. ' +
           'dokploy.<module>.<method>(params) calls the Dokploy API. ' +
-          'helpers: sleep(ms), assert(cond, msg), pick(obj, keys), limit(arr, n), selectOne(arr, pred).',
+          'helpers: sleep(ms), assert(cond, msg), pick(obj, keys), limit(arr, n).',
       ),
   })
   .strict()
@@ -75,11 +72,11 @@ export const executeTool: ToolDefinition = createTool({
   title: 'Execute Dokploy Workflow',
   description:
     'Run JavaScript code against the Dokploy API. ' +
-    '`dokploy` and `helpers` are available as globals -- no wrapper function needed. ' +
-    'Just write: `await dokploy.project.all()` or multi-line with `const`/`return`. ' +
+    'IMPORTANT: Do NOT wrap code in a function -- `dokploy` and `helpers` are already globals. ' +
+    'Write bare code: `await dokploy.project.all()` or `const x = await dokploy.application.one({ applicationId: "id" }); return x`. ' +
     'dokploy.<module>.<method>(params) calls the API. ' +
     'Modules: project, environment, application, compose, domain, postgres, mysql, mariadb, mongo, redis, ' +
-    'deployment, docker, server, settings, user, notification, backup, mounts, registry, certificates, and more. ' +
+    'deployment, docker, server, settings, user, notification, backup, mounts, registry, certificates, schedule, patch, sshKey, gitProvider, and more. ' +
     'Use search tool first to discover procedure names and required parameters.',
   schema: executeSchema,
   annotations: { openWorldHint: true },

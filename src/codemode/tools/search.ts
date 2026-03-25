@@ -12,7 +12,7 @@ const searchSchema = z
       .string()
       .min(1)
       .describe(
-        'JavaScript code to search the API catalog. `catalog` is available as a global. ' +
+        'JavaScript code. `catalog` is a global -- do NOT wrap in a function. ' +
           'Examples: `catalog.searchText("application deploy")` | ' +
           '`catalog.getByTag("compose")` | `catalog.get("application.one")`. ' +
           'Methods: searchText(query), get(procedure), getByTag(tag), endpoints, byTag.',
@@ -61,10 +61,9 @@ export const searchTool: ToolDefinition = createTool({
   name: 'search',
   title: 'Search Dokploy API',
   description:
-    'Search the Dokploy API catalog to discover procedures, parameters, and modules. ' +
-    '`catalog` is available as a global -- just write: `catalog.searchText("deploy")`. ' +
-    'Use catalog.searchText("query") to find by keyword, catalog.getByTag("application") for a module, ' +
-    'catalog.get("application.one") for one procedure. ' +
+    'Search the Dokploy API catalog. ' +
+    'IMPORTANT: Do NOT wrap code in a function -- `catalog` is already a global. ' +
+    'Write bare code: `catalog.searchText("deploy")` or `catalog.getByTag("application")` or `catalog.get("application.one")`. ' +
     'Returns procedure names, required/optional parameters, and HTTP methods.',
   schema: searchSchema,
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
