@@ -1,7 +1,7 @@
 {
   "name": "@vibetools/dokploy-mcp",
   "version": "2.0.0",
-  "description": "MCP Server for the Dokploy API - complete coverage of all endpoints",
+  "description": "Dokploy MCP server with Code Mode by default and classic compatibility",
   "type": "module",
   "exports": {
     ".": {
