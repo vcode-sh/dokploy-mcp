@@ -1,15 +1,12 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { allTools } from '../src/tools/index.js'
 
 const BASELINE_IMPLEMENTED_SPEC_ENDPOINTS = 377
 const BASELINE_MISSING_SPEC_ENDPOINTS = 86
-const OPENAPI_PATH = '.openapi/openapi'
-
-const hasOpenApiSpec = existsSync(OPENAPI_PATH)
 
 function readOpenApiPaths(): string[] {
-  const raw = readFileSync(OPENAPI_PATH, 'utf8')
+  const raw = readFileSync('.openapi/openapi', 'utf8')
   const spec = JSON.parse(raw) as {
     result: {
       data: {
@@ -23,7 +20,7 @@ function readOpenApiPaths(): string[] {
   return Object.keys(spec.result.data.json.paths)
 }
 
-describe.skipIf(!hasOpenApiSpec)('OpenAPI coverage guard', () => {
+describe('OpenAPI coverage guard', () => {
   it('does not register endpoints that are absent from the OpenAPI spec', () => {
     const specEndpoints = new Set(readOpenApiPaths())
     const extraEndpoints = allTools
