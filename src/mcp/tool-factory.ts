@@ -28,8 +28,14 @@ export interface ToolDefinition {
 }
 
 function wrapStructured(data: unknown): Record<string, unknown> {
-  if (Array.isArray(data)) return { items: data }
-  if (data === null || data === undefined || typeof data !== 'object') return { value: data }
+  if (Array.isArray(data)) {
+    return { items: data }
+  }
+
+  if (data === null || data === undefined || typeof data !== 'object') {
+    return { value: data }
+  }
+
   return data as Record<string, unknown>
 }
 
@@ -69,6 +75,7 @@ function mapApiError(err: ApiError) {
     const [message, getDetails] = entry
     return error(message, getDetails(err))
   }
+
   return error(`Dokploy API error (${err.status})`, err.message)
 }
 
@@ -94,6 +101,7 @@ export function createTool<T extends AnyZodObject>(def: {
         if (err instanceof ApiError) {
           return mapApiError(err)
         }
+
         return error(
           `Failed to execute ${def.name}`,
           err instanceof Error ? err.message : 'Unknown error',
@@ -147,9 +155,9 @@ export function getTool<T extends AnyZodObject>(opts: {
     },
     handler: async ({ input, api }) => {
       const params: Record<string, unknown> = {}
-      for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
-        if (v !== undefined && v !== null) {
-          params[k] = v
+      for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+        if (value !== undefined && value !== null) {
+          params[key] = value
         }
       }
       return api.get(opts.endpoint, params)

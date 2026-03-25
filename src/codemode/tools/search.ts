@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { createTool, type ToolDefinition } from '../../tools/_factory.js'
+import { createTool, type ToolDefinition } from '../../mcp/tool-factory.js'
 import { createSearchCatalogView } from '../context/search-context.js'
 import { runSandboxedFunction } from '../sandbox/runner.js'
 import { resolveSandboxRuntime } from '../sandbox/runtime.js'

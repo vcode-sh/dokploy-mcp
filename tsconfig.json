@@ -27,7 +27,7 @@
     "src/codemode/**/*.ts",
     "src/config/**/*.ts",
     "src/generated/**/*.ts",
-    "src/tools/_factory.ts"
+    "src/mcp/**/*.ts"
   ],
   "exclude": ["node_modules", "dist", ".old"]
 }

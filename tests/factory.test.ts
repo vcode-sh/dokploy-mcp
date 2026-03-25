@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { createTool, getTool, postTool } from '../src/tools/_factory.js'
+import { createTool, getTool, postTool } from '../src/mcp/tool-factory.js'
 
 describe('createTool', () => {
   it('creates a tool with correct structure', () => {

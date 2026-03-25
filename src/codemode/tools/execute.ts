@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { createTool, type ToolDefinition } from '../../tools/_factory.js'
+import { createTool, type ToolDefinition } from '../../mcp/tool-factory.js'
 import { createExecuteContext } from '../context/execute-context.js'
 import type { GatewayCallResult } from '../gateway/api-gateway.js'
 import type { SandboxHost } from '../sandbox/host.js'

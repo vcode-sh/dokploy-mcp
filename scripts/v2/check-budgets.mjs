@@ -44,7 +44,24 @@ function percentile(samples, ratio) {
   return sorted[Math.floor(sorted.length * ratio)] ?? sorted[sorted.length - 1] ?? 0
 }
 
+async function withSandboxRuntime(runtime, run) {
+  const previous = process.env.DOKPLOY_MCP_SANDBOX_RUNTIME
+  process.env.DOKPLOY_MCP_SANDBOX_RUNTIME = runtime
+
+  try {
+    return await run()
+  } finally {
+    if (previous === undefined) {
+      delete process.env.DOKPLOY_MCP_SANDBOX_RUNTIME
+    } else {
+      process.env.DOKPLOY_MCP_SANDBOX_RUNTIME = previous
+    }
+  }
+}
+
 async function sampleDurations(run) {
+  await run()
+
   const samples = []
 
   for (let index = 0; index < SAMPLE_COUNT; index += 1) {
@@ -61,11 +78,13 @@ async function sampleDurations(run) {
 }
 
 async function measureSearchDuration() {
-  return sampleDurations(async () => {
-    await searchTool.handler({
-      code: 'async ({ catalog }) => catalog.searchText("notification").slice(0, 20)',
-    })
-  })
+  return withSandboxRuntime('local', async () =>
+    sampleDurations(async () => {
+      await searchTool.handler({
+        code: 'async ({ catalog }) => catalog.searchText("notification").slice(0, 20)',
+      })
+    }),
+  )
 }
 
 function createBudgetHost() {
@@ -103,26 +122,28 @@ function createBudgetHost() {
 }
 
 async function measureExecuteDuration() {
-  return sampleDurations(async () => {
-    await runExecuteWithHost(
-      `
-      async ({ dokploy, helpers }) => {
-        const projects = await dokploy.project.search({ limit: 5 })
-        helpers.assert(
-          Array.isArray(projects.items) && projects.items.length > 0,
-          'Expected a project',
-        )
-        const project = helpers.selectOne(projects.items)
-        const environments = await dokploy.environment.byProjectId({ projectId: project.projectId })
-        return {
-          total: projects.total ?? null,
-          environmentCount: Array.isArray(environments) ? environments.length : 0,
+  return withSandboxRuntime('local', async () =>
+    sampleDurations(async () => {
+      await runExecuteWithHost(
+        `
+        async ({ dokploy, helpers }) => {
+          const projects = await dokploy.project.search({ limit: 5 })
+          helpers.assert(
+            Array.isArray(projects.items) && projects.items.length > 0,
+            'Expected a project',
+          )
+          const project = helpers.selectOne(projects.items)
+          const environments = await dokploy.environment.byProjectId({ projectId: project.projectId })
+          return {
+            total: projects.total ?? null,
+            environmentCount: Array.isArray(environments) ? environments.length : 0,
+          }
         }
-      }
-      `,
-      createBudgetHost(),
-    )
-  })
+        `,
+        createBudgetHost(),
+      )
+    }),
+  )
 }
 
 async function measureSandboxStartup() {

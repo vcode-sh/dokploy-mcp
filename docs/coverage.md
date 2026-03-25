@@ -37,4 +37,4 @@ The public server does not expose one MCP tool per Dokploy endpoint anymore. Ins
 ## Notes
 
 - The catalog is generated from `.openapi/openapi`, not a historical Dokploy release.
-- The old endpoint-per-tool implementation remains only as internal source material and is no longer the public package surface.
+- The endpoint-per-tool implementation has been removed from the public v2 codebase.

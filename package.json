@@ -21,7 +21,6 @@
     "bench:protocol": "node scripts/v2/measure-tools-list.mjs",
     "bench:search": "node scripts/v2/bench-search.mjs",
     "bench:execute": "node scripts/v2/bench-execute.mjs",
-    "bench:classic-vs-codemode": "node scripts/v2/bench-classic-vs-codemode.mjs",
     "bench:sandbox-startup": "node scripts/v2/bench-sandbox-startup.mjs",
     "ci:budgets": "node scripts/v2/check-budgets.mjs",
     "ci:full": "npm test && npm run lint && npm run build && npm run ci:budgets && npm run smoke:mcp && npm run smoke:search && npm run smoke:execute",
