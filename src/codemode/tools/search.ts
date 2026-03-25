@@ -12,10 +12,10 @@ const searchSchema = z
       .string()
       .min(1)
       .describe(
-        'An async arrow function receiving ({ catalog }). ' +
-          'Example: async ({ catalog }) => catalog.searchText("application deploy"). ' +
-          'catalog methods: searchText(query), get(procedure), getByTag(tag), ' +
-          'endpoints (array of all procedures), byTag (grouped by module).',
+        'JavaScript code to search the API catalog. `catalog` is available as a global. ' +
+          'Examples: `catalog.searchText("application deploy")` | ' +
+          '`catalog.getByTag("compose")` | `catalog.get("application.one")`. ' +
+          'Methods: searchText(query), get(procedure), getByTag(tag), endpoints, byTag.',
       ),
   })
   .strict()
@@ -62,10 +62,9 @@ export const searchTool: ToolDefinition = createTool({
   title: 'Search Dokploy API',
   description:
     'Search the Dokploy API catalog to discover procedures, parameters, and modules. ' +
-    'The code parameter must be an async arrow function: async ({ catalog }) => { ... }. ' +
-    'Use catalog.searchText("query") to find procedures by keyword, ' +
-    'catalog.getByTag("application") to list all procedures in a module, ' +
-    'catalog.get("application.one") to get details of a specific procedure. ' +
+    '`catalog` is available as a global -- just write: `catalog.searchText("deploy")`. ' +
+    'Use catalog.searchText("query") to find by keyword, catalog.getByTag("application") for a module, ' +
+    'catalog.get("application.one") for one procedure. ' +
     'Returns procedure names, required/optional parameters, and HTTP methods.',
   schema: searchSchema,
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },

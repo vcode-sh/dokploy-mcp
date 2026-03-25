@@ -16,8 +16,12 @@ const executeSchema = z
       .string()
       .min(1)
       .describe(
-        'An async arrow function receiving ({ dokploy, helpers }). ' +
-          'Example: async ({ dokploy }) => { const p = await dokploy.project.all(); return p }. ' +
+        'JavaScript code to run. Can be a simple expression, statements, or an async function. ' +
+          'dokploy and helpers are available as globals. ' +
+          'Examples: ' +
+          '`await dokploy.project.all()` | ' +
+          '`const app = await dokploy.application.one({ applicationId: "id" }); return app.name` | ' +
+          '`async ({ dokploy }) => dokploy.settings.health()`. ' +
           'dokploy.<module>.<method>(params) calls the Dokploy API. ' +
           'helpers: sleep(ms), assert(cond, msg), pick(obj, keys), limit(arr, n), selectOne(arr, pred).',
       ),
@@ -70,13 +74,13 @@ export const executeTool: ToolDefinition = createTool({
   name: 'execute',
   title: 'Execute Dokploy Workflow',
   description:
-    'Execute a sandboxed Dokploy workflow. ' +
-    'The code parameter must be an async arrow function: async ({ dokploy, helpers }) => { ... }. ' +
-    'Use dokploy.<module>.<method>(params) to call any Dokploy API procedure ' +
-    '(e.g. dokploy.application.one({ applicationId }), dokploy.project.all()). ' +
-    'Available modules: project, environment, application, compose, domain, postgres, mysql, mariadb, mongo, redis, ' +
+    'Run JavaScript code against the Dokploy API. ' +
+    '`dokploy` and `helpers` are available as globals -- no wrapper function needed. ' +
+    'Just write: `await dokploy.project.all()` or multi-line with `const`/`return`. ' +
+    'dokploy.<module>.<method>(params) calls the API. ' +
+    'Modules: project, environment, application, compose, domain, postgres, mysql, mariadb, mongo, redis, ' +
     'deployment, docker, server, settings, user, notification, backup, mounts, registry, certificates, and more. ' +
-    'Use search tool first to discover exact procedure names and required parameters.',
+    'Use search tool first to discover procedure names and required parameters.',
   schema: executeSchema,
   annotations: { openWorldHint: true },
   handler: async ({ input }) => {

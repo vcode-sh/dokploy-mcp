@@ -19,7 +19,7 @@ describe('codemode contract', () => {
       {
         name: 'search',
         title: 'Search Dokploy API',
-        description: expect.stringContaining('async ({ catalog })'),
+        description: expect.stringContaining('catalog'),
         keys: ['code'],
         method: undefined,
         readOnlyHint: true,
@@ -29,7 +29,7 @@ describe('codemode contract', () => {
       {
         name: 'execute',
         title: 'Execute Dokploy Workflow',
-        description: expect.stringContaining('async ({ dokploy, helpers })'),
+        description: expect.stringContaining('dokploy'),
         keys: ['code'],
         method: undefined,
         readOnlyHint: null,

@@ -28,6 +28,29 @@ function deepFreeze<T>(value: T): T {
   return value
 }
 
+const ARROW_FN_RE = /^\s*async\s*\(/
+
+/**
+ * Auto-wraps raw code into an async function if the agent didn't provide one.
+ * Accepts all these forms:
+ *   1. async ({ dokploy }) => { ... }           -- arrow with destructuring (original)
+ *   2. async (ctx) => { ... }                   -- arrow with param
+ *   3. async () => dokploy.project.all()        -- arrow using globals
+ *   4. dokploy.project.all()                    -- raw expression (auto-wrapped)
+ *   5. const x = await dokploy.project.all()    -- raw statements (auto-wrapped)
+ */
+function wrapSandboxCode(code: string): string {
+  const trimmed = code.trim()
+  if (ARROW_FN_RE.test(trimmed)) {
+    return trimmed
+  }
+  // Raw code -- wrap in an async function that receives context but ignores it
+  // (context keys are already available as globals)
+  const hasReturn = /\breturn\b/.test(trimmed)
+  const body = hasReturn ? trimmed : `return (${trimmed})`
+  return `async () => { ${body} }`
+}
+
 export async function runSandboxedFunction<TContext extends Record<string, unknown>>({
   code,
   context,
@@ -39,29 +62,34 @@ export async function runSandboxedFunction<TContext extends Record<string, unkno
 
   const frozenContext = deepFreeze(context)
 
+  const consoleProxy = {
+    log: (...args: unknown[]) => {
+      const line = args
+        .map((arg) => {
+          try {
+            return typeof arg === 'string' ? arg : JSON.stringify(arg)
+          } catch {
+            return String(arg)
+          }
+        })
+        .join(' ')
+
+      loggedBytes += Buffer.byteLength(line, 'utf8')
+      if (loggedBytes > limits.maxLogBytes) {
+        throw new Error(`Sandbox logs exceeded ${limits.maxLogBytes} bytes.`)
+      }
+
+      logs.push(line)
+    },
+  }
+
   const sandbox = createContext(
     {
       __context: frozenContext,
-      console: {
-        log: (...args: unknown[]) => {
-          const line = args
-            .map((arg) => {
-              try {
-                return typeof arg === 'string' ? arg : JSON.stringify(arg)
-              } catch {
-                return String(arg)
-              }
-            })
-            .join(' ')
-
-          loggedBytes += Buffer.byteLength(line, 'utf8')
-          if (loggedBytes > limits.maxLogBytes) {
-            throw new Error(`Sandbox logs exceeded ${limits.maxLogBytes} bytes.`)
-          }
-
-          logs.push(line)
-        },
-      },
+      // Expose context keys as top-level globals so agents can write
+      // `dokploy.project.all()` or `catalog.searchText("x")` directly
+      ...frozenContext,
+      console: consoleProxy,
       process: undefined,
       fetch: undefined,
       require: undefined,
@@ -86,15 +114,14 @@ export async function runSandboxedFunction<TContext extends Record<string, unkno
     },
   )
 
+  const wrappedCode = wrapSandboxCode(code)
+
   const script = new Script(
     `
       (async () => {
-        const __fn = (${code})
+        const __fn = (${wrappedCode})
         if (typeof __fn !== 'function') {
           throw new Error('Sandbox code must evaluate to a function.')
-        }
-        if (__fn.constructor?.name !== 'AsyncFunction') {
-          throw new Error('Sandbox code must evaluate to an async function.')
         }
         return await __fn(__context)
       })()
