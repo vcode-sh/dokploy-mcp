@@ -1,5 +1,11 @@
 import { ApiError, api } from '../../api/client.js'
 import { procedureSchemas } from '../../generated/dokploy-schemas.js'
+import {
+  getEffectiveProcedureSchema,
+  mapProcedureInput,
+  transformProcedureResponse,
+  validateProcedureInput,
+} from '../overrides/procedure-overrides.js'
 import { formatGatewayError } from './error-format.js'
 import { finishTrace, type GatewayTraceEntry, startTrace } from './trace.js'
 
@@ -75,10 +81,11 @@ function validateTypedSchema(
     case 'array':
       return validateArraySchema(value, schemaObject, path)
     case 'string':
-      return validatePrimitive(value, 'string', path)
+      return validateStringSchema(value, schemaObject, path)
     case 'number':
+      return validateNumberSchema(value, schemaObject, path)
     case 'integer':
-      return validatePrimitive(value, 'number', path)
+      return validateIntegerSchema(value, schemaObject, path)
     case 'boolean':
       return validatePrimitive(value, 'boolean', path)
     case 'null':
@@ -100,6 +107,19 @@ function validateObjectSchema(
   const objectValue = value as Record<string, unknown>
   const properties = (schemaObject.properties as Record<string, unknown>) ?? {}
   const required = (schemaObject.required as string[] | undefined) ?? []
+  const additionalProperties = schemaObject.additionalProperties
+  return [
+    ...validateRequiredObjectKeys(objectValue, required, path),
+    ...validateUnexpectedObjectKeys(objectValue, properties, additionalProperties, path),
+    ...validateObjectProperties(objectValue, properties, path),
+  ]
+}
+
+function validateRequiredObjectKeys(
+  objectValue: Record<string, unknown>,
+  required: string[],
+  path: string,
+) {
   const errors = []
 
   for (const key of required) {
@@ -107,6 +127,37 @@ function validateObjectSchema(
       errors.push(`${path ? `${path}.` : ''}${key} is required`)
     }
   }
+
+  return errors
+}
+
+function validateUnexpectedObjectKeys(
+  objectValue: Record<string, unknown>,
+  properties: Record<string, unknown>,
+  additionalProperties: unknown,
+  path: string,
+) {
+  if (additionalProperties !== false) {
+    return []
+  }
+
+  const errors = []
+
+  for (const key of Object.keys(objectValue)) {
+    if (!(key in properties)) {
+      errors.push(`${path ? `${path}.` : ''}${key} is not allowed`)
+    }
+  }
+
+  return errors
+}
+
+function validateObjectProperties(
+  objectValue: Record<string, unknown>,
+  properties: Record<string, unknown>,
+  path: string,
+) {
+  const errors = []
 
   for (const [key, propertySchema] of Object.entries(properties)) {
     if (key in objectValue) {
@@ -130,6 +181,19 @@ function validateArraySchema(
 
   const itemSchema = schemaObject.items
   const errors = []
+  const minItems =
+    typeof schemaObject.minItems === 'number' ? (schemaObject.minItems as number) : undefined
+  const maxItems =
+    typeof schemaObject.maxItems === 'number' ? (schemaObject.maxItems as number) : undefined
+
+  if (minItems !== undefined && value.length < minItems) {
+    errors.push(`${path || 'value'} must contain at least ${minItems} items`)
+  }
+
+  if (maxItems !== undefined && value.length > maxItems) {
+    errors.push(`${path || 'value'} must contain at most ${maxItems} items`)
+  }
+
   for (const [index, entry] of value.entries()) {
     errors.push(...validateAgainstSchema(entry, itemSchema, `${path || 'value'}[${index}]`))
   }
@@ -144,6 +208,95 @@ function validatePrimitive(
   return typeof value === type ? [] : [`${path || 'value'} must be a ${type}`]
 }
 
+function validateStringSchema(
+  value: unknown,
+  schemaObject: Record<string, unknown>,
+  path: string,
+): string[] {
+  const primitiveErrors = validatePrimitive(value, 'string', path)
+  if (primitiveErrors.length > 0) {
+    return primitiveErrors
+  }
+
+  const stringValue = value as string
+  const errors = []
+  const minLength =
+    typeof schemaObject.minLength === 'number' ? (schemaObject.minLength as number) : undefined
+  const maxLength =
+    typeof schemaObject.maxLength === 'number' ? (schemaObject.maxLength as number) : undefined
+  const pattern = typeof schemaObject.pattern === 'string' ? schemaObject.pattern : undefined
+
+  if (minLength !== undefined && stringValue.length < minLength) {
+    errors.push(`${path || 'value'} must have length >= ${minLength}`)
+  }
+
+  if (maxLength !== undefined && stringValue.length > maxLength) {
+    errors.push(`${path || 'value'} must have length <= ${maxLength}`)
+  }
+
+  if (pattern && !new RegExp(pattern).test(stringValue)) {
+    errors.push(`${path || 'value'} must match pattern ${pattern}`)
+  }
+
+  return errors
+}
+
+function validateNumberSchema(
+  value: unknown,
+  schemaObject: Record<string, unknown>,
+  path: string,
+): string[] {
+  const primitiveErrors = validatePrimitive(value, 'number', path)
+  if (primitiveErrors.length > 0) {
+    return primitiveErrors
+  }
+
+  return validateNumericBounds(value as number, schemaObject, path)
+}
+
+function validateIntegerSchema(
+  value: unknown,
+  schemaObject: Record<string, unknown>,
+  path: string,
+): string[] {
+  const primitiveErrors = validatePrimitive(value, 'number', path)
+  if (primitiveErrors.length > 0) {
+    return primitiveErrors
+  }
+
+  const numberValue = value as number
+  const errors = []
+
+  if (!Number.isInteger(numberValue)) {
+    errors.push(`${path || 'value'} must be an integer`)
+  }
+
+  errors.push(...validateNumericBounds(numberValue, schemaObject, path))
+  return errors
+}
+
+function validateNumericBounds(
+  value: number,
+  schemaObject: Record<string, unknown>,
+  path: string,
+): string[] {
+  const errors = []
+  const minimum =
+    typeof schemaObject.minimum === 'number' ? (schemaObject.minimum as number) : undefined
+  const maximum =
+    typeof schemaObject.maximum === 'number' ? (schemaObject.maximum as number) : undefined
+
+  if (minimum !== undefined && value < minimum) {
+    errors.push(`${path || 'value'} must be >= ${minimum}`)
+  }
+
+  if (maximum !== undefined && value > maximum) {
+    errors.push(`${path || 'value'} must be <= ${maximum}`)
+  }
+
+  return errors
+}
+
 export interface GatewayCallResult {
   data: unknown
   trace: GatewayTraceEntry
@@ -154,7 +307,8 @@ export async function invokeProcedureWithApi(
   input: Record<string, unknown> = {},
   requestApi: RequestApi = api,
 ): Promise<GatewayCallResult> {
-  const schema = procedureSchemas[procedure as ProcedureName]
+  const schema =
+    getEffectiveProcedureSchema(procedure) ?? procedureSchemas[procedure as ProcedureName]
   if (!schema) {
     throw formatGatewayError({
       type: 'validation_error',
@@ -164,6 +318,7 @@ export async function invokeProcedureWithApi(
   }
 
   const validationErrors = validateAgainstSchema(input, schema.inputSchema)
+  validationErrors.push(...validateProcedureInput(procedure, input))
   if (validationErrors.length > 0) {
     throw formatGatewayError({
       type: 'validation_error',
@@ -174,15 +329,17 @@ export async function invokeProcedureWithApi(
 
   const trace = startTrace(procedure, schema.method)
   const maxRetries = resolveGatewayRetryCount()
+  const requestInput = mapProcedureInput(procedure, input)
 
   try {
     let attempt = 0
     while (true) {
       try {
-        const data =
+        const response =
           schema.method === 'GET'
-            ? await requestApi.get(schema.path, input)
-            : await requestApi.post(schema.path, input)
+            ? await requestApi.get(schema.path, requestInput)
+            : await requestApi.post(schema.path, requestInput)
+        const data = transformProcedureResponse(procedure, input, response)
 
         return {
           data,

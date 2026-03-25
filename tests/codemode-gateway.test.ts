@@ -38,6 +38,85 @@ describe('codemode gateway validation', () => {
     })
   })
 
+  it('rejects generated string inputs that violate minLength constraints', async () => {
+    await expect(invokeProcedure('project.one', { projectId: '' })).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'project.one',
+      message: expect.stringContaining('projectId must have length >= 1'),
+    })
+  })
+
+  it('rejects unexpected input properties when the schema disallows them', async () => {
+    await expect(
+      invokeProcedureWithApi(
+        'application.one',
+        {
+          applicationId: 'app-1',
+          unexpected: true,
+        },
+        {
+          async get() {
+            throw new Error('Unexpected GET call')
+          },
+          async post() {
+            throw new Error('Unexpected POST call')
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'application.one',
+      message: expect.stringContaining('unexpected is not allowed'),
+    })
+  })
+
+  it('rejects generated integer inputs that are not integers', async () => {
+    await expect(
+      invokeProcedureWithApi(
+        'application.update',
+        {
+          applicationId: 'app-1',
+          stopGracePeriodSwarm: 1.5,
+        },
+        {
+          async get() {
+            throw new Error('Unexpected GET call')
+          },
+          async post() {
+            throw new Error('Unexpected POST call')
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'application.update',
+      message: expect.stringContaining('stopGracePeriodSwarm must be an integer'),
+    })
+  })
+
+  it('rejects generated string inputs that violate pattern constraints', async () => {
+    await expect(
+      invokeProcedureWithApi(
+        'docker.restartContainer',
+        {
+          containerId: 'bad id',
+        },
+        {
+          async get() {
+            throw new Error('Unexpected GET call')
+          },
+          async post() {
+            throw new Error('Unexpected POST call')
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'docker.restartContainer',
+      message: expect.stringContaining('containerId must match pattern'),
+    })
+  })
+
   it('retries retryable GET failures through the gateway', async () => {
     let attempts = 0
     const fakeApi = {
@@ -135,5 +214,197 @@ describe('codemode gateway validation', () => {
     expect(result.trace.procedure).toBe('project.all')
     expect(result.trace.method).toBe('GET')
     expect(result.trace.durationMs).toBeGreaterThanOrEqual(0)
+  })
+
+  it('does not forward MCP-only shaping params upstream for application.one', async () => {
+    const fakeApi = {
+      async get(_path: string, input?: Record<string, unknown>) {
+        expect(input).toEqual({ applicationId: 'app-1' })
+        return {
+          applicationId: 'app-1',
+          name: 'Demo app',
+          deployments: [{ deploymentId: 'dep-1' }, { deploymentId: 'dep-2' }],
+        }
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'application.one',
+      {
+        applicationId: 'app-1',
+        select: ['name', 'deployments'],
+        deploymentLimit: 1,
+      },
+      fakeApi,
+    )
+
+    expect(result.data).toEqual({
+      name: 'Demo app',
+      deployments: [{ deploymentId: 'dep-1' }],
+    })
+  })
+
+  it('keeps application.one default behavior unchanged without shaping params', async () => {
+    const payload = {
+      applicationId: 'app-1',
+      name: 'Demo app',
+      applicationStatus: 'running',
+      deployments: [{ deploymentId: 'dep-1' }, { deploymentId: 'dep-2' }],
+    }
+    const fakeApi = {
+      async get() {
+        return payload
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'application.one',
+      { applicationId: 'app-1' },
+      fakeApi,
+    )
+    expect(result.data).toEqual(payload)
+  })
+
+  it('removes deployments when includeDeployments is false', async () => {
+    const fakeApi = {
+      async get() {
+        return {
+          applicationId: 'app-1',
+          name: 'Demo app',
+          deployments: [{ deploymentId: 'dep-1' }],
+        }
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'application.one',
+      {
+        applicationId: 'app-1',
+        select: ['name', 'deployments'],
+        includeDeployments: false,
+      },
+      fakeApi,
+    )
+
+    expect(result.data).toEqual({ name: 'Demo app' })
+  })
+
+  it('supports deploymentLimit zero for application.one', async () => {
+    const fakeApi = {
+      async get() {
+        return {
+          applicationId: 'app-1',
+          deployments: [{ deploymentId: 'dep-1' }],
+        }
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'application.one',
+      {
+        applicationId: 'app-1',
+        select: ['deployments'],
+        deploymentLimit: 0,
+      },
+      fakeApi,
+    )
+
+    expect(result.data).toEqual({ deployments: [] })
+  })
+
+  it('ignores unknown fields in application.one select instead of failing', async () => {
+    const fakeApi = {
+      async get() {
+        return {
+          applicationId: 'app-1',
+          name: 'Demo app',
+          watchPaths: ['apps/web'],
+        }
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'application.one',
+      {
+        applicationId: 'app-1',
+        select: ['watchPaths', 'missingField'],
+      },
+      fakeApi,
+    )
+
+    expect(result.data).toEqual({
+      watchPaths: ['apps/web'],
+    })
+  })
+
+  it('rejects invalid application.one shaping combinations', async () => {
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    await expect(
+      invokeProcedureWithApi(
+        'application.one',
+        {
+          applicationId: 'app-1',
+          includeDeployments: false,
+          deploymentLimit: 1,
+        },
+        fakeApi,
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'application.one',
+      message: expect.stringContaining(
+        'deploymentLimit cannot be used when includeDeployments is false',
+      ),
+    })
+  })
+
+  it('rejects invalid application.one shaping values', async () => {
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    await expect(
+      invokeProcedureWithApi(
+        'application.one',
+        {
+          applicationId: 'app-1',
+          select: ['name', ''],
+          deploymentLimit: -1,
+        },
+        fakeApi,
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'application.one',
+      message: expect.stringContaining('select[1] must be a non-empty string'),
+    })
   })
 })

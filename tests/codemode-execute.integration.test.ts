@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+import { invokeProcedureWithApi } from '../src/codemode/gateway/api-gateway.js'
+import { createSandboxHost } from '../src/codemode/sandbox/host.js'
 import { runSandboxedFunction } from '../src/codemode/sandbox/runner.js'
 import { buildExecuteContext, runExecuteWithHost } from '../src/codemode/tools/execute.js'
 
@@ -278,5 +280,304 @@ describe('codemode execute integration', () => {
       applicationId: 'app-1',
       title: 'After update',
     })
+  })
+
+  it('can shape application.one responses inside execute without forwarding MCP-only params upstream', async () => {
+    const fakeApi = {
+      async get(_path: string, input?: Record<string, unknown>) {
+        expect(input).toEqual({ applicationId: 'app-1' })
+        return {
+          applicationId: 'app-1',
+          name: 'Demo app',
+          watchPaths: ['apps/web'],
+          deployments: [
+            { deploymentId: 'dep-1', title: 'first' },
+            { deploymentId: 'dep-2', title: 'second' },
+          ],
+          env: 'SECRET=1',
+        }
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+    const host = createSandboxHost({
+      maxCalls: 5,
+      executor: async (procedure, input = {}) => invokeProcedureWithApi(procedure, input, fakeApi),
+    })
+
+    const result = await runExecuteWithHost(
+      `
+        return await dokploy.application.one({
+          applicationId: 'app-1',
+          select: ['name', 'watchPaths', 'deployments'],
+          deploymentLimit: 1,
+        })
+      `,
+      host,
+    )
+
+    expect(result.result).toEqual({
+      name: 'Demo app',
+      watchPaths: ['apps/web'],
+      deployments: [{ deploymentId: 'dep-1', title: 'first' }],
+    })
+  })
+
+  it('can execute virtual application.many while preserving input order and shaping per app', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${String(input.applicationId ?? '')}`)
+
+      switch (procedure) {
+        case 'application.one':
+          if (input.applicationId === 'app-2') {
+            expect(input).toEqual({
+              applicationId: 'app-2',
+              select: ['name', 'watchPaths', 'deployments'],
+              deploymentLimit: 1,
+            })
+            return {
+              data: {
+                name: 'Second app',
+                watchPaths: ['apps/two'],
+                deployments: [{ deploymentId: 'dep-2a' }],
+              },
+              trace: trace(procedure, 0),
+            }
+          }
+
+          if (input.applicationId === 'app-1') {
+            expect(input).toEqual({
+              applicationId: 'app-1',
+              select: ['name', 'watchPaths', 'deployments'],
+              deploymentLimit: 1,
+            })
+            return {
+              data: {
+                name: 'First app',
+                watchPaths: ['apps/one'],
+                deployments: [{ deploymentId: 'dep-1a' }],
+              },
+              trace: trace(procedure, 1),
+            }
+          }
+
+          throw new Error(`Unexpected applicationId ${String(input.applicationId)}`)
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: `
+        async ({ dokploy }) => {
+          return await dokploy.application.many({
+            applicationIds: ['app-2', 'app-1'],
+            select: ['name', 'watchPaths', 'deployments'],
+            deploymentLimit: 1,
+          })
+        }
+      `,
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      items: [
+        {
+          name: 'Second app',
+          watchPaths: ['apps/two'],
+          deployments: [{ deploymentId: 'dep-2a' }],
+        },
+        {
+          name: 'First app',
+          watchPaths: ['apps/one'],
+          deployments: [{ deploymentId: 'dep-1a' }],
+        },
+      ],
+      total: 2,
+    })
+    expect(calls).toEqual(['application.one:app-2', 'application.one:app-1'])
+    expect(context.getCalls()).toHaveLength(2)
+  })
+
+  it('supports virtual application.many through dokploy.call', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      switch (procedure) {
+        case 'application.one':
+          return {
+            data: { name: `Name ${String(input.applicationId)}` },
+            trace: trace(procedure, 0),
+          }
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: `
+        async ({ dokploy }) => {
+          return await dokploy.call('application.many', {
+            applicationIds: ['app-1', 'app-2'],
+            select: ['name'],
+          })
+        }
+      `,
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      items: [{ name: 'Name app-1' }, { name: 'Name app-2' }],
+      total: 2,
+    })
+  })
+
+  it('can execute virtual project.overview with paginated application discovery', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${JSON.stringify(input)}`)
+
+      switch (procedure) {
+        case 'project.one':
+          expect(input).toEqual({ projectId: 'project-1' })
+          return {
+            data: { projectId: 'project-1', name: 'Demo project' },
+            trace: trace(procedure, 0),
+          }
+        case 'environment.byProjectId':
+          expect(input).toEqual({ projectId: 'project-1' })
+          return {
+            data: [{ environmentId: 'env-1', name: 'Production' }],
+            trace: trace(procedure, 1),
+          }
+        case 'environment.one':
+          expect(input).toEqual({ environmentId: 'env-1' })
+          return {
+            data: {
+              environmentId: 'env-1',
+              name: 'Production',
+              applications: [{ applicationId: 'app-1' }, { applicationId: 'app-2' }],
+            },
+            trace: trace(procedure, 2),
+          }
+        case 'application.one':
+          if (input.applicationId === 'app-1') {
+            expect(input).toEqual({
+              applicationId: 'app-1',
+              select: [
+                'applicationId',
+                'name',
+                'appName',
+                'applicationStatus',
+                'domains',
+                'mounts',
+                'watchPaths',
+                'deployments',
+              ],
+              deploymentLimit: 1,
+            })
+            return {
+              data: {
+                applicationId: 'app-1',
+                name: 'First app',
+                appName: 'first-app',
+                applicationStatus: 'running',
+                domains: [{ host: 'first.example.com' }],
+                mounts: [{ mountId: 'mount-1' }],
+                watchPaths: ['apps/one'],
+                deployments: [{ deploymentId: 'dep-1' }],
+              },
+              trace: trace(procedure, 3),
+            }
+          }
+
+          if (input.applicationId === 'app-2') {
+            expect(input).toEqual({
+              applicationId: 'app-2',
+              select: [
+                'applicationId',
+                'name',
+                'appName',
+                'applicationStatus',
+                'domains',
+                'mounts',
+                'watchPaths',
+                'deployments',
+              ],
+              deploymentLimit: 1,
+            })
+            return {
+              data: {
+                applicationId: 'app-2',
+                name: 'Second app',
+                appName: 'second-app',
+                applicationStatus: 'stopped',
+                domains: [{ host: 'second.example.com' }],
+                mounts: [{ mountId: 'mount-2' }],
+                watchPaths: ['apps/two'],
+                deployments: [{ deploymentId: 'dep-2' }],
+              },
+              trace: trace(procedure, 4),
+            }
+          }
+
+          throw new Error(`Unexpected applicationId ${String(input.applicationId)}`)
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: `
+        async ({ dokploy }) => {
+          return await dokploy.project.overview({
+            projectId: 'project-1',
+            pageSize: 1,
+          })
+        }
+      `,
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      projectId: 'project-1',
+      name: 'Demo project',
+      environments: [
+        {
+          environmentId: 'env-1',
+          name: 'Production',
+          applications: [
+            {
+              applicationId: 'app-1',
+              name: 'First app',
+              appName: 'first-app',
+              applicationStatus: 'running',
+              domains: [{ host: 'first.example.com' }],
+              mounts: [{ mountId: 'mount-1' }],
+              watchPaths: ['apps/one'],
+              lastDeployment: { deploymentId: 'dep-1' },
+            },
+            {
+              applicationId: 'app-2',
+              name: 'Second app',
+              appName: 'second-app',
+              applicationStatus: 'stopped',
+              domains: [{ host: 'second.example.com' }],
+              mounts: [{ mountId: 'mount-2' }],
+              watchPaths: ['apps/two'],
+              lastDeployment: { deploymentId: 'dep-2' },
+            },
+          ],
+        },
+      ],
+    })
+    expect(calls).toEqual([
+      'project.one:{"projectId":"project-1"}',
+      'environment.byProjectId:{"projectId":"project-1"}',
+      'environment.one:{"environmentId":"env-1"}',
+      'application.one:{"applicationId":"app-1","select":["applicationId","name","appName","applicationStatus","domains","mounts","watchPaths","deployments"],"deploymentLimit":1}',
+      'application.one:{"applicationId":"app-2","select":["applicationId","name","appName","applicationStatus","domains","mounts","watchPaths","deployments"],"deploymentLimit":1}',
+    ])
+    expect(context.getCalls()).toHaveLength(5)
   })
 })

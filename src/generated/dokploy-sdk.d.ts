@@ -2421,3 +2421,5 @@ export interface DokploySdk {
     update(input: whitelabeling_update_Input): Promise<whitelabeling_update_Output>
   }
 }
+
+export function createGeneratedDokployRuntime(call: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>): DokploySdk

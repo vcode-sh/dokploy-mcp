@@ -1,6 +1,6 @@
 {
   "name": "@vibetools/dokploy-mcp",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Dokploy MCP server with Code Mode by default",
   "type": "module",
   "exports": {

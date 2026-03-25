@@ -74,6 +74,7 @@ export const executeTool: ToolDefinition = createTool({
     'Run JavaScript code against the Dokploy API. ' +
     'IMPORTANT: Do NOT wrap code in a function -- `dokploy` and `helpers` are already globals. ' +
     'Write bare code: `await dokploy.project.all()` or `const x = await dokploy.application.one({ applicationId: "id" }); return x`. ' +
+    'Common reads: `application.one` returns application detail fields such as status, mounts, domains, and deployments, and supports optional `select`, `includeDeployments`, and `deploymentLimit`; `application.many` batches several shaped application reads; `project.overview` returns a compact per-environment and per-application state view; `deployment.all` returns deployment history entries. ' +
     'dokploy.<module>.<method>(params) calls the API. ' +
     'Modules: project, environment, application, compose, domain, postgres, mysql, mariadb, mongo, redis, ' +
     'deployment, docker, server, settings, user, notification, backup, mounts, registry, certificates, schedule, patch, sshKey, gitProvider, and more. ' +

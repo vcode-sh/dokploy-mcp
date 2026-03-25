@@ -1,7 +1,8 @@
-import { createGeneratedDokployRuntime } from '../../generated/dokploy-sdk.js'
-import { buildHelpers } from '../context/execute-context.js'
+import { createExecuteContext } from '../context/execute-context.js'
+import type { GatewayCallResult } from '../gateway/api-gateway.js'
 import { createSearchCatalogView } from '../context/search-context.js'
 import { runSandboxedFunction } from './runner.js'
+import { resolveSandboxLimits } from './limits.js'
 import type { SandboxLimits } from './types.js'
 
 const pendingCalls = new Map<
@@ -60,10 +61,30 @@ process.on('message', async (message: unknown) => {
     const context =
       payload.mode === 'search'
         ? { catalog: createSearchCatalogView() }
-        : {
-            dokploy: createGeneratedDokployRuntime(rpcCall),
-            helpers: buildHelpers(),
-          }
+        : (() => {
+            const rpcExecutor = async (
+              procedure: string,
+              input?: Record<string, unknown>,
+            ): Promise<GatewayCallResult> => {
+              const data = await rpcCall(procedure, input ?? {})
+              return {
+                data: data as Record<string, unknown>,
+                trace: {
+                  procedure,
+                  method: 'GET' as const,
+                  startedAt: Date.now(),
+                  finishedAt: Date.now(),
+                  durationMs: 0,
+                },
+              }
+            }
+            const maxCalls = limits?.maxCalls ?? resolveSandboxLimits().maxCalls
+            const ctx = createExecuteContext(rpcExecutor, maxCalls)
+            return {
+              dokploy: ctx.dokploy,
+              helpers: ctx.helpers,
+            }
+          })()
 
     const execution = await runSandboxedFunction({
       code: String(payload.code),

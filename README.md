@@ -4,13 +4,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org/)
 
-MCP server for [Dokploy](https://dokploy.com). Two tools. 463 API procedures. Your AI agent can now deploy, configure, and manage your entire infrastructure without memorizing 377 endpoint definitions first.
+MCP server for [Dokploy](https://dokploy.com). Two tools. 463 API procedures. Your AI agent can now deploy, configure, and manage your entire infrastructure without memorizing hundreds of endpoint definitions first.
 
 Most MCP servers dump hundreds of tool schemas into your context window and call it a day. This one doesn't. **Code Mode** gives your agent `search` and `execute` -- it finds what it needs from a compact API catalog, writes a workflow, and the sandbox runs the whole thing in one call. Create an app, set env vars, mount volumes, configure domains, deploy -- all in a single round-trip.
 
-The result: **99.8% fewer tokens** on tool definitions. Your context window can go back to doing its actual job.
+The result: **99.4% fewer tokens** on tool definitions. Your context window can go back to doing its actual job.
 
-> Previously: 377 tools = ~92,354 tokens just to list them. Now: 2 tools = ~218 tokens. The math is embarrassing for everyone else.
+> Previously: 377 tools = ~92,354 tokens just to list them. Now: 2 tools = ~595 tokens. The math is still embarrassing for everyone else.
 
 ## Quick start
 
@@ -42,21 +42,93 @@ Want a wizard? `npx @vibetools/dokploy-mcp setup` -- validates credentials, save
 Your agent gets two tools:
 
 ```
-search   →  "what can Dokploy do with applications?"
-execute  →  runs a multi-step workflow in one sandboxed call
+search   →  discover API procedures and their parameters
+execute  →  run a multi-step workflow in one sandboxed call
 ```
 
-One `execute` call can spin up an app, configure resource limits, set 5 env vars, create 3 file mounts, attach a domain with HTTPS, deploy, wait for it to come up, verify it's running, and clean up after itself. Eight API calls. One context window round-trip. Sub-second sandbox overhead.
+`dokploy` and `helpers` are sandbox globals -- your agent writes bare code, no wrapper functions:
 
-**What this looks like in practice:**
+```js
+// search
+catalog.searchText("deploy")
+catalog.get("application.one")
+
+// execute -- just write code
+await dokploy.settings.health()
+
+// multi-step workflows
+const app = await dokploy.application.one({ applicationId: "id", select: ["name", "status"] })
+return app.name
+```
+
+One `execute` call can spin up an app, configure resource limits, set env vars, create file mounts, attach a domain with HTTPS, deploy, wait for it to come up, verify, and clean up. Eight API calls. One context window round-trip.
+
+**Token comparison:**
 
 | | Old way (endpoint-per-tool) | Code Mode |
 |---|---|---|
-| Tool definitions sent | ~92,354 tokens (377 tools) | ~218 tokens (2 tools) |
+| Tool definitions sent | ~92,354 tokens (377 tools) | ~595 tokens (2 tools) |
 | Deploy workflow (8 API calls) | 8 round-trips through the model | 1 execute call, done |
-| Context window tax | ~738k tokens on tool schemas alone | ~218 tokens total |
+| Context window tax | ~738k tokens on tool schemas alone | ~595 tokens total |
 
-That last row is why this exists. Every token spent on tool definitions is a token your agent can't use for reasoning. We just gave you 738k of them back.
+Every token spent on tool definitions is a token your agent can't use for reasoning. We just gave you 738k of them back.
+
+## Response shaping
+
+Heavy endpoints like `application.one` return 25KB+ of data when you need 3 fields. Code Mode adds optional shaping parameters that trim responses **before** the sandbox counts bytes:
+
+```js
+// Select only the fields you need (96% reduction)
+await dokploy.application.one({
+  applicationId: "id",
+  select: ["name", "applicationStatus", "mounts", "watchPaths"],
+  includeDeployments: false
+})
+
+// Or limit deployment history instead of excluding it entirely
+await dokploy.application.one({
+  applicationId: "id",
+  deploymentLimit: 1   // only the latest deployment
+})
+```
+
+Without shaping params, behavior is identical to the raw Dokploy API -- fully backward compatible.
+
+## Virtual helpers
+
+Code Mode includes MCP-side helpers for common multi-call patterns. They run inside `execute`, fan out to real Dokploy API calls, and charge every underlying call against the sandbox budget honestly.
+
+**Batch reads** -- inspect N apps without N separate tool calls:
+
+```js
+await dokploy.application.many({
+  applicationIds: ["app-1", "app-2", "app-3"],
+  select: ["name", "applicationStatus", "watchPaths"],
+  includeDeployments: false
+})
+// Returns: { items: [...], total: 3 }
+```
+
+**Project overview** -- the entire project state in one call:
+
+```js
+await dokploy.project.overview({ projectId: "id" })
+// Returns: { name, environments: [{ name, applications: [{ name, status, domains, mounts, watchPaths, lastDeployment }] }] }
+```
+
+These are discoverable via `search` (`catalog.get("application.many")`, `catalog.get("project.overview")`). They are MCP-side virtual procedures, not Dokploy HTTP endpoints.
+
+## Sandbox helpers
+
+Available as globals inside `execute`:
+
+| Helper | Description |
+|---|---|
+| `helpers.sleep(ms)` | Async delay, max 15s. Use after deploy to wait for containers. |
+| `helpers.assert(condition, msg)` | Quick validation. Throws on falsy. |
+| `helpers.pick(obj, keys)` | Object projection. |
+| `helpers.limit(arr, n)` | Array slicing. |
+| `helpers.selectOne(arr, pred?)` | Find first match. |
 
 ## Configuration
 
@@ -86,8 +158,6 @@ Resolution order: env vars > `~/.config/dokploy-mcp/config.json` > Dokploy CLI c
 The Code Mode catalog covers the full Dokploy OpenAPI surface -- 463 procedures across every module. Applications, compose stacks, databases (Postgres, MySQL, MariaDB, MongoDB, Redis), domains, certificates, Docker, servers, backups, notifications, and about 30 more categories you'll discover when you need them.
 
 Your agent doesn't need to know any of this upfront. That's the point. It searches when it needs something, executes when it knows what to do.
-
-Coverage details: **[docs/coverage.md](docs/coverage.md)**
 
 ## CLI
 

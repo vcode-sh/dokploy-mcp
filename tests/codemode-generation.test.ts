@@ -43,6 +43,7 @@ describe('codemode generation', () => {
     const runtime = buildSdkRuntime(schemas)
 
     expect(declaration).toContain('export interface DokploySdk')
+    expect(declaration).toContain('export function createGeneratedDokployRuntime')
     expect(declaration).toContain('application: {')
     expect(declaration).toContain('project: {')
     expect(declaration).toContain('notification: {')

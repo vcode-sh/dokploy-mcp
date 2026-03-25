@@ -64,7 +64,8 @@ export const searchTool: ToolDefinition = createTool({
     'Search the Dokploy API catalog. ' +
     'IMPORTANT: Do NOT wrap code in a function -- `catalog` is already a global. ' +
     'Write bare code: `catalog.searchText("deploy")` or `catalog.getByTag("application")` or `catalog.get("application.one")`. ' +
-    'Returns procedure names, required/optional parameters, and HTTP methods.',
+    'Common patterns: `catalog.get("application.one")` -> application detail fields plus optional shaping params; `catalog.get("application.many")` -> batched application reads; `catalog.get("project.overview")` -> compact project state view; `catalog.get("deployment.all")` -> deployment history entries. ' +
+    'Returns procedure names, parameters, HTTP methods, schemas, and response hints for key endpoints.',
   schema: searchSchema,
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async ({ input }) => {

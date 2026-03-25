@@ -341,6 +341,10 @@ export function buildSdkDeclaration(procedureSchemas) {
   }
   lines.push('}')
   lines.push('')
+  lines.push(
+    "export function createGeneratedDokployRuntime(call: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>): DokploySdk",
+  )
+  lines.push('')
 
   return lines.join('\n')
 }
