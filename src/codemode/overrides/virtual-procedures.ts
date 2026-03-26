@@ -47,6 +47,9 @@ function createApplicationManyInputSchema() {
       deploymentLimit: {
         type: 'integer',
       },
+      includeSecrets: {
+        type: 'boolean',
+      },
     },
     required: ['applicationIds'],
     additionalProperties: false,
@@ -147,6 +150,10 @@ function buildApplicationOneInput(
 
   if ('deploymentLimit' in input) {
     nextInput.deploymentLimit = input.deploymentLimit
+  }
+
+  if ('includeSecrets' in input) {
+    nextInput.includeSecrets = input.includeSecrets
   }
 
   return nextInput
@@ -351,7 +358,7 @@ const virtualProcedureDefinitions: Record<string, VirtualProcedureDefinition> = 
         'MCP-only virtual helper that fans out to application.one while preserving input order and execute call budgeting.',
       inputKind: 'body',
       requiredInputs: ['applicationIds'],
-      optionalInputs: ['select', 'includeDeployments', 'deploymentLimit'],
+      optionalInputs: ['select', 'includeDeployments', 'deploymentLimit', 'includeSecrets'],
       response: {
         type: 'object',
         keys: ['items', 'total'],

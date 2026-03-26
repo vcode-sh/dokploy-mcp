@@ -94,6 +94,26 @@ await dokploy.application.one({
 
 Without shaping params, behavior is identical to the raw Dokploy API -- fully backward compatible.
 
+## Secret redaction
+
+Git provider credentials (GitHub App private keys, client secrets, webhook secrets, Gitea/GitLab/Bitbucket tokens) are **automatically redacted** from all responses. Your AI agent sees `[REDACTED]` instead of the real values -- because leaking your private key into a context window is the kind of mistake you only make once.
+
+Affected procedures: `application.one`, `application.many`, `github.one`, `gitea.one`, `gitlab.one`, `bitbucket.one`, `github.githubProviders`, `gitProvider.getAll`.
+
+If you actually need the raw secrets (rotation scripts, migration, etc.), opt in explicitly:
+
+```js
+await dokploy.application.one({
+  applicationId: "id",
+  includeSecrets: true  // you asked for it
+})
+
+await dokploy.github.one({
+  githubId: "id",
+  includeSecrets: true
+})
+```
+
 ## Virtual helpers
 
 Code Mode includes MCP-side helpers for common multi-call patterns. They run inside `execute`, fan out to real Dokploy API calls, and charge every underlying call against the sandbox budget honestly.

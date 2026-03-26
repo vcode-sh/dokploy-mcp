@@ -11,7 +11,84 @@ interface ProcedureOverride {
   transformResponse?: (data: unknown, input: Record<string, unknown>) => unknown
 }
 
-const applicationOneMcpOnlyKeys = new Set(['select', 'includeDeployments', 'deploymentLimit'])
+// Keys that hold credentials in git-provider objects (github, gitea, gitlab, bitbucket).
+// Redacted by default — callers must pass includeSecrets: true to receive them.
+const gitProviderSecretKeys = new Set([
+  // GitHub App
+  'githubClientSecret',
+  'githubPrivateKey',
+  'githubWebhookSecret',
+  // Gitea
+  'clientSecret',
+  'accessToken',
+  'refreshToken',
+  // GitLab
+  'secret',
+  // Bitbucket
+  'appPassword',
+  'apiToken',
+  // SSH / generic
+  'privateKey',
+  'privateKeyPass',
+])
+
+// Top-level keys on an application object that contain nested git-provider data
+const gitProviderNestingKeys = new Set(['github', 'gitea', 'gitlab', 'bitbucket'])
+
+function redactRecord(value: Record<string, unknown>): Record<string, unknown> {
+  const redacted: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(value)) {
+    if (gitProviderSecretKeys.has(key)) {
+      redacted[key] = '[REDACTED]'
+    } else if (isRecord(val)) {
+      redacted[key] = redactRecord(val)
+    } else {
+      redacted[key] = val
+    }
+  }
+  return redacted
+}
+
+function redactGitProviderSecrets(data: unknown): unknown {
+  if (!isRecord(data)) {
+    return data
+  }
+
+  if (Array.isArray(data)) {
+    return data
+  }
+
+  let changed = false
+  const result: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(data)) {
+    if (gitProviderSecretKeys.has(key)) {
+      result[key] = '[REDACTED]'
+      changed = true
+    } else if (gitProviderNestingKeys.has(key) && isRecord(value)) {
+      result[key] = redactRecord(value)
+      changed = true
+    } else {
+      result[key] = value
+    }
+  }
+
+  return changed ? result : data
+}
+
+function redactGitProviderArray(data: unknown): unknown {
+  if (!Array.isArray(data)) {
+    return redactGitProviderSecrets(data)
+  }
+  return data.map((item) => redactGitProviderSecrets(item))
+}
+
+const applicationOneMcpOnlyKeys = new Set([
+  'select',
+  'includeDeployments',
+  'deploymentLimit',
+  'includeSecrets',
+])
 
 const applicationOneInputSchema = {
   type: 'object',
@@ -31,6 +108,9 @@ const applicationOneInputSchema = {
     },
     deploymentLimit: {
       type: 'integer',
+    },
+    includeSecrets: {
+      type: 'boolean',
     },
   },
   required: ['applicationId'],
@@ -140,7 +220,35 @@ function transformApplicationOneResponse(data: unknown, input: Record<string, un
   }
 
   const selected = pickSelectedFields(data, input.select)
-  return applyDeploymentControls(selected, input)
+  const shaped = applyDeploymentControls(selected, input)
+  return input.includeSecrets === true ? shaped : redactGitProviderSecrets(shaped)
+}
+
+const includeSecretsMcpOnlyKeys = new Set(['includeSecrets'])
+
+function mapIncludeSecretsInput(input: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(input).filter(([key]) => !includeSecretsMcpOnlyKeys.has(key)),
+  )
+}
+
+function transformWithSecretGate(data: unknown, input: Record<string, unknown>) {
+  return input.includeSecrets === true ? data : redactGitProviderSecrets(data)
+}
+
+function transformArrayWithSecretGate(data: unknown, input: Record<string, unknown>) {
+  return input.includeSecrets === true ? data : redactGitProviderArray(data)
+}
+
+function withIncludeSecrets(schema: Record<string, unknown>) {
+  const properties = (schema.properties ?? {}) as Record<string, unknown>
+  return {
+    ...schema,
+    properties: {
+      ...properties,
+      includeSecrets: { type: 'boolean' },
+    },
+  }
 }
 
 const procedureOverrides: Record<string, ProcedureOverride> = {
@@ -149,6 +257,52 @@ const procedureOverrides: Record<string, ProcedureOverride> = {
     mapInput: mapApplicationOneInput,
     validateInput: validateApplicationOneInput,
     transformResponse: transformApplicationOneResponse,
+  },
+  'github.one': {
+    inputSchema: withIncludeSecrets({
+      type: 'object',
+      properties: { githubId: { type: 'string', minLength: 1 } },
+      required: ['githubId'],
+      additionalProperties: false,
+    }),
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformWithSecretGate,
+  },
+  'github.githubProviders': {
+    transformResponse: transformArrayWithSecretGate,
+  },
+  'gitea.one': {
+    inputSchema: withIncludeSecrets({
+      type: 'object',
+      properties: { giteaId: { type: 'string', minLength: 1 } },
+      required: ['giteaId'],
+      additionalProperties: false,
+    }),
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformWithSecretGate,
+  },
+  'gitlab.one': {
+    inputSchema: withIncludeSecrets({
+      type: 'object',
+      properties: { gitlabId: { type: 'string', minLength: 1 } },
+      required: ['gitlabId'],
+      additionalProperties: false,
+    }),
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformWithSecretGate,
+  },
+  'bitbucket.one': {
+    inputSchema: withIncludeSecrets({
+      type: 'object',
+      properties: { bitbucketId: { type: 'string', minLength: 1 } },
+      required: ['bitbucketId'],
+      additionalProperties: false,
+    }),
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformWithSecretGate,
+  },
+  'gitProvider.getAll': {
+    transformResponse: transformArrayWithSecretGate,
   },
 }
 

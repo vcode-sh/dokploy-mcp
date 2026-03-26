@@ -408,3 +408,195 @@ describe('codemode gateway validation', () => {
     })
   })
 })
+
+describe('codemode gateway secret redaction', () => {
+  const githubProvider = {
+    githubId: 'gh-1',
+    githubAppName: 'my-app',
+    githubClientId: 'Iv23abc',
+    githubClientSecret: 'secret-value',
+    githubPrivateKey: '-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----',
+    githubWebhookSecret: 'whsec-123',
+    gitProviderId: 'gp-1',
+  }
+
+  const applicationWithGithub = {
+    applicationId: 'app-1',
+    name: 'Demo',
+    github: githubProvider,
+    gitea: null,
+    gitlab: null,
+    bitbucket: null,
+  }
+
+  it('redacts github secrets from application.one by default', async () => {
+    const fakeApi = {
+      async get() {
+        return applicationWithGithub
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'application.one',
+      { applicationId: 'app-1' },
+      fakeApi,
+    )
+
+    const data = result.data as Record<string, unknown>
+    const github = data.github as Record<string, unknown>
+    expect(github.githubClientSecret).toBe('[REDACTED]')
+    expect(github.githubPrivateKey).toBe('[REDACTED]')
+    expect(github.githubWebhookSecret).toBe('[REDACTED]')
+    expect(github.githubId).toBe('gh-1')
+    expect(github.githubAppName).toBe('my-app')
+    expect(github.githubClientId).toBe('Iv23abc')
+  })
+
+  it('returns secrets when includeSecrets is true', async () => {
+    const fakeApi = {
+      async get() {
+        return applicationWithGithub
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'application.one',
+      { applicationId: 'app-1', includeSecrets: true },
+      fakeApi,
+    )
+
+    const data = result.data as Record<string, unknown>
+    const github = data.github as Record<string, unknown>
+    expect(github.githubClientSecret).toBe('secret-value')
+    expect(github.githubPrivateKey).toContain('BEGIN RSA PRIVATE KEY')
+    expect(github.githubWebhookSecret).toBe('whsec-123')
+  })
+
+  it('redacts secrets from github.one by default', async () => {
+    const fakeApi = {
+      async get() {
+        return githubProvider
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi('github.one', { githubId: 'gh-1' }, fakeApi)
+
+    const data = result.data as Record<string, unknown>
+    expect(data.githubClientSecret).toBe('[REDACTED]')
+    expect(data.githubPrivateKey).toBe('[REDACTED]')
+    expect(data.githubWebhookSecret).toBe('[REDACTED]')
+    expect(data.githubId).toBe('gh-1')
+  })
+
+  it('returns secrets from github.one when includeSecrets is true', async () => {
+    const fakeApi = {
+      async get() {
+        return githubProvider
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'github.one',
+      { githubId: 'gh-1', includeSecrets: true },
+      fakeApi,
+    )
+
+    const data = result.data as Record<string, unknown>
+    expect(data.githubClientSecret).toBe('secret-value')
+    expect(data.githubPrivateKey).toContain('BEGIN RSA PRIVATE KEY')
+  })
+
+  it('redacts gitea secrets from application.one', async () => {
+    const fakeApi = {
+      async get() {
+        return {
+          applicationId: 'app-1',
+          github: null,
+          gitea: {
+            giteaId: 'gt-1',
+            clientSecret: 'gitea-secret',
+            accessToken: 'gitea-token',
+            refreshToken: 'gitea-refresh',
+            name: 'my-gitea',
+          },
+          gitlab: null,
+          bitbucket: null,
+        }
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'application.one',
+      { applicationId: 'app-1' },
+      fakeApi,
+    )
+
+    const data = result.data as Record<string, unknown>
+    const gitea = data.gitea as Record<string, unknown>
+    expect(gitea.clientSecret).toBe('[REDACTED]')
+    expect(gitea.accessToken).toBe('[REDACTED]')
+    expect(gitea.refreshToken).toBe('[REDACTED]')
+    expect(gitea.name).toBe('my-gitea')
+  })
+
+  it('redacts secrets from gitProvider.getAll array response', async () => {
+    const fakeApi = {
+      async get() {
+        return [
+          { gitProviderId: 'gp-1', githubClientSecret: 'sec-1', githubPrivateKey: 'pk-1' },
+          { gitProviderId: 'gp-2', clientSecret: 'sec-2', accessToken: 'tok-2' },
+        ]
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi('gitProvider.getAll', {}, fakeApi)
+
+    const data = result.data as Array<Record<string, unknown>>
+    expect(data[0].githubClientSecret).toBe('[REDACTED]')
+    expect(data[0].githubPrivateKey).toBe('[REDACTED]')
+    expect(data[0].gitProviderId).toBe('gp-1')
+    expect(data[1].clientSecret).toBe('[REDACTED]')
+    expect(data[1].accessToken).toBe('[REDACTED]')
+    expect(data[1].gitProviderId).toBe('gp-2')
+  })
+
+  it('does not strip includeSecrets from non-overridden procedures', async () => {
+    const fakeApi = {
+      async get() {
+        return applicationWithGithub
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'application.one',
+      { applicationId: 'app-1', select: ['name', 'github'] },
+      fakeApi,
+    )
+
+    const data = result.data as Record<string, unknown>
+    expect(data.name).toBe('Demo')
+    const github = data.github as Record<string, unknown>
+    expect(github.githubClientSecret).toBe('[REDACTED]')
+  })
+})
