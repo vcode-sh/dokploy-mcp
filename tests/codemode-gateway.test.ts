@@ -599,4 +599,57 @@ describe('codemode gateway secret redaction', () => {
     const github = data.github as Record<string, unknown>
     expect(github.githubClientSecret).toBe('[REDACTED]')
   })
+
+  it('redacts private keys from sshKey.one responses', async () => {
+    const fakeApi = {
+      async get() {
+        return {
+          sshKeyId: 'ssh-1',
+          name: 'prod',
+          privateKey:
+            '-----BEGIN OPENSSH PRIVATE KEY-----\nfake\n-----END OPENSSH PRIVATE KEY-----',
+          publicKey: 'ssh-ed25519 AAAA...',
+        }
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi('sshKey.one', { sshKeyId: 'ssh-1' }, fakeApi)
+
+    const data = result.data as Record<string, unknown>
+    expect(data.privateKey).toBe('[REDACTED]')
+    expect(data.publicKey).toBe('ssh-ed25519 AAAA...')
+    expect(data.name).toBe('prod')
+  })
+
+  it('redacts nested private keys from server.withSSHKey responses', async () => {
+    const fakeApi = {
+      async get() {
+        return [
+          {
+            serverId: 'srv-1',
+            name: 'primary',
+            sshKey: {
+              sshKeyId: 'ssh-1',
+              privateKey: 'secret-private-key',
+              publicKey: 'ssh-ed25519 AAAA...',
+            },
+          },
+        ]
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    const result = await invokeProcedureWithApi('server.withSSHKey', {}, fakeApi)
+
+    const data = result.data as Array<Record<string, unknown>>
+    const sshKey = data[0]?.sshKey as Record<string, unknown>
+    expect(sshKey.privateKey).toBe('[REDACTED]')
+    expect(sshKey.publicKey).toBe('ssh-ed25519 AAAA...')
+    expect(data[0]?.name).toBe('primary')
+  })
 })

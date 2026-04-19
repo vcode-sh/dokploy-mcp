@@ -32,6 +32,8 @@ const gitProviderSecretKeys = new Set([
   'privateKeyPass',
 ])
 
+const sshSecretKeys = new Set(['privateKey', 'privateKeyPass'])
+
 // Top-level keys on an application object that contain nested git-provider data
 const gitProviderNestingKeys = new Set(['github', 'gitea', 'gitlab', 'bitbucket'])
 
@@ -76,11 +78,48 @@ function redactGitProviderSecrets(data: unknown): unknown {
   return changed ? result : data
 }
 
+function redactSecretKeysDeep(data: unknown, secretKeys: ReadonlySet<string>): unknown {
+  if (Array.isArray(data)) {
+    let changed = false
+    const result = data.map((item) => {
+      const next = redactSecretKeysDeep(item, secretKeys)
+      changed ||= next !== item
+      return next
+    })
+    return changed ? result : data
+  }
+
+  if (!isRecord(data)) {
+    return data
+  }
+
+  let changed = false
+  const result: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(data)) {
+    if (secretKeys.has(key)) {
+      result[key] = '[REDACTED]'
+      changed = true
+      continue
+    }
+
+    const next = redactSecretKeysDeep(value, secretKeys)
+    result[key] = next
+    changed ||= next !== value
+  }
+
+  return changed ? result : data
+}
+
 function redactGitProviderArray(data: unknown): unknown {
   if (!Array.isArray(data)) {
     return redactGitProviderSecrets(data)
   }
   return data.map((item) => redactGitProviderSecrets(item))
+}
+
+function transformSshSecretResponse(data: unknown) {
+  return redactSecretKeysDeep(data, sshSecretKeys)
 }
 
 const applicationOneMcpOnlyKeys = new Set([
@@ -303,6 +342,18 @@ const procedureOverrides: Record<string, ProcedureOverride> = {
   },
   'gitProvider.getAll': {
     transformResponse: transformArrayWithSecretGate,
+  },
+  'server.withSSHKey': {
+    transformResponse: transformSshSecretResponse,
+  },
+  'sshKey.all': {
+    transformResponse: transformSshSecretResponse,
+  },
+  'sshKey.generate': {
+    transformResponse: transformSshSecretResponse,
+  },
+  'sshKey.one': {
+    transformResponse: transformSshSecretResponse,
   },
 }
 
