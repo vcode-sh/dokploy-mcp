@@ -4,12 +4,25 @@ process.on('message', (message) => {
   }
 
   try {
-    process.send?.({
-      type: 'call',
-      requestId: 1,
-      procedure: 'project.one',
-      input: { projectId: 'p1', bad: 1n },
-    })
+    process.send?.(
+      {
+        type: 'call',
+        requestId: 1,
+        procedure: 'project.one',
+        input: { projectId: 'p1', bad: 1n },
+      },
+      (error) => {
+        if (!error) {
+          return
+        }
+
+        process.send?.({
+          type: 'done',
+          ok: false,
+          error: `Sandbox worker failed to send procedure call: ${error.message}`,
+        })
+      },
+    )
   } catch (error) {
     process.send?.({
       type: 'done',
