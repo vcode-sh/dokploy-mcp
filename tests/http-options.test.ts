@@ -57,7 +57,6 @@ describe('http options', () => {
       enabledTags: ['project'],
       capabilityFlags: {
         resources: true,
-        tasks: true,
       },
       host: '0.0.0.0',
       port: 8088,
@@ -79,12 +78,12 @@ describe('http options', () => {
         port: 4000,
         mcpPath: 'explicit-mcp',
         healthPath: 'explicit-health',
-        capabilityFlags: { prompts: true },
+        capabilityFlags: { resources: true },
       }),
     ).toEqual({
       mode: 'codemode',
       enabledTags: undefined,
-      capabilityFlags: { prompts: true },
+      capabilityFlags: { resources: true },
       host: '127.0.0.2',
       port: 4000,
       mcpPath: '/explicit-mcp',
@@ -99,9 +98,7 @@ describe('http options', () => {
           mode: 'raw',
           enabledTags: ['server', 'project'],
           capabilityFlags: {
-            tasks: true,
             resources: true,
-            prompts: true,
           },
           mcpPath: '/rpc',
           healthPath: '/livez',
@@ -112,7 +109,7 @@ describe('http options', () => {
       transport: 'http',
       mode: 'raw',
       enabledTags: ['server', 'project'],
-      capabilityFlags: ['prompts', 'resources', 'tasks'],
+      capabilityFlags: ['resources'],
       mcpPath: '/rpc',
       healthPath: '/livez',
     })

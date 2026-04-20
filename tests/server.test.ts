@@ -66,12 +66,9 @@ describe('createServer', () => {
   it('parses and normalizes capability flag values', () => {
     expect(parseCapabilityFlags('resources,prompts,resources')).toEqual({
       resources: true,
-      prompts: true,
     })
     expect(parseCapabilityFlags(' Resources , COMPLETIONS , invalid , tasks ')).toEqual({
       resources: true,
-      completions: true,
-      tasks: true,
     })
     expect(parseCapabilityFlags('')).toBeUndefined()
     expect(parseCapabilityFlags(' , invalid , ')).toBeUndefined()
@@ -89,8 +86,6 @@ describe('createServer', () => {
       enabledTags: ['project', 'application'],
       capabilityFlags: {
         resources: true,
-        prompts: true,
-        tasks: true,
       },
     })
   })
@@ -116,11 +111,6 @@ describe('createServer', () => {
         mode: 'codemode',
         capabilityFlags: {
           resources: true,
-          prompts: true,
-          completions: true,
-          sampling: true,
-          elicitation: true,
-          tasks: true,
         },
       }),
       async (client) => {

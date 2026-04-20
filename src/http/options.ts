@@ -1,4 +1,4 @@
-import { parseCapabilityFlags } from '../server.js'
+import { parseCapabilityFlags, serverCapabilityFlags } from '../server.js'
 import type { HttpServerOptions, ResolvedHttpServerOptions } from './types.js'
 
 const DEFAULT_HTTP_HOST = '127.0.0.1'
@@ -45,7 +45,11 @@ export function getHealthPayload(options: ResolvedHttpServerOptions) {
     transport: 'http',
     mode: options.mode,
     enabledTags: options.enabledTags ?? [],
-    capabilityFlags: Object.keys(options.capabilityFlags ?? {}).sort(),
+    capabilityFlags: Object.keys(options.capabilityFlags ?? {})
+      .filter((flag) =>
+        serverCapabilityFlags.includes(flag as (typeof serverCapabilityFlags)[number]),
+      )
+      .sort(),
     mcpPath: options.mcpPath,
     healthPath: options.healthPath,
   }

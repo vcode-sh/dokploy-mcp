@@ -5,6 +5,7 @@ import type {
   McpCapabilityRegistration,
   McpCapabilityRegistrationOptions,
 } from './types.js'
+import { MCP_STAGED_CAPABILITY_FAMILIES } from './types.js'
 
 function isCapabilityEnabled(
   family: McpCapabilityRegistration['family'],
@@ -14,7 +15,15 @@ function isCapabilityEnabled(
     return true
   }
 
-  return capabilityFlags?.[family] === true
+  if (
+    !MCP_STAGED_CAPABILITY_FAMILIES.includes(
+      family as (typeof MCP_STAGED_CAPABILITY_FAMILIES)[number],
+    )
+  ) {
+    return false
+  }
+
+  return capabilityFlags?.[family as keyof McpCapabilityFlags] === true
 }
 
 export function registerMcpCapabilities(

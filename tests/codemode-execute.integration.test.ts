@@ -119,6 +119,90 @@ describe('codemode execute integration', () => {
     ])
   })
 
+  it('surfaces reusable resource links when execute results include known Dokploy IDs', async () => {
+    const host = {
+      async call(procedure: string) {
+        return {
+          data: {
+            projectId: 'project-1',
+            applicationId: 'app-1',
+            server: {
+              serverId: 'server-1',
+            },
+            latestDeployment: {
+              deploymentId: 'dep-1',
+            },
+            procedure,
+          },
+          trace: {
+            procedure,
+            method: 'GET' as const,
+            startedAt: 0,
+            finishedAt: 1,
+            durationMs: 1,
+          },
+        }
+      },
+      getCalls() {
+        return []
+      },
+    }
+
+    const result = await runExecuteWithHost(
+      `
+        async ({ dokploy }) => {
+          return await dokploy.project.one({ projectId: 'project-1' })
+        }
+      `,
+      host,
+    )
+
+    expect(result.resourceLinks).toEqual([
+      {
+        uri: 'dokploy://project/project-1/overview',
+        title: 'Project Overview',
+        kind: 'project',
+        id: 'project-1',
+        view: 'overview',
+      },
+      {
+        uri: 'dokploy://project/project-1/infrastructure',
+        title: 'Project Infrastructure',
+        kind: 'project',
+        id: 'project-1',
+        view: 'infrastructure',
+      },
+      {
+        uri: 'dokploy://project/project-1/logs-overview',
+        title: 'Project Logs Overview',
+        kind: 'project',
+        id: 'project-1',
+        view: 'logs-overview',
+      },
+      {
+        uri: 'dokploy://application/app-1/summary',
+        title: 'Application Summary',
+        kind: 'application',
+        id: 'app-1',
+        view: 'summary',
+      },
+      {
+        uri: 'dokploy://server/server-1/summary',
+        title: 'Server Summary',
+        kind: 'server',
+        id: 'server-1',
+        view: 'summary',
+      },
+      {
+        uri: 'dokploy://deployment/dep-1/summary',
+        title: 'Deployment Summary',
+        kind: 'deployment',
+        id: 'dep-1',
+        view: 'summary',
+      },
+    ])
+  })
+
   it('can execute a compose -> services -> mounts workflow', async () => {
     const context = buildExecuteContext(async (procedure) => {
       switch (procedure) {

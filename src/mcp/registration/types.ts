@@ -11,9 +11,17 @@ export const MCP_CAPABILITY_FAMILIES = [
 ] as const
 
 export type McpCapabilityFamily = (typeof MCP_CAPABILITY_FAMILIES)[number]
-export const MCP_STAGED_CAPABILITY_FAMILIES = MCP_CAPABILITY_FAMILIES.filter(
-  (family) => family !== 'tools',
-) as Exclude<McpCapabilityFamily, 'tools'>[]
+export const MCP_IMPLEMENTED_CAPABILITY_FAMILIES = ['tools', 'resources'] as const
+export const MCP_STAGED_CAPABILITY_FAMILIES = ['resources'] as const
+export const MCP_PLANNED_CAPABILITY_FAMILIES = [
+  'prompts',
+  'completions',
+  'sampling',
+  'elicitation',
+  'tasks',
+] as const
+
+export type McpImplementedCapabilityFamily = (typeof MCP_IMPLEMENTED_CAPABILITY_FAMILIES)[number]
 export type McpStagedCapabilityFamily = (typeof MCP_STAGED_CAPABILITY_FAMILIES)[number]
 export type McpCapabilityFlags = Partial<Record<McpStagedCapabilityFamily, boolean>>
 

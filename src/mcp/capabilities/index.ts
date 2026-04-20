@@ -10,14 +10,19 @@ import { codeModeToolsCapability } from './tools.js'
 
 export const codeModeSharedCapabilities: readonly McpCapabilityRegistration[] = [
   codeModeResourcesCapability,
-  codeModePromptsCapability,
-  codeModeCompletionsCapability,
-  codeModeSamplingCapability,
-  codeModeElicitationCapability,
-  codeModeTasksCapability,
 ]
 
 export const codeModeCapabilities: readonly McpCapabilityRegistration[] = [
   codeModeToolsCapability,
   ...codeModeSharedCapabilities,
+]
+
+// Reserved for later phases. These families stay out of the active registration set until they
+// expose real MCP behavior.
+export const codeModePlannedCapabilities: readonly McpCapabilityRegistration[] = [
+  codeModePromptsCapability,
+  codeModeCompletionsCapability,
+  codeModeSamplingCapability,
+  codeModeElicitationCapability,
+  codeModeTasksCapability,
 ]

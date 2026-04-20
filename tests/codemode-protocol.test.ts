@@ -97,11 +97,6 @@ describe('protocol surfaces', () => {
         mode: 'codemode',
         capabilityFlags: {
           resources: true,
-          prompts: true,
-          completions: true,
-          sampling: true,
-          elicitation: true,
-          tasks: true,
         },
       }),
     )

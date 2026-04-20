@@ -436,11 +436,6 @@ describe('http server transport', () => {
       mode: 'codemode',
       capabilityFlags: {
         resources: true,
-        prompts: true,
-        completions: true,
-        sampling: true,
-        elicitation: true,
-        tasks: true,
       },
     })
     const response = await fetch(handle.healthUrl)
@@ -449,7 +444,7 @@ describe('http server transport', () => {
     expect(response.status).toBe(200)
     expect(payload).toMatchObject({
       ok: true,
-      capabilityFlags: ['completions', 'elicitation', 'prompts', 'resources', 'sampling', 'tasks'],
+      capabilityFlags: ['resources'],
     })
 
     await withHttpClient(handle, async (client) => {

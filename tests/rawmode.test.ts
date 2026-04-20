@@ -145,12 +145,12 @@ describe('raw and hybrid server modes', () => {
       {
         mode: 'raw' as const,
         enabledTags: ['project'],
-        capabilityFlags: { resources: true, prompts: true, tasks: true },
+        capabilityFlags: { resources: true },
       },
       {
         mode: 'hybrid' as const,
         enabledTags: ['project'],
-        capabilityFlags: { resources: true, prompts: true, tasks: true },
+        capabilityFlags: { resources: true },
       },
     ]) {
       await withClient(createServer(options), async (client) => {
@@ -182,11 +182,6 @@ describe('raw and hybrid server modes', () => {
       enabledTags: ['project', 'application'],
       capabilityFlags: {
         resources: true,
-        prompts: true,
-        completions: true,
-        sampling: true,
-        elicitation: true,
-        tasks: true,
       },
     })
   })

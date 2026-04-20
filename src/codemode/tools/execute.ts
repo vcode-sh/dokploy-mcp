@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { listResourceLinks } from '../../mcp/resources/resource-links.js'
 import { createTool, type ToolDefinition } from '../../mcp/tool-factory.js'
 import { createExecuteContext } from '../context/execute-context.js'
 import type { GatewayCallResult } from '../gateway/api-gateway.js'
@@ -60,10 +61,13 @@ export async function runExecuteWithHost(code: string, host: SandboxHost) {
           })(),
         })
 
+  const resourceLinks = listResourceLinks(execution.result)
+
   return {
     result: execution.result,
     logs: execution.logs,
     calls: host.getCalls(),
+    ...(resourceLinks.length > 0 ? { resourceLinks } : {}),
   }
 }
 
@@ -75,6 +79,7 @@ export const executeTool: ToolDefinition = createTool({
     'IMPORTANT: Do NOT wrap code in a function -- `dokploy` and `helpers` are already globals. ' +
     'Write bare code: `await dokploy.project.all()` or `const x = await dokploy.application.one({ applicationId: "id" }); return x`. ' +
     'Common reads: `application.one` returns application detail fields such as status, mounts, domains, and deployments, and supports optional `select`, `includeDeployments`, and `deploymentLimit`; `application.many` batches several shaped application reads; `project.overview` returns a compact per-environment and per-application state view; `deployment.all` returns deployment history entries. ' +
+    'When the result contains known Dokploy IDs, the tool also returns reusable `dokploy://...` resource links for follow-up inspection. ' +
     'dokploy.<module>.<method>(params) calls the API. ' +
     'Modules: project, environment, application, compose, domain, postgres, mysql, mariadb, mongo, redis, ' +
     'deployment, docker, server, settings, user, notification, backup, mounts, registry, certificates, schedule, patch, sshKey, gitProvider, and more. ' +

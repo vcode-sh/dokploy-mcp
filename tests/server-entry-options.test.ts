@@ -27,7 +27,6 @@ describe('server entry options', () => {
       enabledTags: ['project', 'application'],
       capabilityFlags: {
         resources: true,
-        prompts: true,
       },
       host: '0.0.0.0',
       port: 8080,
@@ -66,7 +65,6 @@ describe('server entry options', () => {
       enabledTags: ['project', 'server'],
       capabilityFlags: {
         resources: true,
-        tasks: true,
       },
       host: '127.0.0.1',
       port: 3001,
