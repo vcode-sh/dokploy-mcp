@@ -110,6 +110,19 @@ async function startCreatedTestHttpServer(options: Parameters<typeof createHttpS
   return handle
 }
 
+async function closeNodeServer(server: ReturnType<typeof createHttpServer>) {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error)
+        return
+      }
+
+      resolve()
+    })
+  })
+}
+
 async function withHttpClient(handle: StartedHttpServer, run: (client: Client) => Promise<void>) {
   const client = new Client({
     name: 'http-transport-client',
@@ -457,6 +470,17 @@ describe('http server transport', () => {
       ])
       await expect(client.listPrompts()).rejects.toThrow()
     })
+  })
+
+  it('allows managed close before the HTTP server starts listening', async () => {
+    const server = createHttpServer({
+      host: '127.0.0.1',
+      port: 0,
+    })
+
+    await expect(
+      settleWithin(closeNodeServer(server), 'close before listen'),
+    ).resolves.toBeUndefined()
   })
 
   it('creates a reusable MCP session for HTTP clients', async () => {

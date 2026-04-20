@@ -117,6 +117,137 @@ describe('codemode gateway validation', () => {
     })
   })
 
+  it('accepts null values for anyOf fields and forwards them to POST procedures', async () => {
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post(_path: string, input?: Record<string, unknown>) {
+        expect(input).toEqual({
+          name: 'Alpha',
+          description: null,
+          env: 'KEY=value',
+        })
+        return { ok: true }
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'project.create',
+      {
+        name: 'Alpha',
+        description: null,
+        env: 'KEY=value',
+      },
+      fakeApi,
+    )
+
+    expect(result.data).toEqual({ ok: true })
+  })
+
+  it('rejects nested enum violations in object array inputs', async () => {
+    await expect(
+      invokeProcedureWithApi(
+        'settings.updateTraefikPorts',
+        {
+          additionalPorts: [
+            {
+              targetPort: 80,
+              publishedPort: 443,
+              protocol: 'icmp',
+            },
+          ],
+        },
+        {
+          async get() {
+            throw new Error('Unexpected GET call')
+          },
+          async post() {
+            throw new Error('Unexpected POST call')
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'settings.updateTraefikPorts',
+      message: expect.stringContaining('additionalPorts[0].protocol must be one of tcp, udp, sctp'),
+    })
+  })
+
+  it('rejects arrays that violate minItems constraints', async () => {
+    await expect(
+      invokeProcedureWithApi(
+        'notification.createEmail',
+        {
+          appBuildError: false,
+          databaseBackup: false,
+          dokployBackup: false,
+          volumeBackup: false,
+          dokployRestart: false,
+          name: 'Alerts',
+          appDeploy: false,
+          dockerCleanup: false,
+          serverThreshold: false,
+          smtpServer: 'smtp.example.com',
+          smtpPort: 587,
+          username: 'user',
+          password: 'pass',
+          fromAddress: 'from@example.com',
+          toAddresses: [],
+        },
+        {
+          async get() {
+            throw new Error('Unexpected GET call')
+          },
+          async post() {
+            throw new Error('Unexpected POST call')
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'notification.createEmail',
+      message: expect.stringContaining('toAddresses must contain at least 1 items'),
+    })
+  })
+
+  it('rejects numeric values below minimum constraints', async () => {
+    await expect(
+      invokeProcedureWithApi(
+        'notification.createEmail',
+        {
+          appBuildError: false,
+          databaseBackup: false,
+          dokployBackup: false,
+          volumeBackup: false,
+          dokployRestart: false,
+          name: 'Alerts',
+          appDeploy: false,
+          dockerCleanup: false,
+          serverThreshold: false,
+          smtpServer: 'smtp.example.com',
+          smtpPort: 0,
+          username: 'user',
+          password: 'pass',
+          fromAddress: 'from@example.com',
+          toAddresses: ['to@example.com'],
+        },
+        {
+          async get() {
+            throw new Error('Unexpected GET call')
+          },
+          async post() {
+            throw new Error('Unexpected POST call')
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'notification.createEmail',
+      message: expect.stringContaining('smtpPort must be >= 1'),
+    })
+  })
+
   it('retries retryable GET failures through the gateway', async () => {
     let attempts = 0
     const fakeApi = {
@@ -135,6 +266,61 @@ describe('codemode gateway validation', () => {
     const result = await invokeProcedureWithApi('project.all', {}, fakeApi)
     expect(result.data).toEqual([])
     expect(attempts).toBe(2)
+  })
+
+  it('does not retry retryable failures for POST procedures', async () => {
+    let attempts = 0
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post() {
+        attempts += 1
+        throw new ApiError(503, 'Service Unavailable', { message: 'retry me' }, '/project.create')
+      },
+    }
+
+    await expect(
+      invokeProcedureWithApi('project.create', { name: 'Alpha' }, fakeApi),
+    ).rejects.toMatchObject({
+      type: 'dokploy_error',
+      status: 503,
+      procedure: 'project.create',
+    })
+    expect(attempts).toBe(1)
+  })
+
+  it('respects zero gateway retries from env configuration', async () => {
+    const previous = process.env.DOKPLOY_MCP_GATEWAY_RETRIES
+    process.env.DOKPLOY_MCP_GATEWAY_RETRIES = '0'
+
+    let attempts = 0
+    const fakeApi = {
+      async get() {
+        attempts += 1
+        throw new ApiError(503, 'Service Unavailable', { message: 'retry me' }, '/project.all')
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    try {
+      await expect(invokeProcedureWithApi('project.all', {}, fakeApi)).rejects.toMatchObject({
+        type: 'dokploy_error',
+        status: 503,
+        procedure: 'project.all',
+      })
+      expect(attempts).toBe(1)
+    } finally {
+      if (previous === undefined) {
+        process.env = Object.fromEntries(
+          Object.entries(process.env).filter(([key]) => key !== 'DOKPLOY_MCP_GATEWAY_RETRIES'),
+        )
+      } else {
+        process.env.DOKPLOY_MCP_GATEWAY_RETRIES = previous
+      }
+    }
   })
 
   it('maps Dokploy API errors to compact gateway errors', async () => {
@@ -185,6 +371,35 @@ describe('codemode gateway validation', () => {
     expect(getBackendVersionInfo).not.toHaveBeenCalled()
   })
 
+  it('falls back to the original 404 when backend version probing throws', async () => {
+    const getBackendVersionInfo = vi.fn().mockRejectedValue(new Error('probe failed'))
+    const fakeApi = {
+      async get() {
+        throw new ApiError(
+          404,
+          'Not Found',
+          { message: 'resource missing' },
+          '/settings.checkInfrastructureHealth',
+        )
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+      getBackendVersionInfo,
+    }
+
+    await expect(
+      invokeProcedureWithApi('settings.checkInfrastructureHealth', {}, fakeApi),
+    ).rejects.toEqual({
+      ok: false,
+      type: 'dokploy_error',
+      status: 404,
+      procedure: 'settings.checkInfrastructureHealth',
+      message: 'Dokploy API error (404): resource missing',
+    })
+    expect(getBackendVersionInfo).toHaveBeenCalledTimes(1)
+  })
+
   it('maps auth errors to compact gateway errors', async () => {
     const fakeApi = {
       async get() {
@@ -224,6 +439,29 @@ describe('codemode gateway validation', () => {
       status: undefined,
       procedure: 'project.one',
       message: 'boom',
+    })
+  })
+
+  it('passes through preformatted gateway-style errors without rewrapping them', async () => {
+    const fakeApi = {
+      async get() {
+        throw {
+          type: 'validation_error',
+          procedure: 'project.one',
+          message: 'already formatted',
+        }
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    await expect(
+      invokeProcedureWithApi('project.one', { projectId: 'p1' }, fakeApi),
+    ).rejects.toEqual({
+      type: 'validation_error',
+      procedure: 'project.one',
+      message: 'already formatted',
     })
   })
 

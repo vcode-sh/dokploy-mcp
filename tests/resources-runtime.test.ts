@@ -45,6 +45,34 @@ describe('mcp resources runtime', () => {
     )
   })
 
+  it('skips malformed listing entries without crashing resource discovery', async () => {
+    const executor = createResourceExecutor(async (procedure) => {
+      switch (procedure) {
+        case 'project.search':
+          return {
+            items: [null, { name: 'Missing ID' }, { projectId: 'project-1', name: 'Alpha' }],
+          }
+        case 'application.search':
+          return {
+            items: ['bad-entry', { applicationId: 'app-1', name: 'Frontend' }],
+          }
+        case 'server.all':
+          return [{ serverId: 'server-1', name: 'Primary' }, { name: 'Missing ID' }]
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const resources = await listCodeModeResources(executor)
+    expect(resources.map((resource) => resource.uri).sort()).toEqual([
+      'dokploy://application/app-1/summary',
+      'dokploy://project/project-1/infrastructure',
+      'dokploy://project/project-1/logs-overview',
+      'dokploy://project/project-1/overview',
+      'dokploy://server/server-1/summary',
+    ])
+  })
+
   it('builds project overview resources via virtual procedures and related links', async () => {
     const executor = createResourceExecutor(async (procedure, input = {}) => {
       switch (procedure) {
@@ -141,6 +169,57 @@ describe('mcp resources runtime', () => {
     expect(serialized).not.toContain('secret-private-key')
     expect(serialized).not.toContain('secret-webhook')
     expect(Buffer.byteLength(serialized, 'utf8')).toBeLessThan(24 * 1024)
+  })
+
+  it('accepts array-valued template variables and falls back when application detail is not an object', async () => {
+    const executor = createResourceExecutor(async (procedure, input = {}) => {
+      expect(procedure).toBe('application.one')
+      expect(input).toMatchObject({
+        applicationId: 'app-1',
+      })
+      return 'scalar-detail'
+    })
+
+    const result = await readCodeModeResource(
+      'dokploy://application/app-1/summary',
+      { applicationId: ['app-1', 'app-2'] },
+      'application-summary',
+      executor,
+    )
+    const payload = JSON.parse(result.contents[0]?.text ?? '{}') as Record<string, unknown>
+
+    expect(payload).toEqual({
+      applicationId: 'app-1',
+      domains: [],
+      mounts: [],
+      watchPaths: [],
+      latestDeployment: null,
+      relatedResources: {},
+    })
+  })
+
+  it('wraps scalar virtual resource outputs instead of assuming an object payload', async () => {
+    const executor = async (procedure: string) => {
+      expect(procedure).toBe('project.logsOverview')
+      return 'summary-text'
+    }
+
+    const result = await readCodeModeResource(
+      'dokploy://project/project-1/logs-overview',
+      { projectId: 'project-1' },
+      'project-logs-overview',
+      executor,
+    )
+    const payload = JSON.parse(result.contents[0]?.text ?? '{}') as Record<string, unknown>
+
+    expect(payload).toEqual({
+      value: 'summary-text',
+      relatedResources: {
+        overview: 'dokploy://project/project-1/overview',
+        infrastructure: 'dokploy://project/project-1/infrastructure',
+        logsOverview: 'dokploy://project/project-1/logs-overview',
+      },
+    })
   })
 
   it('returns invalid params when a deployment summary cannot be resolved', async () => {
