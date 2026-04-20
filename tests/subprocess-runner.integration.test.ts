@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { resolve } from 'node:path'
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { SandboxLimits } from '../src/codemode/sandbox/types.js'
 
@@ -20,8 +22,21 @@ async function loadRunner() {
   return import('../src/codemode/sandbox/subprocess-runner.js')
 }
 
+beforeEach(() => {
+  vi.unstubAllEnvs()
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
 describe('sandbox subprocess runner integration', () => {
   it('times out when the worker is blocked waiting for a gateway call result', async () => {
+    vi.stubEnv(
+      'DOKPLOY_MCP_SANDBOX_WORKER_PATH',
+      resolve('tests/fixtures/subprocess-workers/timeout-call-worker.js'),
+    )
+
     const { runExecuteInSubprocess } = await loadRunner()
 
     await expect(
@@ -37,6 +52,11 @@ describe('sandbox subprocess runner integration', () => {
   })
 
   it('returns an explicit IPC error when the worker cannot serialize a procedure call', async () => {
+    vi.stubEnv(
+      'DOKPLOY_MCP_SANDBOX_WORKER_PATH',
+      resolve('tests/fixtures/subprocess-workers/unserializable-call-worker.js'),
+    )
+
     const { runExecuteInSubprocess } = await loadRunner()
     const onCall = vi.fn(async () => ({ ok: true }))
 

@@ -161,6 +161,67 @@ describe('codemode runtime', () => {
     })
   })
 
+  it('search catalog get exposes virtual logs.tailMany as an execute-only helper', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('logs.tailMany')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('logs.tailMany')
+    expect(contract.path).toBe('/virtual/logs.tailMany')
+    expect(contract.requiredInputs).toEqual(expect.arrayContaining(['requests']))
+    expect(contract.response).toEqual({
+      type: 'object',
+      keys: ['items', 'total'],
+    })
+  })
+
+  it('search catalog get exposes virtual libsql.many as an execute-only helper', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('libsql.many')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('libsql.many')
+    expect(contract.path).toBe('/virtual/libsql.many')
+    expect(contract.requiredInputs).toEqual(expect.arrayContaining(['libsqlIds']))
+    expect(contract.response).toEqual({
+      type: 'object',
+      keys: ['items', 'total'],
+    })
+  })
+
+  it('search catalog get exposes virtual tag.bulkAssignPreview as an execute-only helper', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('tag.bulkAssignPreview')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('tag.bulkAssignPreview')
+    expect(contract.path).toBe('/virtual/tag.bulkAssignPreview')
+    expect(contract.requiredInputs).toEqual(expect.arrayContaining(['projectId', 'tagIds']))
+    expect(contract.response).toEqual({
+      type: 'object',
+      keys: [
+        'projectId',
+        'projectName',
+        'requestedTagIds',
+        'currentTagIds',
+        'resolvedTags',
+        'missingTagIds',
+        'unchangedTagIds',
+        'toAddTagIds',
+        'previewOperation',
+      ],
+    })
+  })
+
   it('search can find endpoints by manual response hints when OpenAPI is incomplete', async () => {
     const result = await searchTool.handler({
       code: 'async ({ catalog }) => catalog.searchText("watchPaths").map((entry) => entry.procedure)',
@@ -204,6 +265,33 @@ describe('codemode runtime', () => {
 
     const payload = result.structuredContent as { result?: unknown }
     expect(payload.result).toEqual(expect.arrayContaining(['project.infrastructureOverview']))
+  })
+
+  it('search can find logs.tailMany by helper-specific inputs', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("requests").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['logs.tailMany']))
+  })
+
+  it('search can find libsql.many by helper-specific fields', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("libsqlIds").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['libsql.many']))
+  })
+
+  it('search can find tag.bulkAssignPreview by preview-specific fields', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("bulkAssign").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['tag.bulkAssignPreview']))
   })
 
   it('bounds array search results', async () => {
@@ -274,6 +362,16 @@ describe('codemode runtime', () => {
       serverIds: ['server-1'],
       includeSecurity: true,
     })
+    expectTypeOf(context.dokploy.logs.tailMany).toBeCallableWith({
+      requests: [{ kind: 'application', applicationId: 'app-1', tail: 20 }],
+    })
+    expectTypeOf(context.dokploy.libsql.many).toBeCallableWith({
+      libsqlIds: ['libsql-1'],
+    })
+    expectTypeOf(context.dokploy.tag.bulkAssignPreview).toBeCallableWith({
+      projectId: 'project-1',
+      tagIds: ['tag-1'],
+    })
     expectTypeOf(context.dokploy.project.overview).toBeCallableWith({
       projectId: 'project-1',
       pageSize: 10,
@@ -288,8 +386,18 @@ describe('codemode runtime', () => {
     expectTypeOf(context.dokploy.call).toBeCallableWith('server.many', {
       serverIds: ['server-1'],
     })
+    expectTypeOf(context.dokploy.call).toBeCallableWith('logs.tailMany', {
+      requests: [{ kind: 'application', applicationId: 'app-1' }],
+    })
+    expectTypeOf(context.dokploy.call).toBeCallableWith('libsql.many', {
+      libsqlIds: ['libsql-1'],
+    })
     expectTypeOf(context.dokploy.call).toBeCallableWith('project.infrastructureOverview', {
       projectId: 'project-1',
+    })
+    expectTypeOf(context.dokploy.call).toBeCallableWith('tag.bulkAssignPreview', {
+      projectId: 'project-1',
+      tagIds: ['tag-1'],
     })
   })
 
@@ -586,6 +694,103 @@ describe('codemode runtime', () => {
     expect(context.getCalls()).toHaveLength(0)
   })
 
+  it('validates virtual logs.tailMany input before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.logs.tailMany({
+              requests: [{ kind: 'compose', composeId: 'compose-1' }],
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('requests[0].containerId is required')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
+  it('validates virtual libsql.many input before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.libsql.many({
+              libsqlIds: ['libsql-1', ''],
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('libsqlIds[1] must be a non-empty string')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
+  it('validates virtual tag.bulkAssignPreview input before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.tag.bulkAssignPreview({
+              projectId: 'project-1',
+              tagIds: ['tag-1', ''],
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('tagIds[1] must be a non-empty string')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
   it('enforces the execute max call budget for virtual project.overview fan-out', async () => {
     const context = buildExecuteContext(async (procedure, input = {}) => {
       switch (procedure) {
@@ -765,6 +970,36 @@ describe('codemode runtime', () => {
           async ({ dokploy }) => {
             return await dokploy.project.infrastructureOverview({
               projectId: 'project-1',
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('Code Mode execute exceeded 2 API calls.')
+  })
+
+  it('enforces the execute max call budget for virtual libsql.many fan-out', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 2)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.libsql.many({
+              libsqlIds: ['libsql-1', 'libsql-2', 'libsql-3'],
             })
           }
         `,

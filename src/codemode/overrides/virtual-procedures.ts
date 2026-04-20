@@ -213,6 +213,124 @@ function createServerManyOutputSchema() {
   return createApplicationManyOutputSchema()
 }
 
+function createTailManyInputSchema() {
+  return {
+    type: 'object',
+    properties: {
+      requests: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            kind: { type: 'string' },
+            applicationId: { type: 'string' },
+            composeId: { type: 'string' },
+            containerId: { type: 'string' },
+            libsqlId: { type: 'string' },
+            mariadbId: { type: 'string' },
+            mongoId: { type: 'string' },
+            mysqlId: { type: 'string' },
+            postgresId: { type: 'string' },
+            redisId: { type: 'string' },
+            tail: { type: 'integer' },
+            since: { type: 'string' },
+            search: { type: 'string' },
+          },
+          required: ['kind'],
+        },
+      },
+    },
+    required: ['requests'],
+    additionalProperties: false,
+  }
+}
+
+function createTailManyOutputSchema() {
+  return createApplicationManyOutputSchema()
+}
+
+function createLibsqlManyInputSchema() {
+  return {
+    type: 'object',
+    properties: {
+      libsqlIds: {
+        type: 'array',
+        items: {
+          type: 'string',
+        },
+      },
+    },
+    required: ['libsqlIds'],
+    additionalProperties: false,
+  }
+}
+
+function createTagBulkAssignPreviewInputSchema() {
+  return {
+    type: 'object',
+    properties: {
+      projectId: {
+        type: 'string',
+        minLength: 1,
+      },
+      tagIds: {
+        type: 'array',
+        items: {
+          type: 'string',
+        },
+      },
+    },
+    required: ['projectId', 'tagIds'],
+    additionalProperties: false,
+  }
+}
+
+function createTagBulkAssignPreviewOutputSchema() {
+  return {
+    type: 'object',
+    properties: {
+      projectId: { type: 'string' },
+      projectName: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+      requestedTagIds: { type: 'array', items: { type: 'string' } },
+      currentTagIds: { type: 'array', items: { type: 'string' } },
+      resolvedTags: { type: 'array', items: { type: 'object', additionalProperties: true } },
+      missingTagIds: { type: 'array', items: { type: 'string' } },
+      unchangedTagIds: { type: 'array', items: { type: 'string' } },
+      toAddTagIds: { type: 'array', items: { type: 'string' } },
+      previewOperation: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['procedure', 'input'],
+        properties: {
+          procedure: { type: 'string' },
+          input: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['projectId', 'tagIds'],
+            properties: {
+              projectId: { type: 'string' },
+              tagIds: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+      },
+    },
+    required: [
+      'projectId',
+      'projectName',
+      'requestedTagIds',
+      'currentTagIds',
+      'resolvedTags',
+      'missingTagIds',
+      'unchangedTagIds',
+      'toAddTagIds',
+      'previewOperation',
+    ],
+    additionalProperties: false,
+  }
+}
+
 function validateServerManyInput(input: Record<string, unknown>) {
   const errors: string[] = []
 
@@ -220,6 +338,240 @@ function validateServerManyInput(input: Record<string, unknown>) {
   errors.push(...validateBooleanFlag(input, 'includeSecurity'))
 
   return errors
+}
+
+const logRequestKinds = new Set([
+  'application',
+  'compose',
+  'libsql',
+  'mariadb',
+  'mongo',
+  'mysql',
+  'postgres',
+  'redis',
+])
+
+function validateLogRequestKind(request: Record<string, unknown>, index: number) {
+  const kind = getStringOrNull(request.kind)
+  if (kind && logRequestKinds.has(kind)) {
+    return kind
+  }
+
+  return [`requests[${index}].kind must be one of ${[...logRequestKinds].join(', ')}`]
+}
+
+function validateLogRequestRequiredIds(
+  request: Record<string, unknown>,
+  index: number,
+  kind: string,
+) {
+  const errors: string[] = []
+
+  switch (kind) {
+    case 'application':
+      if (!getStringOrNull(request.applicationId)) {
+        errors.push(`requests[${index}].applicationId is required`)
+      }
+      break
+    case 'compose':
+      if (!getStringOrNull(request.composeId)) {
+        errors.push(`requests[${index}].composeId is required`)
+      }
+      if (!getStringOrNull(request.containerId)) {
+        errors.push(`requests[${index}].containerId is required`)
+      }
+      break
+    case 'libsql':
+      if (!getStringOrNull(request.libsqlId)) {
+        errors.push(`requests[${index}].libsqlId is required`)
+      }
+      break
+    case 'mariadb':
+      if (!getStringOrNull(request.mariadbId)) {
+        errors.push(`requests[${index}].mariadbId is required`)
+      }
+      break
+    case 'mongo':
+      if (!getStringOrNull(request.mongoId)) {
+        errors.push(`requests[${index}].mongoId is required`)
+      }
+      break
+    case 'mysql':
+      if (!getStringOrNull(request.mysqlId)) {
+        errors.push(`requests[${index}].mysqlId is required`)
+      }
+      break
+    case 'postgres':
+      if (!getStringOrNull(request.postgresId)) {
+        errors.push(`requests[${index}].postgresId is required`)
+      }
+      break
+    case 'redis':
+      if (!getStringOrNull(request.redisId)) {
+        errors.push(`requests[${index}].redisId is required`)
+      }
+      break
+  }
+
+  return errors
+}
+
+function validateLogRequestScalarFields(request: Record<string, unknown>, index: number) {
+  const errors: string[] = []
+
+  if ('tail' in request) {
+    if (typeof request.tail !== 'number' || !Number.isInteger(request.tail) || request.tail < 0) {
+      errors.push(`requests[${index}].tail must be a non-negative integer`)
+    }
+  }
+
+  if ('since' in request && request.since !== undefined && typeof request.since !== 'string') {
+    errors.push(`requests[${index}].since must be a string`)
+  }
+
+  if ('search' in request && request.search !== undefined && typeof request.search !== 'string') {
+    errors.push(`requests[${index}].search must be a string`)
+  }
+
+  return errors
+}
+
+function validateTailManyInput(input: Record<string, unknown>) {
+  const { requests } = input
+
+  if (!Array.isArray(requests)) {
+    return ['requests must be an array of log requests']
+  }
+
+  const errors: string[] = []
+
+  if (requests.length === 0) {
+    errors.push('requests must be a non-empty array of log requests')
+  }
+
+  for (const [index, request] of requests.entries()) {
+    if (!isRecord(request)) {
+      errors.push(`requests[${index}] must be an object`)
+      continue
+    }
+
+    const kindOrErrors = validateLogRequestKind(request, index)
+    if (Array.isArray(kindOrErrors)) {
+      errors.push(...kindOrErrors)
+      continue
+    }
+
+    errors.push(...validateLogRequestRequiredIds(request, index, kindOrErrors))
+    errors.push(...validateLogRequestScalarFields(request, index))
+  }
+
+  return errors
+}
+
+function validateLibsqlManyInput(input: Record<string, unknown>) {
+  return validateStringList(input.libsqlIds, 'libsqlIds')
+}
+
+function validateTagBulkAssignPreviewInput(input: Record<string, unknown>) {
+  const errors: string[] = []
+
+  if (typeof input.projectId !== 'string' || input.projectId.trim().length === 0) {
+    errors.push('projectId must be a non-empty string')
+  }
+
+  errors.push(...validateStringList(input.tagIds, 'tagIds'))
+
+  return errors
+}
+
+function buildLogRequestProcedure(request: Record<string, unknown>) {
+  const kind = String(request.kind)
+
+  switch (kind) {
+    case 'application':
+      return {
+        procedure: 'application.readLogs',
+        input: {
+          applicationId: String(request.applicationId),
+          tail: request.tail,
+          since: request.since,
+          search: request.search,
+        },
+      }
+    case 'compose':
+      return {
+        procedure: 'compose.readLogs',
+        input: {
+          composeId: String(request.composeId),
+          containerId: String(request.containerId),
+          tail: request.tail,
+          since: request.since,
+          search: request.search,
+        },
+      }
+    case 'libsql':
+      return {
+        procedure: 'libsql.readLogs',
+        input: {
+          libsqlId: String(request.libsqlId),
+          tail: request.tail,
+          since: request.since,
+          search: request.search,
+        },
+      }
+    case 'mariadb':
+      return {
+        procedure: 'mariadb.readLogs',
+        input: {
+          mariadbId: String(request.mariadbId),
+          tail: request.tail,
+          since: request.since,
+          search: request.search,
+        },
+      }
+    case 'mongo':
+      return {
+        procedure: 'mongo.readLogs',
+        input: {
+          mongoId: String(request.mongoId),
+          tail: request.tail,
+          since: request.since,
+          search: request.search,
+        },
+      }
+    case 'mysql':
+      return {
+        procedure: 'mysql.readLogs',
+        input: {
+          mysqlId: String(request.mysqlId),
+          tail: request.tail,
+          since: request.since,
+          search: request.search,
+        },
+      }
+    case 'postgres':
+      return {
+        procedure: 'postgres.readLogs',
+        input: {
+          postgresId: String(request.postgresId),
+          tail: request.tail,
+          since: request.since,
+          search: request.search,
+        },
+      }
+    case 'redis':
+      return {
+        procedure: 'redis.readLogs',
+        input: {
+          redisId: String(request.redisId),
+          tail: request.tail,
+          since: request.since,
+          search: request.search,
+        },
+      }
+    default:
+      throw new Error(`Unsupported log request kind: ${kind}`)
+  }
 }
 
 async function executeServerMany(input: Record<string, unknown>, context: VirtualProcedureContext) {
@@ -237,6 +589,44 @@ async function executeServerMany(input: Record<string, unknown>, context: Virtua
     }
 
     items.push(nextItem)
+  }
+
+  return {
+    items,
+    total: items.length,
+  }
+}
+
+async function executeLogsTailMany(
+  input: Record<string, unknown>,
+  context: VirtualProcedureContext,
+) {
+  const requests = (input.requests as Record<string, unknown>[] | undefined) ?? []
+  const items = []
+
+  for (const request of requests) {
+    const { procedure, input: procedureInput } = buildLogRequestProcedure(request)
+    const result = await context.call(procedure, procedureInput)
+    items.push({
+      ...request,
+      procedure,
+      result,
+    })
+  }
+
+  return {
+    items,
+    total: items.length,
+  }
+}
+
+async function executeLibsqlMany(input: Record<string, unknown>, context: VirtualProcedureContext) {
+  const libsqlIds = (input.libsqlIds as string[] | undefined)?.map((value) => value.trim()) ?? []
+  const items = []
+
+  for (const libsqlId of libsqlIds) {
+    const item = await context.call('libsql.one', { libsqlId })
+    items.push(item)
   }
 
   return {
@@ -709,6 +1099,76 @@ async function executeProjectInfrastructureOverview(
   }
 }
 
+function getTagId(value: unknown) {
+  return isRecord(value) ? getStringOrNull(value.tagId) : null
+}
+
+function getProjectTagIds(value: unknown) {
+  if (!isRecord(value)) {
+    return []
+  }
+
+  const tags = getArray(value.tags)
+  const tagIds: string[] = []
+
+  for (const tag of tags) {
+    const tagId = getTagId(tag)
+    if (tagId) {
+      tagIds.push(tagId)
+    }
+  }
+
+  return tagIds
+}
+
+async function executeTagBulkAssignPreview(
+  input: Record<string, unknown>,
+  context: VirtualProcedureContext,
+) {
+  const projectId = String(input.projectId)
+  const requestedTagIds = ((input.tagIds as string[] | undefined) ?? []).map((tagId) =>
+    tagId.trim(),
+  )
+  const project = await context.call('project.one', { projectId })
+  const currentTagIds = getProjectTagIds(project)
+  const allTags = getArray(await context.call('tag.all', {}))
+  const tagsById = new Map<string, Record<string, unknown>>()
+
+  for (const tag of allTags) {
+    const tagId = getTagId(tag)
+    if (tagId && isRecord(tag)) {
+      tagsById.set(tagId, tag)
+    }
+  }
+
+  const resolvedTags = requestedTagIds
+    .map((tagId) => tagsById.get(tagId))
+    .filter((tag): tag is Record<string, unknown> => Boolean(tag))
+  const missingTagIds = requestedTagIds.filter((tagId) => !tagsById.has(tagId))
+  const unchangedTagIds = requestedTagIds.filter((tagId) => currentTagIds.includes(tagId))
+  const toAddTagIds = requestedTagIds.filter(
+    (tagId) => tagsById.has(tagId) && !currentTagIds.includes(tagId),
+  )
+
+  return {
+    projectId,
+    projectName: isRecord(project) ? getStringOrNull(project.name) : null,
+    requestedTagIds,
+    currentTagIds,
+    resolvedTags,
+    missingTagIds,
+    unchangedTagIds,
+    toAddTagIds,
+    previewOperation: {
+      procedure: 'tag.bulkAssign',
+      input: {
+        projectId,
+        tagIds: requestedTagIds,
+      },
+    },
+  }
+}
+
 const virtualProcedureDefinitions: Record<string, VirtualProcedureDefinition> = {
   'application.many': {
     endpoint: {
@@ -770,6 +1230,66 @@ const virtualProcedureDefinitions: Record<string, VirtualProcedureDefinition> = 
     validateInput: validateServerManyInput,
     execute: executeServerMany,
   },
+  'logs.tailMany': {
+    endpoint: {
+      procedure: 'logs.tailMany',
+      method: 'GET',
+      path: '/virtual/logs.tailMany',
+      tag: 'logs',
+      summary: 'Read and normalize multiple log tails in one execute workflow',
+      description:
+        'MCP-only virtual helper that batches supported *.readLogs procedures while preserving input order and execute call budgeting.',
+      inputKind: 'body',
+      requiredInputs: ['requests'],
+      optionalInputs: [],
+      response: {
+        type: 'object',
+        keys: ['items', 'total'],
+      },
+      virtual: true,
+    },
+    schema: {
+      method: 'GET',
+      path: '/virtual/logs.tailMany',
+      tag: 'logs',
+      inputKind: 'body',
+      inputSchema: createTailManyInputSchema(),
+      outputSchema: createTailManyOutputSchema(),
+      virtual: true,
+    },
+    validateInput: validateTailManyInput,
+    execute: executeLogsTailMany,
+  },
+  'libsql.many': {
+    endpoint: {
+      procedure: 'libsql.many',
+      method: 'GET',
+      path: '/virtual/libsql.many',
+      tag: 'libsql',
+      summary: 'Read multiple LibSQL services in one execute workflow',
+      description:
+        'MCP-only virtual helper that fans out to libsql.one while preserving input order and honest execute call budgeting.',
+      inputKind: 'body',
+      requiredInputs: ['libsqlIds'],
+      optionalInputs: [],
+      response: {
+        type: 'object',
+        keys: ['items', 'total'],
+      },
+      virtual: true,
+    },
+    schema: {
+      method: 'GET',
+      path: '/virtual/libsql.many',
+      tag: 'libsql',
+      inputKind: 'body',
+      inputSchema: createLibsqlManyInputSchema(),
+      outputSchema: createApplicationManyOutputSchema(),
+      virtual: true,
+    },
+    validateInput: validateLibsqlManyInput,
+    execute: executeLibsqlMany,
+  },
   'project.overview': {
     endpoint: {
       procedure: 'project.overview',
@@ -829,6 +1349,46 @@ const virtualProcedureDefinitions: Record<string, VirtualProcedureDefinition> = 
     },
     validateInput: validateProjectInfrastructureOverviewInput,
     execute: executeProjectInfrastructureOverview,
+  },
+  'tag.bulkAssignPreview': {
+    endpoint: {
+      procedure: 'tag.bulkAssignPreview',
+      method: 'GET',
+      path: '/virtual/tag.bulkAssignPreview',
+      tag: 'tag',
+      summary: 'Preview a bulk tag assignment before mutating a project',
+      description:
+        'MCP-only virtual helper that resolves requested tagIds, compares them with the project current tags, and returns a non-mutating preview for tag.bulkAssign.',
+      inputKind: 'body',
+      requiredInputs: ['projectId', 'tagIds'],
+      optionalInputs: [],
+      response: {
+        type: 'object',
+        keys: [
+          'projectId',
+          'projectName',
+          'requestedTagIds',
+          'currentTagIds',
+          'resolvedTags',
+          'missingTagIds',
+          'unchangedTagIds',
+          'toAddTagIds',
+          'previewOperation',
+        ],
+      },
+      virtual: true,
+    },
+    schema: {
+      method: 'GET',
+      path: '/virtual/tag.bulkAssignPreview',
+      tag: 'tag',
+      inputKind: 'body',
+      inputSchema: createTagBulkAssignPreviewInputSchema(),
+      outputSchema: createTagBulkAssignPreviewOutputSchema(),
+      virtual: true,
+    },
+    validateInput: validateTagBulkAssignPreviewInput,
+    execute: executeTagBulkAssignPreview,
   },
 }
 

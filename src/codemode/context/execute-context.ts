@@ -40,6 +40,83 @@ export interface ServerManyOutput {
   total: number
 }
 
+export type TailManyRequest =
+  | {
+      kind: 'application'
+      applicationId: string
+      tail?: number
+      since?: string
+      search?: string
+    }
+  | {
+      kind: 'compose'
+      composeId: string
+      containerId: string
+      tail?: number
+      since?: string
+      search?: string
+    }
+  | {
+      kind: 'libsql'
+      libsqlId: string
+      tail?: number
+      since?: string
+      search?: string
+    }
+  | {
+      kind: 'mariadb'
+      mariadbId: string
+      tail?: number
+      since?: string
+      search?: string
+    }
+  | {
+      kind: 'mongo'
+      mongoId: string
+      tail?: number
+      since?: string
+      search?: string
+    }
+  | {
+      kind: 'mysql'
+      mysqlId: string
+      tail?: number
+      since?: string
+      search?: string
+    }
+  | {
+      kind: 'postgres'
+      postgresId: string
+      tail?: number
+      since?: string
+      search?: string
+    }
+  | {
+      kind: 'redis'
+      redisId: string
+      tail?: number
+      since?: string
+      search?: string
+    }
+
+export interface TailManyInput {
+  requests: TailManyRequest[]
+}
+
+export interface TailManyOutput {
+  items: Record<string, unknown>[]
+  total: number
+}
+
+export interface LibsqlManyInput {
+  libsqlIds: string[]
+}
+
+export interface LibsqlManyOutput {
+  items: Record<string, unknown>[]
+  total: number
+}
+
 export interface ProjectOverviewInput {
   projectId: string
   pageSize?: number
@@ -145,6 +222,29 @@ export interface ProjectInfrastructureOverviewOutput {
   }
 }
 
+export interface TagBulkAssignPreviewInput {
+  projectId: string
+  tagIds: string[]
+}
+
+export interface TagBulkAssignPreviewOutput {
+  projectId: string
+  projectName: string | null
+  requestedTagIds: string[]
+  currentTagIds: string[]
+  resolvedTags: Record<string, unknown>[]
+  missingTagIds: string[]
+  unchangedTagIds: string[]
+  toAddTagIds: string[]
+  previewOperation: {
+    procedure: 'tag.bulkAssign'
+    input: {
+      projectId: string
+      tagIds: string[]
+    }
+  }
+}
+
 export interface ExecuteDokployProcedureMap {
   'application.one': {
     input: ExecuteApplicationOneInput
@@ -158,6 +258,14 @@ export interface ExecuteDokployProcedureMap {
     input: ServerManyInput
     output: ServerManyOutput
   }
+  'logs.tailMany': {
+    input: TailManyInput
+    output: TailManyOutput
+  }
+  'libsql.many': {
+    input: LibsqlManyInput
+    output: LibsqlManyOutput
+  }
   'project.overview': {
     input: ProjectOverviewInput
     output: ProjectOverviewOutput
@@ -166,6 +274,10 @@ export interface ExecuteDokployProcedureMap {
     input: ProjectInfrastructureOverviewInput
     output: ProjectInfrastructureOverviewOutput
   }
+  'tag.bulkAssignPreview': {
+    input: TagBulkAssignPreviewInput
+    output: TagBulkAssignPreviewOutput
+  }
 }
 
 type GeneratedModuleRuntime = Record<string, unknown>
@@ -173,7 +285,9 @@ type GeneratedModuleRuntime = Record<string, unknown>
 interface GeneratedDokployRuntime {
   call: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>
   application: GeneratedModuleRuntime
+  libsql: GeneratedModuleRuntime
   server: GeneratedModuleRuntime
+  tag: GeneratedModuleRuntime
   project: GeneratedModuleRuntime
   [moduleName: string]: unknown
 }
@@ -192,6 +306,15 @@ export interface ExecuteDokployRuntime extends GeneratedDokployRuntime {
   }
   server: GeneratedModuleRuntime & {
     many(input: ServerManyInput): Promise<ServerManyOutput>
+  }
+  logs: GeneratedModuleRuntime & {
+    tailMany(input: TailManyInput): Promise<TailManyOutput>
+  }
+  libsql: GeneratedModuleRuntime & {
+    many(input: LibsqlManyInput): Promise<LibsqlManyOutput>
+  }
+  tag: GeneratedModuleRuntime & {
+    bulkAssignPreview(input: TagBulkAssignPreviewInput): Promise<TagBulkAssignPreviewOutput>
   }
   project: GeneratedModuleRuntime & {
     overview(input: ProjectOverviewInput): Promise<ProjectOverviewOutput>
@@ -313,6 +436,29 @@ export function createExecuteContext(executor: CallExecutor, maxCalls: number): 
           'server.many',
           input as unknown as Record<string, unknown>,
         ) as Promise<ServerManyOutput>,
+    },
+    logs: {
+      tailMany: (input: TailManyInput) =>
+        dispatchCall(
+          'logs.tailMany',
+          input as unknown as Record<string, unknown>,
+        ) as Promise<TailManyOutput>,
+    },
+    libsql: {
+      ...runtime.libsql,
+      many: (input: LibsqlManyInput) =>
+        dispatchCall(
+          'libsql.many',
+          input as unknown as Record<string, unknown>,
+        ) as Promise<LibsqlManyOutput>,
+    },
+    tag: {
+      ...runtime.tag,
+      bulkAssignPreview: (input: TagBulkAssignPreviewInput) =>
+        dispatchCall(
+          'tag.bulkAssignPreview',
+          input as unknown as Record<string, unknown>,
+        ) as Promise<TagBulkAssignPreviewOutput>,
     },
     project: {
       ...runtime.project,

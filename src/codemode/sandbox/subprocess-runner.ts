@@ -6,7 +6,7 @@ import { resolveSandboxLimits } from './limits.js'
 import type { SandboxExecutionResult, SandboxLimits } from './types.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const workerPath = resolve(__dirname, '../../../dist/codemode/sandbox/worker-entry.js')
+const defaultWorkerPath = resolve(__dirname, '../../../dist/codemode/sandbox/worker-entry.js')
 
 interface WorkerDoneMessage {
   type: 'done'
@@ -25,8 +25,17 @@ interface WorkerCallMessage {
 
 const SUBPROCESS_TIMEOUT_GRACE_MS = 100
 
+function resolveWorkerPath() {
+  const overridePath = process.env.DOKPLOY_MCP_SANDBOX_WORKER_PATH?.trim()
+  if (!overridePath) {
+    return defaultWorkerPath
+  }
+
+  return resolve(overridePath)
+}
+
 function createWorker() {
-  return fork(workerPath, {
+  return fork(resolveWorkerPath(), {
     stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     env: {},
     execArgv: [],

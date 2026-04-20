@@ -906,4 +906,174 @@ describe('codemode execute integration', () => {
     ])
     expect(context.getCalls()).toHaveLength(5)
   })
+
+  it('can execute virtual logs.tailMany while preserving input order', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${JSON.stringify(input)}`)
+
+      switch (procedure) {
+        case 'application.readLogs':
+          return {
+            data: { lines: ['app-error'], truncated: false },
+            trace: trace(procedure, 0),
+          }
+        case 'compose.readLogs':
+          return {
+            data: { lines: ['compose-line'], truncated: false },
+            trace: trace(procedure, 1),
+          }
+        case 'libsql.readLogs':
+          return {
+            data: { lines: ['libsql-line'], truncated: false },
+            trace: trace(procedure, 2),
+          }
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: readFixture('logs-tail-many.js'),
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      items: [
+        {
+          kind: 'application',
+          applicationId: 'app-1',
+          tail: 20,
+          search: 'error',
+          procedure: 'application.readLogs',
+          result: { lines: ['app-error'], truncated: false },
+        },
+        {
+          kind: 'compose',
+          composeId: 'compose-1',
+          containerId: 'web',
+          tail: 10,
+          procedure: 'compose.readLogs',
+          result: { lines: ['compose-line'], truncated: false },
+        },
+        {
+          kind: 'libsql',
+          libsqlId: 'libsql-1',
+          tail: 5,
+          procedure: 'libsql.readLogs',
+          result: { lines: ['libsql-line'], truncated: false },
+        },
+      ],
+      total: 3,
+    })
+    expect(calls).toEqual([
+      'application.readLogs:{"applicationId":"app-1","tail":20,"search":"error"}',
+      'compose.readLogs:{"composeId":"compose-1","containerId":"web","tail":10}',
+      'libsql.readLogs:{"libsqlId":"libsql-1","tail":5}',
+    ])
+    expect(context.getCalls()).toHaveLength(3)
+  })
+
+  it('can execute virtual libsql.many while preserving input order', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${JSON.stringify(input)}`)
+
+      switch (procedure) {
+        case 'libsql.one':
+          if (input.libsqlId === 'libsql-2') {
+            return {
+              data: { libsqlId: 'libsql-2', name: 'Second libsql' },
+              trace: trace(procedure, 0),
+            }
+          }
+
+          if (input.libsqlId === 'libsql-1') {
+            return {
+              data: { libsqlId: 'libsql-1', name: 'First libsql' },
+              trace: trace(procedure, 1),
+            }
+          }
+
+          throw new Error(`Unexpected libsqlId ${String(input.libsqlId)}`)
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: readFixture('libsql-many.js'),
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      items: [
+        { libsqlId: 'libsql-2', name: 'Second libsql' },
+        { libsqlId: 'libsql-1', name: 'First libsql' },
+      ],
+      total: 2,
+    })
+    expect(calls).toEqual([
+      'libsql.one:{"libsqlId":"libsql-2"}',
+      'libsql.one:{"libsqlId":"libsql-1"}',
+    ])
+    expect(context.getCalls()).toHaveLength(2)
+  })
+
+  it('can execute virtual tag.bulkAssignPreview with resolved and missing tags', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${JSON.stringify(input)}`)
+
+      switch (procedure) {
+        case 'project.one':
+          return {
+            data: {
+              projectId: 'project-1',
+              name: 'Project One',
+              tags: [{ tagId: 'tag-1', name: 'Current tag' }],
+            },
+            trace: trace(procedure, 0),
+          }
+        case 'tag.all':
+          return {
+            data: [
+              { tagId: 'tag-1', name: 'Current tag', color: '#111111' },
+              { tagId: 'tag-2', name: 'New tag', color: '#222222' },
+            ],
+            trace: trace(procedure, 1),
+          }
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: readFixture('tag-bulk-assign-preview.js'),
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      projectId: 'project-1',
+      projectName: 'Project One',
+      requestedTagIds: ['tag-2', 'tag-missing', 'tag-1'],
+      currentTagIds: ['tag-1'],
+      resolvedTags: [
+        { tagId: 'tag-2', name: 'New tag', color: '#222222' },
+        { tagId: 'tag-1', name: 'Current tag', color: '#111111' },
+      ],
+      missingTagIds: ['tag-missing'],
+      unchangedTagIds: ['tag-1'],
+      toAddTagIds: ['tag-2'],
+      previewOperation: {
+        procedure: 'tag.bulkAssign',
+        input: {
+          projectId: 'project-1',
+          tagIds: ['tag-2', 'tag-missing', 'tag-1'],
+        },
+      },
+    })
+    expect(calls).toEqual(['project.one:{"projectId":"project-1"}', 'tag.all:{}'])
+    expect(context.getCalls()).toHaveLength(2)
+  })
 })
