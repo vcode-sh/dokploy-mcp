@@ -1,9 +1,13 @@
 import { batchProcedureDefinitions } from './batch.js'
+import { databaseProcedureDefinitions } from './database.js'
+import { deploymentProcedureDefinitions } from './deployment.js'
 import { projectProcedureDefinitions } from './project.js'
 import { tagProcedureDefinitions } from './tag.js'
 
 const virtualProcedureDefinitions = {
   ...batchProcedureDefinitions,
+  ...databaseProcedureDefinitions,
+  ...deploymentProcedureDefinitions,
   ...projectProcedureDefinitions,
   ...tagProcedureDefinitions,
 }

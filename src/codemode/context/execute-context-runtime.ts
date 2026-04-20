@@ -9,6 +9,10 @@ import {
   type ApplicationManyInput,
   type ApplicationManyOutput,
   buildHelpers,
+  type DatabaseRotatePasswordPreviewInput,
+  type DatabaseRotatePasswordPreviewOutput,
+  type DeploymentLatestByTypeInput,
+  type DeploymentLatestByTypeOutput,
   type ExecuteApplicationOneInput,
   type ExecuteContext,
   type ExecuteDokployProcedureMap,
@@ -125,6 +129,21 @@ export function createExecuteContext(executor: CallExecutor, maxCalls: number): 
           'tag.bulkAssignPreview',
           input as unknown as Record<string, unknown>,
         ) as Promise<TagBulkAssignPreviewOutput>,
+    },
+    database: {
+      rotatePasswordPreview: (input: DatabaseRotatePasswordPreviewInput) =>
+        dispatchCall(
+          'database.rotatePasswordPreview',
+          input as unknown as Record<string, unknown>,
+        ) as Promise<DatabaseRotatePasswordPreviewOutput>,
+    },
+    deployment: {
+      ...runtime.deployment,
+      latestByType: (input: DeploymentLatestByTypeInput) =>
+        dispatchCall(
+          'deployment.latestByType',
+          input as unknown as Record<string, unknown>,
+        ) as Promise<DeploymentLatestByTypeOutput>,
     },
     project: {
       ...runtime.project,

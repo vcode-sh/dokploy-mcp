@@ -141,12 +141,16 @@ describe('codemode subprocess runner', () => {
     })
     await flushMicrotasks()
 
-    expect(worker.send).toHaveBeenCalledWith({
-      type: 'callResult',
-      requestId: 7,
-      ok: false,
-      error: 'Sandbox call result could not be serialized for IPC.',
-    })
+    expect(worker.send).toHaveBeenNthCalledWith(
+      3,
+      {
+        type: 'callResult',
+        requestId: 7,
+        ok: false,
+        error: 'Sandbox call result could not be serialized for IPC.',
+      },
+      expect.any(Function),
+    )
 
     worker.emit('message', {
       type: 'done',

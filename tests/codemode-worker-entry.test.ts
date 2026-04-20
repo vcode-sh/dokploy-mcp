@@ -41,14 +41,22 @@ function flushMicrotasks() {
 async function loadWorkerEntry() {
   vi.resetModules()
   const existingListeners = new Set(process.listeners('message'))
+  const existingDisconnectListeners = new Set(process.listeners('disconnect'))
   await import('../src/codemode/sandbox/worker-entry.js')
   const addedListeners = process
     .listeners('message')
     .filter((listener) => !existingListeners.has(listener))
+  const addedDisconnectListeners = process
+    .listeners('disconnect')
+    .filter((listener) => !existingDisconnectListeners.has(listener))
 
   return () => {
     for (const listener of addedListeners) {
       process.off('message', listener)
+    }
+
+    for (const listener of addedDisconnectListeners) {
+      process.off('disconnect', listener)
     }
   }
 }
@@ -295,6 +303,139 @@ describe('codemode worker entry', () => {
       type: 'done',
       ok: false,
       error: 'Sandbox worker failed to send procedure call: Do not know how to serialize a BigInt',
+    })
+
+    cleanup()
+    process.send = originalSend
+  })
+
+  it('returns an explicit failure when the parent sends an invalid call result payload', async () => {
+    const sendCalls: unknown[] = []
+    const originalSend = process.send
+    process.send = vi.fn((message: unknown, callback?: (error: Error | null) => void) => {
+      sendCalls.push(message)
+      callback?.(null)
+      return true
+    }) as typeof process.send
+
+    createExecuteContextMock.mockImplementation(
+      (
+        rpcExecutor: (
+          procedure: string,
+          input?: Record<string, unknown>,
+        ) => Promise<GatewayCallResult>,
+      ) => ({
+        dokploy: {
+          call: (procedure: string, input?: Record<string, unknown>) =>
+            rpcExecutor(procedure, input),
+        },
+        helpers: {},
+      }),
+    )
+
+    runSandboxedFunctionMock.mockImplementation(
+      async ({
+        context,
+      }: {
+        context: {
+          dokploy: {
+            call: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>
+          }
+        }
+      }) => {
+        await context.dokploy.call('project.one', { projectId: 'project-1' })
+        return {
+          result: null,
+          logs: [],
+        } satisfies SandboxExecutionResult
+      },
+    )
+
+    const cleanup = await loadWorkerEntry()
+    process.emit('message', {
+      type: 'run',
+      mode: 'execute',
+      code: 'await dokploy.call("project.one", { projectId: "project-1" })',
+      limits: createLimits(),
+    })
+    await flushMicrotasks()
+
+    process.emit('message', {
+      type: 'callResult',
+      requestId: 'bad',
+      ok: true,
+      data: { projectId: 'project-1' },
+    })
+    await flushMicrotasks()
+
+    expect(sendCalls).toContainEqual({
+      type: 'done',
+      ok: false,
+      error: 'Sandbox worker received an invalid procedure call result.',
+    })
+
+    cleanup()
+    process.send = originalSend
+  })
+
+  it('returns an explicit failure when the parent IPC channel disconnects mid-call', async () => {
+    const sendCalls: unknown[] = []
+    const originalSend = process.send
+    process.send = vi.fn((message: unknown, callback?: (error: Error | null) => void) => {
+      sendCalls.push(message)
+      callback?.(null)
+      return true
+    }) as typeof process.send
+
+    createExecuteContextMock.mockImplementation(
+      (
+        rpcExecutor: (
+          procedure: string,
+          input?: Record<string, unknown>,
+        ) => Promise<GatewayCallResult>,
+      ) => ({
+        dokploy: {
+          call: (procedure: string, input?: Record<string, unknown>) =>
+            rpcExecutor(procedure, input),
+        },
+        helpers: {},
+      }),
+    )
+
+    runSandboxedFunctionMock.mockImplementation(
+      async ({
+        context,
+      }: {
+        context: {
+          dokploy: {
+            call: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>
+          }
+        }
+      }) => {
+        await context.dokploy.call('project.one', { projectId: 'project-1' })
+        return {
+          result: null,
+          logs: [],
+        } satisfies SandboxExecutionResult
+      },
+    )
+
+    const cleanup = await loadWorkerEntry()
+    process.emit('message', {
+      type: 'run',
+      mode: 'execute',
+      code: 'await dokploy.call("project.one", { projectId: "project-1" })',
+      limits: createLimits(),
+    })
+    await flushMicrotasks()
+
+    process.emit('disconnect')
+    await flushMicrotasks()
+
+    expect(sendCalls).toContainEqual({
+      type: 'done',
+      ok: false,
+      error: 'Sandbox worker IPC channel disconnected before a procedure call result was received.',
     })
 
     cleanup()

@@ -141,8 +141,32 @@ function buildTimeoutError(timeoutMs: number) {
   return new Error(`Sandbox subprocess timed out after ${timeoutMs}ms.`)
 }
 
+function buildDisconnectError() {
+  return new Error('Sandbox worker IPC channel disconnected before completing.')
+}
+
 function buildCallResultSerializationError() {
   return 'Sandbox call result could not be serialized for IPC.'
+}
+
+function buildCallResultTransportError(error: Error) {
+  return new Error(
+    `Sandbox worker IPC channel failed while sending a procedure call result: ${error.message}`,
+  )
+}
+
+function normalizeError(error: unknown) {
+  return error instanceof Error ? error : new Error(String(error))
+}
+
+function isLikelySerializationError(error: Error) {
+  const message = error.message.toLowerCase()
+  return (
+    message.includes('serialize') ||
+    message.includes('serialization') ||
+    message.includes('bigint') ||
+    message.includes('circular')
+  )
 }
 
 function cleanupWorker(
@@ -212,11 +236,7 @@ function sendInitialRunMessage(
     limits: SandboxLimits
   },
 ) {
-  try {
-    worker.send(payload)
-  } catch (error) {
-    settle.reject(error)
-  }
+  sendWorkerMessage(worker, settle, payload)
 }
 
 function sendExecuteCallError(
@@ -225,16 +245,12 @@ function sendExecuteCallError(
   requestId: number,
   error: string,
 ) {
-  try {
-    worker.send({
-      type: 'callResult',
-      requestId,
-      ok: false,
-      error,
-    })
-  } catch (fallbackError) {
-    settle.reject(fallbackError)
-  }
+  sendWorkerMessage(worker, settle, {
+    type: 'callResult',
+    requestId,
+    ok: false,
+    error,
+  })
 }
 
 function sendExecuteCallResult(
@@ -243,10 +259,34 @@ function sendExecuteCallResult(
   requestId: number,
   data: unknown,
 ) {
+  sendWorkerMessage(worker, settle, { type: 'callResult', requestId, ok: true, data }, (error) => {
+    if (isLikelySerializationError(error)) {
+      sendExecuteCallError(worker, settle, requestId, buildCallResultSerializationError())
+      return
+    }
+
+    settle.reject(buildCallResultTransportError(error))
+  })
+}
+
+function sendWorkerMessage(
+  worker: ReturnType<typeof createWorker>,
+  settle: ReturnType<typeof createSettlers>,
+  message: Record<string, unknown>,
+  onError?: (error: Error) => void,
+) {
+  const handleError = onError ?? ((error: Error) => settle.reject(error))
+
   try {
-    worker.send({ type: 'callResult', requestId, ok: true, data })
-  } catch {
-    sendExecuteCallError(worker, settle, requestId, buildCallResultSerializationError())
+    worker.send(message, (error) => {
+      if (!error) {
+        return
+      }
+
+      handleError(normalizeError(error))
+    })
+  } catch (error) {
+    handleError(normalizeError(error))
   }
 }
 
@@ -304,6 +344,7 @@ export async function runSearchInSubprocess(options: {
     })
 
     worker.on('error', (error) => settle.reject(error))
+    worker.on('disconnect', () => settle.reject(buildDisconnectError()))
     worker.on('exit', (code, signal) => settle.reject(buildExitError(code, signal), false))
 
     sendInitialRunMessage(worker, settle, {
@@ -336,6 +377,7 @@ export async function runExecuteInSubprocess(options: {
     })
 
     worker.on('error', (error) => settle.reject(error))
+    worker.on('disconnect', () => settle.reject(buildDisconnectError()))
     worker.on('exit', (code, signal) => settle.reject(buildExitError(code, signal), false))
 
     sendInitialRunMessage(worker, settle, {

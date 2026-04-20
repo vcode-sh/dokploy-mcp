@@ -259,6 +259,75 @@ export interface TagBulkAssignPreviewOutput {
   }
 }
 
+export type DatabaseRotatePasswordPreviewInput =
+  | {
+      kind: 'mariadb'
+      mariadbId: string
+      type?: 'user' | 'root'
+    }
+  | {
+      kind: 'mongo'
+      mongoId: string
+    }
+  | {
+      kind: 'mysql'
+      mysqlId: string
+      type?: 'user' | 'root'
+    }
+  | {
+      kind: 'postgres'
+      postgresId: string
+    }
+  | {
+      kind: 'redis'
+      redisId: string
+    }
+
+export interface DatabaseRotatePasswordPreviewOutput {
+  kind: string
+  resourceId: string
+  name: string | null
+  appName: string | null
+  environmentId: string | null
+  projectId: string | null
+  previewOperation: {
+    procedure:
+      | 'mariadb.changePassword'
+      | 'mongo.changePassword'
+      | 'mysql.changePassword'
+      | 'postgres.changePassword'
+      | 'redis.changePassword'
+    inputTemplate: Record<string, unknown>
+    requiredSecretField: 'password'
+  }
+}
+
+export interface DeploymentLatestByTypeInput {
+  id: string
+  type:
+    | 'application'
+    | 'compose'
+    | 'server'
+    | 'schedule'
+    | 'previewDeployment'
+    | 'backup'
+    | 'volumeBackup'
+}
+
+export interface DeploymentLatestByTypeOutput {
+  id: string
+  type:
+    | 'application'
+    | 'compose'
+    | 'server'
+    | 'schedule'
+    | 'previewDeployment'
+    | 'backup'
+    | 'volumeBackup'
+  total: number | null
+  latestDeployment: unknown
+}
+
 export interface ExecuteDokployProcedureMap {
   'application.one': {
     input: ExecuteApplicationOneInput
@@ -279,6 +348,14 @@ export interface ExecuteDokployProcedureMap {
   'libsql.many': {
     input: LibsqlManyInput
     output: LibsqlManyOutput
+  }
+  'database.rotatePasswordPreview': {
+    input: DatabaseRotatePasswordPreviewInput
+    output: DatabaseRotatePasswordPreviewOutput
+  }
+  'deployment.latestByType': {
+    input: DeploymentLatestByTypeInput
+    output: DeploymentLatestByTypeOutput
   }
   'project.overview': {
     input: ProjectOverviewInput
@@ -303,6 +380,7 @@ type GeneratedModuleRuntime = Record<string, unknown>
 export interface GeneratedDokployRuntime {
   call: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>
   application: GeneratedModuleRuntime
+  deployment: GeneratedModuleRuntime
   libsql: GeneratedModuleRuntime
   server: GeneratedModuleRuntime
   tag: GeneratedModuleRuntime
@@ -333,6 +411,14 @@ export interface ExecuteDokployRuntime extends GeneratedDokployRuntime {
   }
   tag: GeneratedModuleRuntime & {
     bulkAssignPreview(input: TagBulkAssignPreviewInput): Promise<TagBulkAssignPreviewOutput>
+  }
+  database: GeneratedModuleRuntime & {
+    rotatePasswordPreview(
+      input: DatabaseRotatePasswordPreviewInput,
+    ): Promise<DatabaseRotatePasswordPreviewOutput>
+  }
+  deployment: GeneratedModuleRuntime & {
+    latestByType(input: DeploymentLatestByTypeInput): Promise<DeploymentLatestByTypeOutput>
   }
   project: GeneratedModuleRuntime & {
     overview(input: ProjectOverviewInput): Promise<ProjectOverviewOutput>

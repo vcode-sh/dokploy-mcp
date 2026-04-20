@@ -1,3 +1,9 @@
+const procedureCallBase = {
+  type: 'call',
+  requestId: 1,
+  procedure: 'project.one',
+}
+
 function sendDoneError(error) {
   process.send?.({
     type: 'done',
@@ -6,44 +12,75 @@ function sendDoneError(error) {
   })
 }
 
-function handleTimeoutCall() {
-  process.send?.({
-    type: 'call',
-    requestId: 1,
-    procedure: 'project.one',
-    input: { projectId: 'p1' },
-  })
+function formatProcedureCallSendError(error) {
+  return `Sandbox worker failed to send procedure call: ${
+    error instanceof Error ? error.message : String(error)
+  }`
 }
 
-function handleUnserializableCall() {
-  try {
-    process.send?.(
-      {
-        type: 'call',
-        requestId: 1,
-        procedure: 'project.one',
-        input: { projectId: 'p1', bad: 1n },
-      },
-      (error) => {
-        if (!error) {
-          return
-        }
+function sendProcedureCall(input, options = {}) {
+  const message = {
+    ...procedureCallBase,
+    input,
+  }
+  const reportSendError = options.reportSendError === true
 
-        sendDoneError(`Sandbox worker failed to send procedure call: ${error.message}`)
-      },
-    )
+  try {
+    if (!reportSendError) {
+      process.send?.(message)
+      return
+    }
+
+    process.send?.(message, (error) => {
+      if (!error) {
+        return
+      }
+
+      sendDoneError(formatProcedureCallSendError(error))
+    })
   } catch (error) {
-    sendDoneError(
-      `Sandbox worker failed to send procedure call: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    )
+    sendDoneError(formatProcedureCallSendError(error))
   }
 }
 
-const handlers = {
-  'timeout-call': handleTimeoutCall,
-  'unserializable-call': handleUnserializableCall,
+function createProcedureCallMode(input, options = {}) {
+  return () => {
+    sendProcedureCall(input, options)
+  }
+}
+
+function createDisconnectAfterCallMode(input) {
+  return () => {
+    sendProcedureCall(input)
+
+    const exitTimer = setTimeout(() => {
+      process.exit(0)
+    }, 100)
+
+    process.disconnect?.()
+    return exitTimer
+  }
+}
+
+function createImmediateDisconnectMode() {
+  return () => {
+    const exitTimer = setTimeout(() => {
+      process.exit(0)
+    }, 100)
+
+    process.disconnect?.()
+    return exitTimer
+  }
+}
+
+const modeHandlers = {
+  'timeout-call': createProcedureCallMode({ projectId: 'p1' }),
+  'unserializable-call': createProcedureCallMode(
+    { projectId: 'p1', bad: 1n },
+    { reportSendError: true },
+  ),
+  'disconnect-after-call': createDisconnectAfterCallMode({ projectId: 'p1' }),
+  'disconnect-immediately': createImmediateDisconnectMode(),
 }
 
 process.on('message', (message) => {
@@ -52,10 +89,12 @@ process.on('message', (message) => {
   }
 
   const mode = process.env.DOKPLOY_MCP_SANDBOX_TEST_WORKER_MODE?.trim()
-  if (!(mode && mode in handlers)) {
+  const handler = mode ? modeHandlers[mode] : undefined
+
+  if (!handler) {
     sendDoneError(`Unsupported sandbox test worker mode: ${mode || '(unset)'}.`)
     return
   }
 
-  handlers[mode]()
+  handler()
 })

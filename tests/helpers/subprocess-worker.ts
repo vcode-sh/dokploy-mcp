@@ -3,13 +3,63 @@ import { fileURLToPath } from 'node:url'
 
 import { vi } from 'vitest'
 
+import type { SandboxLimits } from '../../src/codemode/sandbox/types.js'
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
 export const subprocessTestWorkerPath = resolve(
   __dirname,
   '../fixtures/subprocess-workers/test-worker.js',
 )
 
-export type SubprocessTestWorkerMode = 'timeout-call' | 'unserializable-call'
+const subprocessWorkerPathEnvName = 'DOKPLOY_MCP_SANDBOX_WORKER_PATH'
+const subprocessWorkerModeEnvName = 'DOKPLOY_MCP_SANDBOX_TEST_WORKER_MODE'
+const unsupportedSubprocessTestWorkerMode = 'unsupported'
+
+export const subprocessTestWorkerModes = [
+  'timeout-call',
+  'unserializable-call',
+  'disconnect-after-call',
+  'disconnect-immediately',
+] as const
+export type SubprocessTestWorkerMode = (typeof subprocessTestWorkerModes)[number]
+
+const defaultSubprocessLimits: SandboxLimits = {
+  timeoutMs: 25,
+  maxResultBytes: 1024,
+  maxLogBytes: 1024,
+  maxCalls: 5,
+  maxResponseBytes: 1024,
+  maxHeapDeltaBytes: 1024,
+}
+
+const defaultSubprocessIntegrationLimits: SandboxLimits = {
+  timeoutMs: 50,
+  maxResultBytes: 8 * 1024,
+  maxLogBytes: 2 * 1024,
+  maxCalls: 5,
+  maxResponseBytes: 16 * 1024,
+  maxHeapDeltaBytes: 2 * 1024 * 1024,
+}
+
+function mergeSubprocessLimits(
+  base: SandboxLimits,
+  overrides: Partial<SandboxLimits> = {},
+): SandboxLimits {
+  return {
+    ...base,
+    ...overrides,
+  }
+}
+
+export function createSubprocessLimits(overrides: Partial<SandboxLimits> = {}): SandboxLimits {
+  return mergeSubprocessLimits(defaultSubprocessLimits, overrides)
+}
+
+export function createSubprocessIntegrationLimits(
+  overrides: Partial<SandboxLimits> = {},
+): SandboxLimits {
+  return mergeSubprocessLimits(defaultSubprocessIntegrationLimits, overrides)
+}
 
 export async function loadSubprocessRunner(options?: { useRealChildProcess?: boolean }) {
   vi.resetModules()
@@ -21,7 +71,31 @@ export async function loadSubprocessRunner(options?: { useRealChildProcess?: boo
   return import('../../src/codemode/sandbox/subprocess-runner.js')
 }
 
+export async function loadRealSubprocessRunner() {
+  return loadSubprocessRunner({ useRealChildProcess: true })
+}
+
+export async function loadRealSubprocessRunnerWithTestWorker(mode: SubprocessTestWorkerMode) {
+  useConfiguredSubprocessTestWorker(mode)
+  return loadRealSubprocessRunner()
+}
+
+export async function loadRealSubprocessRunnerWithInvalidTestWorker(
+  mode = unsupportedSubprocessTestWorkerMode,
+) {
+  useConfiguredSubprocessTestWorker(mode)
+  return loadRealSubprocessRunner()
+}
+
 export function useSubprocessTestWorker(mode: SubprocessTestWorkerMode) {
-  vi.stubEnv('DOKPLOY_MCP_SANDBOX_WORKER_PATH', subprocessTestWorkerPath)
-  vi.stubEnv('DOKPLOY_MCP_SANDBOX_TEST_WORKER_MODE', mode)
+  useConfiguredSubprocessTestWorker(mode)
+}
+
+export function useInvalidSubprocessTestWorker(mode = unsupportedSubprocessTestWorkerMode) {
+  useConfiguredSubprocessTestWorker(mode)
+}
+
+function useConfiguredSubprocessTestWorker(mode: string) {
+  vi.stubEnv(subprocessWorkerPathEnvName, subprocessTestWorkerPath)
+  vi.stubEnv(subprocessWorkerModeEnvName, mode)
 }

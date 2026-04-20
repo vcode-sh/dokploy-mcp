@@ -45,6 +45,16 @@ function sendDoneMessage(ok: boolean, payload: Record<string, unknown>) {
   })
 }
 
+function buildInvalidCallResultError() {
+  return new Error('Sandbox worker received an invalid procedure call result.')
+}
+
+function buildDisconnectedCallResultError() {
+  return new Error(
+    'Sandbox worker IPC channel disconnected before a procedure call result was received.',
+  )
+}
+
 function isValidRunPayload(
   payload: Record<string, unknown>,
 ): payload is Record<string, unknown> & { type: 'run'; mode: 'search' | 'execute'; code: string } {
@@ -82,6 +92,15 @@ function rpcCall(procedure: string, input: Record<string, unknown> = {}) {
   })
 }
 
+function rejectPendingCalls(error: Error) {
+  const pendingEntries = [...pendingCalls.values()]
+  pendingCalls.clear()
+
+  for (const pending of pendingEntries) {
+    pending.reject(error)
+  }
+}
+
 process.on('message', async (message: unknown) => {
   if (!isRecord(message)) {
     return
@@ -91,6 +110,7 @@ process.on('message', async (message: unknown) => {
 
   if (payload.type === 'callResult') {
     if (!Number.isInteger(payload.requestId) || typeof payload.ok !== 'boolean') {
+      rejectPendingCalls(buildInvalidCallResultError())
       return
     }
 
@@ -169,4 +189,8 @@ process.on('message', async (message: unknown) => {
       // The worker cannot report the failure if the IPC channel is already broken.
     }
   }
+})
+
+process.on('disconnect', () => {
+  rejectPendingCalls(buildDisconnectedCallResultError())
 })

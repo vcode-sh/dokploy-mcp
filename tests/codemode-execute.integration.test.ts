@@ -1211,4 +1211,95 @@ describe('codemode execute integration', () => {
     expect(calls).toEqual(['project.one:{"projectId":"project-1"}', 'tag.all:{}'])
     expect(context.getCalls()).toHaveLength(2)
   })
+
+  it('can execute virtual database.rotatePasswordPreview without mutating anything', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${JSON.stringify(input)}`)
+
+      switch (procedure) {
+        case 'mysql.one':
+          return {
+            data: {
+              mysqlId: 'mysql-1',
+              name: 'Main MySQL',
+              appName: 'mysql-main',
+              environmentId: 'env-1',
+              projectId: 'project-1',
+            },
+            trace: trace(procedure, 0),
+          }
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: readFixture('database-rotate-password-preview.js'),
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      kind: 'mysql',
+      resourceId: 'mysql-1',
+      name: 'Main MySQL',
+      appName: 'mysql-main',
+      environmentId: 'env-1',
+      projectId: 'project-1',
+      previewOperation: {
+        procedure: 'mysql.changePassword',
+        inputTemplate: {
+          mysqlId: 'mysql-1',
+          type: 'root',
+        },
+        requiredSecretField: 'password',
+      },
+    })
+    expect(calls).toEqual(['mysql.one:{"mysqlId":"mysql-1"}'])
+    expect(context.getCalls()).toHaveLength(1)
+  })
+
+  it('can execute virtual deployment.latestByType and return the latest entry', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${JSON.stringify(input)}`)
+
+      switch (procedure) {
+        case 'deployment.allByType':
+          return {
+            data: {
+              items: [
+                { deploymentId: 'dep-2', status: 'running' },
+                { deploymentId: 'dep-1', status: 'done' },
+              ],
+              total: 2,
+            },
+            trace: trace(procedure, 0),
+          }
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: `
+        async ({ dokploy }) => {
+          return await dokploy.deployment.latestByType({
+            id: 'app-1',
+            type: 'application',
+          })
+        }
+      `,
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      id: 'app-1',
+      type: 'application',
+      total: 2,
+      latestDeployment: { deploymentId: 'dep-2', status: 'running' },
+    })
+    expect(calls).toEqual(['deployment.allByType:{"id":"app-1","type":"application"}'])
+    expect(context.getCalls()).toHaveLength(1)
+  })
 })

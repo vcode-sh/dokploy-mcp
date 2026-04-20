@@ -36,8 +36,16 @@ export interface SessionRecord {
 
 export interface SessionRegistry {
   get: (sessionId: string) => SessionRecord | undefined
+  trackRecord: (record: SessionRecord) => void
   set: (sessionId: string, record: SessionRecord) => void
   delete: (sessionId: string) => void
+  isShuttingDown: () => boolean
+  beginShutdown: () => void
+  beginRequest: (record: SessionRecord, kind: 'request' | 'stream' | 'control') => boolean
+  endRequest: (record: SessionRecord, kind: 'request' | 'stream' | 'control') => Promise<void>
+  registerRequestAborter: (record: SessionRecord, aborter: () => void) => void
+  unregisterRequestAborter: (record: SessionRecord, aborter: () => void) => void
+  closeRecord: (record: SessionRecord) => Promise<void>
   closeSession: (sessionId: string) => Promise<void>
   closeAll: () => Promise<void>
 }

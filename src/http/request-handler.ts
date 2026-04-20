@@ -3,19 +3,74 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { isInitializeRequest, JSONRPCMessageSchema } from '@modelcontextprotocol/sdk/types.js'
 
 import { getHealthPayload } from './options.js'
-import { writeBadRequest, writeJson, writeJsonRpcError, writeSessionNotFound } from './responses.js'
-import { closeSessionRecord, createSessionRecord } from './sessions.js'
-import type { HttpRequestHandler, ResolvedHttpServerOptions, SessionRegistry } from './types.js'
+import {
+  canWriteResponse,
+  writeBadRequest,
+  writeJson,
+  writeJsonRpcError,
+  writeServerUnavailable,
+  writeSessionNotFound,
+} from './responses.js'
+import { createSessionRecord } from './sessions.js'
+import type {
+  HttpRequestHandler,
+  ResolvedHttpServerOptions,
+  SessionRecord,
+  SessionRegistry,
+} from './types.js'
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = []
+  return await new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
 
-  for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
-  }
+    const cleanup = () => {
+      req.off('data', onData)
+      req.off('end', onEnd)
+      req.off('aborted', onAborted)
+      req.off('close', onClose)
+      req.off('error', onError)
+    }
 
-  const raw = Buffer.concat(chunks).toString('utf8')
-  return raw.length === 0 ? null : JSON.parse(raw)
+    const onData = (chunk: Buffer | string) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+    }
+
+    const onEnd = () => {
+      cleanup()
+
+      try {
+        const raw = Buffer.concat(chunks).toString('utf8')
+        resolve(raw.length === 0 ? null : JSON.parse(raw))
+      } catch (error) {
+        reject(error)
+      }
+    }
+
+    const onAborted = () => {
+      cleanup()
+      reject(new Error('Request body aborted'))
+    }
+
+    const onClose = () => {
+      if (req.complete) {
+        return
+      }
+
+      cleanup()
+      reject(new Error('Request body closed before completion'))
+    }
+
+    const onError = (error: Error) => {
+      cleanup()
+      reject(error)
+    }
+
+    req.on('data', onData)
+    req.once('end', onEnd)
+    req.once('aborted', onAborted)
+    req.once('close', onClose)
+    req.once('error', onError)
+  })
 }
 
 function parseJsonRpcMessages(payload: unknown) {
@@ -55,6 +110,40 @@ function getSessionRecord(req: IncomingMessage, res: ServerResponse, sessions: S
   return session
 }
 
+async function handleTrackedSessionRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  sessions: SessionRegistry,
+  session: SessionRecord,
+  parsedBody?: unknown,
+) {
+  const requestKind =
+    req.method === 'GET' ? 'stream' : req.method === 'DELETE' ? 'control' : 'request'
+  const abortRequest = () => {
+    req.destroy()
+    res.destroy()
+  }
+
+  if (!sessions.beginRequest(session, requestKind)) {
+    writeServerUnavailable(req, res)
+    return
+  }
+
+  if (requestKind !== 'control') {
+    sessions.registerRequestAborter(session, abortRequest)
+  }
+
+  try {
+    await session.transport.handleRequest(req, res, parsedBody)
+  } finally {
+    if (requestKind !== 'control') {
+      sessions.unregisterRequestAborter(session, abortRequest)
+    }
+
+    await sessions.endRequest(session, requestKind)
+  }
+}
+
 async function handleExistingPostSession(
   req: IncomingMessage,
   res: ServerResponse,
@@ -72,7 +161,7 @@ async function handleExistingPostSession(
     return true
   }
 
-  await session.transport.handleRequest(req, res, parsedBody)
+  await handleTrackedSessionRequest(req, res, sessions, session, parsedBody)
   return true
 }
 
@@ -83,7 +172,17 @@ async function handleInitializePostSession(
   options: ResolvedHttpServerOptions,
   parsedBody: unknown,
 ) {
+  if (sessions.isShuttingDown()) {
+    writeServerUnavailable(req, res)
+    return
+  }
+
   const session = createSessionRecord(sessions, options)
+  if (!sessions.beginRequest(session, 'request')) {
+    await sessions.closeRecord(session)
+    writeServerUnavailable(req, res)
+    return
+  }
 
   try {
     await session.server.connect(session.transport)
@@ -93,10 +192,10 @@ async function handleInitializePostSession(
     if (sessionId) {
       await sessions.closeSession(sessionId)
     } else {
-      await closeSessionRecord(session)
+      await sessions.closeRecord(session)
     }
 
-    if (!res.headersSent) {
+    if (canWriteResponse(res)) {
       writeJsonRpcError(
         req,
         res,
@@ -104,6 +203,8 @@ async function handleInitializePostSession(
         error instanceof Error ? error.message : 'Internal server error',
       )
     }
+  } finally {
+    await sessions.endRequest(session, 'request')
   }
 }
 
@@ -150,7 +251,7 @@ async function handleSessionRequest(
     return
   }
 
-  await session.transport.handleRequest(req, res)
+  await handleTrackedSessionRequest(req, res, sessions, session)
 }
 
 async function handleMcpRequest(
@@ -172,7 +273,7 @@ async function handleMcpRequest(
 
     await handleSessionRequest(req, res, sessions)
   } catch (error) {
-    if (!res.headersSent) {
+    if (canWriteResponse(res)) {
       writeJsonRpcError(
         req,
         res,

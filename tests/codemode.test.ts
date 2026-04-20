@@ -248,6 +248,51 @@ describe('codemode runtime', () => {
     })
   })
 
+  it('search catalog get exposes virtual database.rotatePasswordPreview as an execute-only helper', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('database.rotatePasswordPreview')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('database.rotatePasswordPreview')
+    expect(contract.path).toBe('/virtual/database.rotatePasswordPreview')
+    expect(contract.requiredInputs).toEqual(expect.arrayContaining(['kind']))
+    expect(contract.optionalInputs).toEqual(
+      expect.arrayContaining(['mariadbId', 'mongoId', 'mysqlId', 'postgresId', 'redisId', 'type']),
+    )
+    expect(contract.response).toEqual({
+      type: 'object',
+      keys: [
+        'kind',
+        'resourceId',
+        'name',
+        'appName',
+        'environmentId',
+        'projectId',
+        'previewOperation',
+      ],
+    })
+  })
+
+  it('search catalog get exposes virtual deployment.latestByType as an execute-only helper', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('deployment.latestByType')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('deployment.latestByType')
+    expect(contract.path).toBe('/virtual/deployment.latestByType')
+    expect(contract.requiredInputs).toEqual(expect.arrayContaining(['id', 'type']))
+    expect(contract.response).toEqual({
+      type: 'object',
+      keys: ['id', 'type', 'total', 'latestDeployment'],
+    })
+  })
+
   it('search can find endpoints by manual response hints when OpenAPI is incomplete', async () => {
     const result = await searchTool.handler({
       code: 'async ({ catalog }) => catalog.searchText("watchPaths").map((entry) => entry.procedure)',
@@ -329,6 +374,24 @@ describe('codemode runtime', () => {
     expect(payload.result).toEqual(expect.arrayContaining(['tag.bulkAssignPreview']))
   })
 
+  it('search can find database.rotatePasswordPreview by preview-specific fields', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("changePassword").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['database.rotatePasswordPreview']))
+  })
+
+  it('search can find deployment.latestByType by helper-specific fields', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("allByType").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['deployment.latestByType']))
+  })
+
   it('bounds array search results', async () => {
     const result = await searchTool.handler({
       code: 'async () => Array.from({ length: 200 }, (_, index) => index)',
@@ -407,6 +470,15 @@ describe('codemode runtime', () => {
       projectId: 'project-1',
       tagIds: ['tag-1'],
     })
+    expectTypeOf(context.dokploy.database.rotatePasswordPreview).toBeCallableWith({
+      kind: 'mysql',
+      mysqlId: 'mysql-1',
+      type: 'root',
+    })
+    expectTypeOf(context.dokploy.deployment.latestByType).toBeCallableWith({
+      id: 'app-1',
+      type: 'application',
+    })
     expectTypeOf(context.dokploy.project.overview).toBeCallableWith({
       projectId: 'project-1',
       pageSize: 10,
@@ -444,6 +516,14 @@ describe('codemode runtime', () => {
     expectTypeOf(context.dokploy.call).toBeCallableWith('tag.bulkAssignPreview', {
       projectId: 'project-1',
       tagIds: ['tag-1'],
+    })
+    expectTypeOf(context.dokploy.call).toBeCallableWith('database.rotatePasswordPreview', {
+      kind: 'postgres',
+      postgresId: 'postgres-1',
+    })
+    expectTypeOf(context.dokploy.call).toBeCallableWith('deployment.latestByType', {
+      id: 'server-1',
+      type: 'server',
     })
   })
 
@@ -866,6 +946,73 @@ describe('codemode runtime', () => {
         },
       }),
     ).rejects.toThrow('tagIds[1] must be a non-empty string')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
+  it('validates virtual database.rotatePasswordPreview input before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.database.rotatePasswordPreview({
+              kind: 'mysql',
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('mysqlId is required')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
+  it('validates virtual deployment.latestByType input before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.deployment.latestByType({
+              id: 'app-1',
+              type: 'invalid',
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow(
+      'type must be one of application, compose, server, schedule, previewDeployment, backup, volumeBackup',
+    )
 
     expect(context.getCalls()).toHaveLength(0)
   })
