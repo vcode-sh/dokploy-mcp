@@ -1,8 +1,11 @@
-import { resolve } from 'node:path'
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { SandboxLimits } from '../src/codemode/sandbox/types.js'
+import {
+  loadSubprocessRunner,
+  subprocessTestWorkerPath,
+  useSubprocessTestWorker,
+} from './helpers/subprocess-worker.js'
 
 function createLimits(overrides: Partial<SandboxLimits> = {}): SandboxLimits {
   return {
@@ -16,12 +19,6 @@ function createLimits(overrides: Partial<SandboxLimits> = {}): SandboxLimits {
   }
 }
 
-async function loadRunner() {
-  vi.resetModules()
-  vi.doUnmock('node:child_process')
-  return import('../src/codemode/sandbox/subprocess-runner.js')
-}
-
 beforeEach(() => {
   vi.unstubAllEnvs()
 })
@@ -32,12 +29,9 @@ afterEach(() => {
 
 describe('sandbox subprocess runner integration', () => {
   it('times out when the worker is blocked waiting for a gateway call result', async () => {
-    vi.stubEnv(
-      'DOKPLOY_MCP_SANDBOX_WORKER_PATH',
-      resolve('tests/fixtures/subprocess-workers/timeout-call-worker.js'),
-    )
+    useSubprocessTestWorker('timeout-call')
 
-    const { runExecuteInSubprocess } = await loadRunner()
+    const { runExecuteInSubprocess } = await loadSubprocessRunner({ useRealChildProcess: true })
 
     await expect(
       runExecuteInSubprocess({
@@ -52,12 +46,9 @@ describe('sandbox subprocess runner integration', () => {
   })
 
   it('returns an explicit IPC error when the worker cannot serialize a procedure call', async () => {
-    vi.stubEnv(
-      'DOKPLOY_MCP_SANDBOX_WORKER_PATH',
-      resolve('tests/fixtures/subprocess-workers/unserializable-call-worker.js'),
-    )
+    useSubprocessTestWorker('unserializable-call')
 
-    const { runExecuteInSubprocess } = await loadRunner()
+    const { runExecuteInSubprocess } = await loadSubprocessRunner({ useRealChildProcess: true })
     const onCall = vi.fn(async () => ({ ok: true }))
 
     await expect(
@@ -72,5 +63,20 @@ describe('sandbox subprocess runner integration', () => {
     ).rejects.toThrow(/Sandbox worker failed to send procedure call:/)
 
     expect(onCall).not.toHaveBeenCalled()
+  })
+
+  it('fails fast when the reusable test worker mode is unsupported', async () => {
+    vi.stubEnv('DOKPLOY_MCP_SANDBOX_WORKER_PATH', subprocessTestWorkerPath)
+    vi.stubEnv('DOKPLOY_MCP_SANDBOX_TEST_WORKER_MODE', 'unsupported')
+
+    const { runExecuteInSubprocess } = await loadSubprocessRunner({ useRealChildProcess: true })
+
+    await expect(
+      runExecuteInSubprocess({
+        code: 'await dokploy.project.one({ projectId: "p1" })',
+        limits: createLimits(),
+        onCall: async () => ({ ok: true }),
+      }),
+    ).rejects.toThrow('Unsupported sandbox test worker mode: unsupported.')
   })
 })

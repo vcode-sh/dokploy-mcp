@@ -139,6 +139,31 @@ export interface ProjectInfrastructureOverviewInput {
   includeServerSecurity?: boolean
 }
 
+export interface ProjectLogsOverviewInput {
+  projectId: string
+  tail?: number
+  search?: string
+  includeDatabases?: boolean
+  maxApplications?: number
+  maxDatabases?: number
+}
+
+export interface ProjectLogsOverviewSource {
+  kind: string
+  resourceId: string
+  name: string | null
+  environmentId: string
+  environmentName: string | null
+}
+
+export interface ProjectLogsOverviewOutput {
+  projectId: string
+  projectName: string | null
+  sources: ProjectLogsOverviewSource[]
+  items: Record<string, unknown>[]
+  total: number
+}
+
 export interface ProjectInfrastructureStatusSummary {
   total: number
   statusCounts: Record<string, number>
@@ -259,6 +284,10 @@ export interface ExecuteDokployProcedureMap {
     input: ProjectOverviewInput
     output: ProjectOverviewOutput
   }
+  'project.logsOverview': {
+    input: ProjectLogsOverviewInput
+    output: ProjectLogsOverviewOutput
+  }
   'project.infrastructureOverview': {
     input: ProjectInfrastructureOverviewInput
     output: ProjectInfrastructureOverviewOutput
@@ -307,6 +336,7 @@ export interface ExecuteDokployRuntime extends GeneratedDokployRuntime {
   }
   project: GeneratedModuleRuntime & {
     overview(input: ProjectOverviewInput): Promise<ProjectOverviewOutput>
+    logsOverview(input: ProjectLogsOverviewInput): Promise<ProjectLogsOverviewOutput>
     infrastructureOverview(
       input: ProjectInfrastructureOverviewInput,
     ): Promise<ProjectInfrastructureOverviewOutput>

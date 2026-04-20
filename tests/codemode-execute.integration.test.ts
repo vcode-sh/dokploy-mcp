@@ -907,6 +907,141 @@ describe('codemode execute integration', () => {
     expect(context.getCalls()).toHaveLength(5)
   })
 
+  it('can execute virtual project.logsOverview with bounded application and database log requests', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${JSON.stringify(input)}`)
+
+      switch (procedure) {
+        case 'project.one':
+          return {
+            data: {
+              projectId: 'project-1',
+              name: 'Project One',
+              environments: [
+                {
+                  environmentId: 'env-1',
+                  name: 'Production',
+                  applications: [
+                    { applicationId: 'app-1', name: 'App One' },
+                    { applicationId: 'app-2', name: 'App Two' },
+                    { applicationId: 'app-3', name: 'Ignored app' },
+                  ],
+                  libsql: [{ libsqlId: 'libsql-1', name: 'LibSQL One' }],
+                  mariadb: [{ mariadbId: 'mdb-1', name: 'Maria One' }],
+                  mongo: [],
+                  mysql: [],
+                  postgres: [],
+                  redis: [],
+                },
+              ],
+            },
+            trace: trace(procedure, 0),
+          }
+        case 'application.readLogs':
+          return {
+            data: { lines: [`app:${String(input.applicationId)}`], truncated: false },
+            trace: trace(procedure, 1),
+          }
+        case 'libsql.readLogs':
+          return {
+            data: { lines: [`libsql:${String(input.libsqlId)}`], truncated: false },
+            trace: trace(procedure, 2),
+          }
+        case 'mariadb.readLogs':
+          return {
+            data: { lines: [`mariadb:${String(input.mariadbId)}`], truncated: false },
+            trace: trace(procedure, 3),
+          }
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: readFixture('project-logs-overview.js'),
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      projectId: 'project-1',
+      projectName: 'Project One',
+      sources: [
+        {
+          kind: 'application',
+          resourceId: 'app-1',
+          name: 'App One',
+          environmentId: 'env-1',
+          environmentName: 'Production',
+        },
+        {
+          kind: 'application',
+          resourceId: 'app-2',
+          name: 'App Two',
+          environmentId: 'env-1',
+          environmentName: 'Production',
+        },
+        {
+          kind: 'libsql',
+          resourceId: 'libsql-1',
+          name: 'LibSQL One',
+          environmentId: 'env-1',
+          environmentName: 'Production',
+        },
+        {
+          kind: 'mariadb',
+          resourceId: 'mdb-1',
+          name: 'Maria One',
+          environmentId: 'env-1',
+          environmentName: 'Production',
+        },
+      ],
+      items: [
+        {
+          kind: 'application',
+          applicationId: 'app-1',
+          tail: 25,
+          search: 'error',
+          procedure: 'application.readLogs',
+          result: { lines: ['app:app-1'], truncated: false },
+        },
+        {
+          kind: 'application',
+          applicationId: 'app-2',
+          tail: 25,
+          search: 'error',
+          procedure: 'application.readLogs',
+          result: { lines: ['app:app-2'], truncated: false },
+        },
+        {
+          kind: 'libsql',
+          libsqlId: 'libsql-1',
+          tail: 25,
+          search: 'error',
+          procedure: 'libsql.readLogs',
+          result: { lines: ['libsql:libsql-1'], truncated: false },
+        },
+        {
+          kind: 'mariadb',
+          mariadbId: 'mdb-1',
+          tail: 25,
+          search: 'error',
+          procedure: 'mariadb.readLogs',
+          result: { lines: ['mariadb:mdb-1'], truncated: false },
+        },
+      ],
+      total: 4,
+    })
+    expect(calls).toEqual([
+      'project.one:{"projectId":"project-1"}',
+      'application.readLogs:{"applicationId":"app-1","tail":25,"search":"error"}',
+      'application.readLogs:{"applicationId":"app-2","tail":25,"search":"error"}',
+      'libsql.readLogs:{"libsqlId":"libsql-1","tail":25,"search":"error"}',
+      'mariadb.readLogs:{"mariadbId":"mdb-1","tail":25,"search":"error"}',
+    ])
+    expect(context.getCalls()).toHaveLength(5)
+  })
+
   it('can execute virtual logs.tailMany while preserving input order', async () => {
     const calls: string[] = []
     const context = buildExecuteContext(async (procedure, input = {}) => {

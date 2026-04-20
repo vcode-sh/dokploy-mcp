@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { SandboxLimits } from '../src/codemode/sandbox/types.js'
+import { loadSubprocessRunner } from './helpers/subprocess-worker.js'
 
 class FakeWorker extends EventEmitter {
   connected = true
@@ -46,11 +47,6 @@ function queueWorker() {
   return worker
 }
 
-async function loadRunner() {
-  vi.resetModules()
-  return import('../src/codemode/sandbox/subprocess-runner.js')
-}
-
 afterEach(() => {
   queuedWorkers.length = 0
   vi.clearAllMocks()
@@ -60,7 +56,7 @@ afterEach(() => {
 describe('sandbox subprocess runner', () => {
   it('rejects when the worker sends an invalid search payload', async () => {
     const worker = queueWorker()
-    const { runSearchInSubprocess } = await loadRunner()
+    const { runSearchInSubprocess } = await loadSubprocessRunner()
 
     const promise = runSearchInSubprocess({
       code: 'catalog.endpoints.length',
@@ -76,7 +72,7 @@ describe('sandbox subprocess runner', () => {
 
   it('rejects when the worker exits before completing', async () => {
     const worker = queueWorker()
-    const { runSearchInSubprocess } = await loadRunner()
+    const { runSearchInSubprocess } = await loadSubprocessRunner()
 
     const promise = runSearchInSubprocess({
       code: 'catalog.endpoints.length',
@@ -129,7 +125,7 @@ describe('sandbox subprocess runner', () => {
       return true
     })
 
-    const { runExecuteInSubprocess } = await loadRunner()
+    const { runExecuteInSubprocess } = await loadSubprocessRunner()
     const promise = runExecuteInSubprocess({
       code: 'await dokploy.project.one({ projectId: "p1" })',
       limits: createLimits(),
@@ -160,7 +156,7 @@ describe('sandbox subprocess runner', () => {
     vi.useFakeTimers()
 
     queueWorker()
-    const { runExecuteInSubprocess } = await loadRunner()
+    const { runExecuteInSubprocess } = await loadSubprocessRunner()
     const promise = runExecuteInSubprocess({
       code: 'await dokploy.project.one({ projectId: "p1" })',
       limits: createLimits({ timeoutMs: 10 }),

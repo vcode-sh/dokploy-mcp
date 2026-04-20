@@ -17,6 +17,8 @@ import {
   type LibsqlManyOutput,
   type ProjectInfrastructureOverviewInput,
   type ProjectInfrastructureOverviewOutput,
+  type ProjectLogsOverviewInput,
+  type ProjectLogsOverviewOutput,
   type ProjectOverviewInput,
   type ProjectOverviewOutput,
   type ServerManyInput,
@@ -131,6 +133,11 @@ export function createExecuteContext(executor: CallExecutor, maxCalls: number): 
           'project.overview',
           input as unknown as Record<string, unknown>,
         ) as Promise<ProjectOverviewOutput>,
+      logsOverview: (input: ProjectLogsOverviewInput) =>
+        dispatchCall(
+          'project.logsOverview',
+          input as unknown as Record<string, unknown>,
+        ) as Promise<ProjectLogsOverviewOutput>,
       infrastructureOverview: (input: ProjectInfrastructureOverviewInput) =>
         dispatchCall(
           'project.infrastructureOverview',

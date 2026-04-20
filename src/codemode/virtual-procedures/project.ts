@@ -175,6 +175,70 @@ function createProjectInfrastructureOverviewInputSchema() {
   }
 }
 
+function createProjectLogsOverviewInputSchema() {
+  return {
+    type: 'object',
+    properties: {
+      projectId: {
+        type: 'string',
+        minLength: 1,
+      },
+      tail: {
+        type: 'integer',
+      },
+      search: {
+        type: 'string',
+      },
+      includeDatabases: {
+        type: 'boolean',
+      },
+      maxApplications: {
+        type: 'integer',
+      },
+      maxDatabases: {
+        type: 'integer',
+      },
+    },
+    required: ['projectId'],
+    additionalProperties: false,
+  }
+}
+
+function createProjectLogsOverviewOutputSchema() {
+  return {
+    type: 'object',
+    properties: {
+      projectId: { type: 'string' },
+      projectName: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+      sources: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['kind', 'resourceId', 'name', 'environmentId', 'environmentName'],
+          properties: {
+            kind: { type: 'string' },
+            resourceId: { type: 'string' },
+            name: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            environmentId: { type: 'string' },
+            environmentName: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          },
+        },
+      },
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: true,
+        },
+      },
+      total: { type: 'integer' },
+    },
+    required: ['projectId', 'projectName', 'sources', 'items', 'total'],
+    additionalProperties: false,
+  }
+}
+
 function createProjectInfrastructureOverviewOutputSchema() {
   return {
     type: 'object',
@@ -228,6 +292,51 @@ function validateProjectInfrastructureOverviewInput(input: Record<string, unknow
   }
 
   errors.push(...validateBooleanFlag(input, 'includeServerSecurity'))
+
+  return errors
+}
+
+function validateOptionalPositiveInteger(input: Record<string, unknown>, key: string) {
+  if (!(key in input)) {
+    return []
+  }
+
+  const value = input[key]
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+    return []
+  }
+
+  return [`${key} must be a positive integer`]
+}
+
+function validateOptionalNonNegativeInteger(input: Record<string, unknown>, key: string) {
+  if (!(key in input)) {
+    return []
+  }
+
+  const value = input[key]
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
+    return []
+  }
+
+  return [`${key} must be a non-negative integer`]
+}
+
+function validateProjectLogsOverviewInput(input: Record<string, unknown>) {
+  const errors: string[] = []
+
+  if (typeof input.projectId !== 'string' || input.projectId.trim().length === 0) {
+    errors.push('projectId must be a non-empty string')
+  }
+
+  if ('search' in input && input.search !== undefined && typeof input.search !== 'string') {
+    errors.push('search must be a string')
+  }
+
+  errors.push(...validateBooleanFlag(input, 'includeDatabases'))
+  errors.push(...validateOptionalNonNegativeInteger(input, 'tail'))
+  errors.push(...validateOptionalPositiveInteger(input, 'maxApplications'))
+  errors.push(...validateOptionalPositiveInteger(input, 'maxDatabases'))
 
   return errors
 }
@@ -435,6 +544,181 @@ async function executeProjectInfrastructureOverview(
   }
 }
 
+function getDisplayName(value: unknown) {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  return getStringOrNull(value.name) ?? getStringOrNull(value.appName)
+}
+
+function createProjectLogSource(
+  environment: Record<string, unknown>,
+  resource: Record<string, unknown>,
+  kind: string,
+  resourceId: string,
+) {
+  return {
+    kind,
+    resourceId,
+    name: getDisplayName(resource),
+    environmentId: String(environment.environmentId),
+    environmentName: getStringOrNull(environment.name),
+  }
+}
+
+function resolveProjectLogsOptions(input: Record<string, unknown>) {
+  return {
+    tail: typeof input.tail === 'number' ? input.tail : undefined,
+    search: typeof input.search === 'string' ? input.search : undefined,
+    includeDatabases: input.includeDatabases === true,
+    maxApplications: typeof input.maxApplications === 'number' ? input.maxApplications : 5,
+    maxDatabases: typeof input.maxDatabases === 'number' ? input.maxDatabases : 5,
+  }
+}
+
+function isValidProjectLogsEnvironment(value: unknown): value is Record<string, unknown> {
+  return Boolean(isRecord(value) && getStringOrNull(value.environmentId))
+}
+
+function appendProjectApplicationLogRequests(
+  environment: Record<string, unknown>,
+  options: ReturnType<typeof resolveProjectLogsOptions>,
+  state: {
+    sources: Record<string, unknown>[]
+    requests: Record<string, unknown>[]
+    applicationCount: number
+  },
+) {
+  for (const application of getArray(environment.applications)) {
+    if (!isRecord(application) || state.applicationCount >= options.maxApplications) {
+      continue
+    }
+
+    const applicationId = getStringOrNull(application.applicationId)
+    if (!applicationId) {
+      continue
+    }
+
+    state.sources.push(
+      createProjectLogSource(environment, application, 'application', applicationId),
+    )
+    state.requests.push({
+      kind: 'application',
+      applicationId,
+      tail: options.tail,
+      search: options.search,
+    })
+    state.applicationCount += 1
+  }
+}
+
+function appendProjectDatabaseLogRequests(
+  environment: Record<string, unknown>,
+  options: ReturnType<typeof resolveProjectLogsOptions>,
+  state: {
+    sources: Record<string, unknown>[]
+    requests: Record<string, unknown>[]
+    databaseCount: number
+  },
+) {
+  const databaseKinds = [
+    ['libsql', 'libsqlId'],
+    ['mariadb', 'mariadbId'],
+    ['mongo', 'mongoId'],
+    ['mysql', 'mysqlId'],
+    ['postgres', 'postgresId'],
+    ['redis', 'redisId'],
+  ] as const
+
+  for (const [kind, idKey] of databaseKinds) {
+    for (const resource of getArray(environment[kind])) {
+      if (!isRecord(resource) || state.databaseCount >= options.maxDatabases) {
+        continue
+      }
+
+      const resourceId = getStringOrNull(resource[idKey])
+      if (!resourceId) {
+        continue
+      }
+
+      state.sources.push(createProjectLogSource(environment, resource, kind, resourceId))
+      state.requests.push({
+        kind,
+        [idKey]: resourceId,
+        tail: options.tail,
+        search: options.search,
+      })
+      state.databaseCount += 1
+    }
+  }
+}
+
+function buildProjectLogRequests(project: Record<string, unknown>, input: Record<string, unknown>) {
+  const options = resolveProjectLogsOptions(input)
+  const sources: {
+    kind: string
+    resourceId: string
+    name: string | null
+    environmentId: string
+    environmentName: string | null
+  }[] = []
+  const requests: Record<string, unknown>[] = []
+
+  let applicationCount = 0
+  let databaseCount = 0
+
+  for (const environment of getArray(project.environments)) {
+    if (!isValidProjectLogsEnvironment(environment)) {
+      continue
+    }
+
+    appendProjectApplicationLogRequests(environment, options, {
+      sources,
+      requests,
+      applicationCount,
+    })
+    applicationCount = requests.filter((request) => request.kind === 'application').length
+
+    if (!options.includeDatabases) {
+      continue
+    }
+
+    appendProjectDatabaseLogRequests(environment, options, {
+      sources,
+      requests,
+      databaseCount,
+    })
+    databaseCount = requests.filter((request) => request.kind !== 'application').length
+  }
+
+  return { sources, requests }
+}
+
+async function executeProjectLogsOverview(
+  input: Record<string, unknown>,
+  context: VirtualProcedureContext,
+) {
+  const projectId = String(input.projectId)
+  const project = await context.call('project.one', { projectId })
+  const projectRecord = isRecord(project) ? project : {}
+  const { sources, requests } = buildProjectLogRequests(projectRecord, input)
+  const logsResult =
+    requests.length > 0
+      ? await context.call('logs.tailMany', { requests })
+      : { items: [], total: 0 }
+  const items = isRecord(logsResult) ? getArray(logsResult.items) : []
+  const total = isRecord(logsResult) && typeof logsResult.total === 'number' ? logsResult.total : 0
+
+  return {
+    projectId,
+    projectName: getStringOrNull(projectRecord.name),
+    sources,
+    items,
+    total,
+  }
+}
+
 export const projectProcedureDefinitions: Record<string, VirtualProcedureDefinition> = {
   'project.overview': {
     endpoint: {
@@ -465,6 +749,36 @@ export const projectProcedureDefinitions: Record<string, VirtualProcedureDefinit
     },
     validateInput: validateProjectOverviewInput,
     execute: executeProjectOverview,
+  },
+  'project.logsOverview': {
+    endpoint: {
+      procedure: 'project.logsOverview',
+      method: 'GET',
+      path: '/virtual/project.logsOverview',
+      tag: 'project',
+      summary: 'Read a bounded logs overview for one project',
+      description:
+        'MCP-only virtual helper that discovers project applications and optional databases, then batches their log reads through logs.tailMany.',
+      inputKind: 'body',
+      requiredInputs: ['projectId'],
+      optionalInputs: ['tail', 'search', 'includeDatabases', 'maxApplications', 'maxDatabases'],
+      response: {
+        type: 'object',
+        keys: ['projectId', 'projectName', 'sources', 'items', 'total'],
+      },
+      virtual: true,
+    },
+    schema: {
+      method: 'GET',
+      path: '/virtual/project.logsOverview',
+      tag: 'project',
+      inputKind: 'body',
+      inputSchema: createProjectLogsOverviewInputSchema(),
+      outputSchema: createProjectLogsOverviewOutputSchema(),
+      virtual: true,
+    },
+    validateInput: validateProjectLogsOverviewInput,
+    execute: executeProjectLogsOverview,
   },
   'project.infrastructureOverview': {
     endpoint: {

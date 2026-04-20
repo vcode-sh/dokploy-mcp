@@ -7,6 +7,7 @@ import type { SandboxExecutionResult, SandboxLimits } from './types.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const defaultWorkerPath = resolve(__dirname, '../../../dist/codemode/sandbox/worker-entry.js')
+const testWorkerModeEnvName = 'DOKPLOY_MCP_SANDBOX_TEST_WORKER_MODE'
 
 interface WorkerDoneMessage {
   type: 'done'
@@ -37,9 +38,23 @@ function resolveWorkerPath() {
 function createWorker() {
   return fork(resolveWorkerPath(), {
     stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
-    env: {},
+    env: resolveWorkerEnv(),
     execArgv: [],
   })
+}
+
+function resolveWorkerEnv() {
+  const testWorkerMode = process.env[testWorkerModeEnvName]?.trim()
+
+  if (!testWorkerMode) {
+    return {}
+  }
+
+  // Keep the subprocess environment empty by default while still allowing the
+  // test harness to switch reusable fixture workers by explicit opt-in.
+  return {
+    [testWorkerModeEnvName]: testWorkerMode,
+  }
 }
 
 function resolveLimits(limits?: SandboxLimits) {

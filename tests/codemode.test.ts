@@ -161,6 +161,32 @@ describe('codemode runtime', () => {
     })
   })
 
+  it('search catalog get exposes virtual project.logsOverview as an execute-only helper', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('project.logsOverview')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('project.logsOverview')
+    expect(contract.path).toBe('/virtual/project.logsOverview')
+    expect(contract.requiredInputs).toEqual(expect.arrayContaining(['projectId']))
+    expect(contract.optionalInputs).toEqual(
+      expect.arrayContaining([
+        'tail',
+        'search',
+        'includeDatabases',
+        'maxApplications',
+        'maxDatabases',
+      ]),
+    )
+    expect(contract.response).toEqual({
+      type: 'object',
+      keys: ['projectId', 'projectName', 'sources', 'items', 'total'],
+    })
+  })
+
   it('search catalog get exposes virtual logs.tailMany as an execute-only helper', async () => {
     const result = await searchTool.handler({
       code: "async ({ catalog }) => catalog.get('logs.tailMany')",
@@ -265,6 +291,15 @@ describe('codemode runtime', () => {
 
     const payload = result.structuredContent as { result?: unknown }
     expect(payload.result).toEqual(expect.arrayContaining(['project.infrastructureOverview']))
+  })
+
+  it('search can find project.logsOverview by helper-specific fields', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("includeDatabases").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['project.logsOverview']))
   })
 
   it('search can find logs.tailMany by helper-specific inputs', async () => {
@@ -380,6 +415,14 @@ describe('codemode runtime', () => {
       projectId: 'project-1',
       includeServerSecurity: true,
     })
+    expectTypeOf(context.dokploy.project.logsOverview).toBeCallableWith({
+      projectId: 'project-1',
+      tail: 25,
+      search: 'error',
+      includeDatabases: true,
+      maxApplications: 2,
+      maxDatabases: 2,
+    })
     expectTypeOf(context.dokploy.call).toBeCallableWith('application.many', {
       applicationIds: ['app-1'],
     })
@@ -393,6 +436,9 @@ describe('codemode runtime', () => {
       libsqlIds: ['libsql-1'],
     })
     expectTypeOf(context.dokploy.call).toBeCallableWith('project.infrastructureOverview', {
+      projectId: 'project-1',
+    })
+    expectTypeOf(context.dokploy.call).toBeCallableWith('project.logsOverview', {
       projectId: 'project-1',
     })
     expectTypeOf(context.dokploy.call).toBeCallableWith('tag.bulkAssignPreview', {
@@ -690,6 +736,39 @@ describe('codemode runtime', () => {
         },
       }),
     ).rejects.toThrow('includeServerSecurity must be a boolean')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
+  it('validates virtual project.logsOverview input before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.project.logsOverview({
+              projectId: 'project-1',
+              maxApplications: 0,
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('maxApplications must be a positive integer')
 
     expect(context.getCalls()).toHaveLength(0)
   })

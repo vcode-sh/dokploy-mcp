@@ -76,6 +76,48 @@ async function createConnectedHttpClient(
   return { client, transport }
 }
 
+async function closeHttpClient(client: {
+  client: Client
+  transport: StreamableHTTPClientTransport
+}) {
+  await Promise.allSettled([client.client.close(), client.transport.close()])
+}
+
+async function expectSessionNotFound(handle: StartedHttpServer, sessionId: string) {
+  const response = await fetch(handle.mcpUrl, {
+    method: 'GET',
+    headers: {
+      Accept: 'text/event-stream',
+      'mcp-session-id': sessionId,
+      'mcp-protocol-version': '2025-03-26',
+    },
+  })
+  const payload = (await response.json()) as Record<string, unknown>
+
+  expect(response.status).toBe(404)
+  expect(payload).toMatchObject({
+    error: {
+      code: -32001,
+      message: 'Session not found',
+    },
+  })
+}
+
+async function createReconnectHttpClient(handle: StartedHttpServer, sessionId: string) {
+  const transport = new StreamableHTTPClientTransport(new URL(handle.mcpUrl), {
+    sessionId,
+  })
+  transport.setProtocolVersion('2025-03-26')
+
+  const client = new Client({
+    name: 'http-transport-client-reconnect',
+    version: '1.0.0',
+  })
+
+  await client.connect(transport)
+  return { client, transport }
+}
+
 describe('http server transport', () => {
   it('exposes helper parsers for HTTP mode configuration', () => {
     expect(resolveHttpServerMode('raw')).toBe('raw')
@@ -329,24 +371,7 @@ describe('http server transport', () => {
       })
 
       expect(response.status).toBe(200)
-
-      const afterDeleteResponse = await fetch(handle.mcpUrl, {
-        method: 'GET',
-        headers: {
-          Accept: 'text/event-stream',
-          'mcp-session-id': sessionId!,
-          'mcp-protocol-version': '2025-03-26',
-        },
-      })
-      const payload = (await afterDeleteResponse.json()) as Record<string, unknown>
-
-      expect(afterDeleteResponse.status).toBe(404)
-      expect(payload).toMatchObject({
-        error: {
-          code: -32001,
-          message: 'Session not found',
-        },
-      })
+      await expectSessionNotFound(handle, sessionId!)
     })
   })
 
@@ -375,12 +400,7 @@ describe('http server transport', () => {
 
       expect(result.isError).not.toBe(true)
     } finally {
-      await Promise.allSettled([
-        first.client.close(),
-        first.transport.close(),
-        second.client.close(),
-        second.transport.close(),
-      ])
+      await Promise.allSettled([closeHttpClient(first), closeHttpClient(second)])
     }
   })
 
@@ -389,32 +409,19 @@ describe('http server transport', () => {
     const initial = await createConnectedHttpClient(handle)
 
     const sessionId = initial.transport.sessionId
-    const protocolVersion = initial.transport.protocolVersion
 
     expect(sessionId).toEqual(expect.any(String))
-    expect(protocolVersion).toEqual(expect.any(String))
 
-    await Promise.allSettled([initial.client.close(), initial.transport.close()])
-
-    const reconnectTransport = new StreamableHTTPClientTransport(new URL(handle.mcpUrl), {
-      sessionId,
-    })
-    reconnectTransport.setProtocolVersion(protocolVersion!)
-
-    const reconnectClient = new Client({
-      name: 'http-transport-client-reconnect',
-      version: '1.0.0',
-    })
-
-    await reconnectClient.connect(reconnectTransport)
+    await closeHttpClient(initial)
+    const reconnect = await createReconnectHttpClient(handle, sessionId!)
 
     try {
-      expect(reconnectTransport.sessionId).toBe(sessionId)
+      expect(reconnect.transport.sessionId).toBe(sessionId)
 
-      const tools = await reconnectClient.listTools()
+      const tools = await reconnect.client.listTools()
       expect(tools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
 
-      const result = await reconnectClient.callTool({
+      const result = await reconnect.client.callTool({
         name: 'search',
         arguments: {
           code: 'catalog.getByTag("project").length',
@@ -423,7 +430,7 @@ describe('http server transport', () => {
 
       expect(result.isError).not.toBe(true)
     } finally {
-      await Promise.allSettled([reconnectClient.close(), reconnectTransport.close()])
+      await closeHttpClient(reconnect)
     }
   })
 
@@ -441,26 +448,181 @@ describe('http server transport', () => {
 
       await client.transport.terminateSession()
       expect(client.transport.sessionId).toBeUndefined()
+      await expectSessionNotFound(handle, sessionId!)
+      await closeHttpClient(client)
+    }
+  })
 
-      const response = await fetch(handle.mcpUrl, {
-        method: 'GET',
-        headers: {
-          Accept: 'text/event-stream',
-          'mcp-session-id': sessionId!,
-          'mcp-protocol-version': '2025-03-26',
+  it('keeps larger bursts of concurrent clients isolated under parallel calls', async () => {
+    const handle = await startTestHttpServer({ mode: 'codemode' })
+    const clients = await Promise.all(
+      Array.from({ length: 12 }, () => createConnectedHttpClient(handle)),
+    )
+
+    try {
+      const sessionIds = clients.map((client) => client.transport.sessionId)
+
+      expect(sessionIds.every((sessionId) => typeof sessionId === 'string')).toBe(true)
+      expect(new Set(sessionIds).size).toBe(clients.length)
+
+      const results = await Promise.all(
+        clients.map(async (client, index) => {
+          const [tools, callResult] = await Promise.all([
+            client.client.listTools(),
+            client.client.callTool({
+              name: 'search',
+              arguments: {
+                code: `catalog.getByTag("project").length + ${index}`,
+              },
+            }),
+          ])
+
+          return { tools, callResult }
+        }),
+      )
+
+      for (const [index, result] of results.entries()) {
+        expect(result.tools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(result.callResult.isError).not.toBe(true)
+        expect(result.callResult.structuredContent).toMatchObject({
+          result: expect.any(Number),
+          logs: [],
+        })
+        expect((result.callResult.structuredContent as { result: number }).result >= index).toBe(
+          true,
+        )
+      }
+
+      await Promise.all(clients.slice(0, 6).map((client) => client.transport.terminateSession()))
+
+      await Promise.all(
+        clients
+          .slice(0, 6)
+          .map((client) => expectSessionNotFound(handle, client.transport.sessionId!)),
+      )
+
+      const survivingResults = await Promise.all(
+        clients.slice(6).map((client) =>
+          client.client.callTool({
+            name: 'search',
+            arguments: {
+              code: 'catalog.getByTag("project").length',
+            },
+          }),
+        ),
+      )
+
+      for (const result of survivingResults) {
+        expect(result.isError).not.toBe(true)
+      }
+    } finally {
+      await Promise.allSettled(clients.map((client) => closeHttpClient(client)))
+    }
+  })
+
+  it('supports reconnect handoff while the original client is still active', async () => {
+    const handle = await startTestHttpServer({ mode: 'codemode' })
+    const initial = await createConnectedHttpClient(handle)
+    const sessionId = initial.transport.sessionId
+
+    expect(sessionId).toEqual(expect.any(String))
+
+    const reconnect = await createReconnectHttpClient(handle, sessionId!)
+
+    try {
+      const [initialTools, reconnectTools, initialCall, reconnectCall] = await Promise.all([
+        initial.client.listTools(),
+        reconnect.client.listTools(),
+        initial.client.callTool({
+          name: 'search',
+          arguments: {
+            code: 'catalog.getByTag("project").length',
+          },
+        }),
+        reconnect.client.callTool({
+          name: 'search',
+          arguments: {
+            code: 'catalog.getByTag("project").length + 1',
+          },
+        }),
+      ])
+
+      expect(initialTools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(reconnectTools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(initialCall.isError).not.toBe(true)
+      expect(reconnectCall.isError).not.toBe(true)
+
+      await closeHttpClient(initial)
+
+      const reconnectAfterHandoff = await reconnect.client.callTool({
+        name: 'search',
+        arguments: {
+          code: 'catalog.getByTag("project").length',
         },
       })
-      const payload = (await response.json()) as Record<string, unknown>
 
-      expect(response.status).toBe(404)
-      expect(payload).toMatchObject({
-        error: {
-          code: -32001,
-          message: 'Session not found',
-        },
-      })
+      expect(reconnectAfterHandoff.isError).not.toBe(true)
 
-      await Promise.allSettled([client.client.close(), client.transport.close()])
+      await reconnect.transport.terminateSession()
+      expect(reconnect.transport.sessionId).toBeUndefined()
+      await expectSessionNotFound(handle, sessionId!)
+    } finally {
+      await Promise.allSettled([closeHttpClient(initial), closeHttpClient(reconnect)])
+    }
+  })
+
+  it('survives longer repeated create reconnect and terminate pressure', async () => {
+    const handle = await startTestHttpServer({ mode: 'codemode' })
+    const priorSessionIds = new Set<string>()
+
+    for (let index = 0; index < 20; index += 1) {
+      const client = await createConnectedHttpClient(handle)
+      const sessionId = client.transport.sessionId
+
+      expect(sessionId).toEqual(expect.any(String))
+      expect(priorSessionIds.has(sessionId!)).toBe(false)
+      priorSessionIds.add(sessionId!)
+
+      const reconnect = await createReconnectHttpClient(handle, sessionId!)
+
+      try {
+        const [primaryResult, reconnectResult] = await Promise.all([
+          client.client.callTool({
+            name: 'search',
+            arguments: {
+              code: `catalog.getByTag("project").length + ${index}`,
+            },
+          }),
+          reconnect.client.callTool({
+            name: 'search',
+            arguments: {
+              code: 'catalog.getByTag("project").length',
+            },
+          }),
+        ])
+
+        expect(primaryResult.isError).not.toBe(true)
+        expect(reconnectResult.isError).not.toBe(true)
+
+        if (index % 2 === 0) {
+          await closeHttpClient(client)
+
+          const reconnectOnlyResult = await reconnect.client.callTool({
+            name: 'search',
+            arguments: {
+              code: 'catalog.getByTag("project").length',
+            },
+          })
+
+          expect(reconnectOnlyResult.isError).not.toBe(true)
+        }
+
+        await reconnect.transport.terminateSession()
+        expect(reconnect.transport.sessionId).toBeUndefined()
+        await expectSessionNotFound(handle, sessionId!)
+      } finally {
+        await Promise.allSettled([closeHttpClient(client), closeHttpClient(reconnect)])
+      }
     }
   })
 })
