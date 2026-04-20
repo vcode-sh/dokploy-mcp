@@ -93,6 +93,14 @@ describe('sandbox subprocess runner integration', () => {
     expect(onCall).not.toHaveBeenCalled()
   })
 
+  it('rejects when the reusable test worker sends an invalid done payload', async () => {
+    await expect(
+      runRealSearchWithTestWorker({
+        mode: 'invalid-done',
+      }),
+    ).rejects.toThrow('Sandbox worker sent an invalid message.')
+  })
+
   it('fails fast when the worker disconnects before receiving a call result', async () => {
     const onCall = vi.fn(async () => ({ ok: true }))
 

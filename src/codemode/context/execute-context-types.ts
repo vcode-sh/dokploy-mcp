@@ -259,6 +259,51 @@ export interface TagBulkAssignPreviewOutput {
   }
 }
 
+export type DatabaseManyRequest =
+  | {
+      kind: 'mariadb'
+      mariadbId: string
+      passwordType?: 'user' | 'root'
+    }
+  | {
+      kind: 'mongo'
+      mongoId: string
+    }
+  | {
+      kind: 'mysql'
+      mysqlId: string
+      passwordType?: 'user' | 'root'
+    }
+  | {
+      kind: 'postgres'
+      postgresId: string
+    }
+  | {
+      kind: 'redis'
+      redisId: string
+    }
+
+export interface DatabaseManyInput {
+  requests: DatabaseManyRequest[]
+  includePasswordRotationPreview?: boolean
+}
+
+export interface DatabaseManyItem {
+  kind: string
+  resourceId: string
+  name: string | null
+  appName: string | null
+  environmentId: string | null
+  projectId: string | null
+  detail: Record<string, unknown>
+  passwordRotationPreview: DatabaseRotatePasswordPreviewOutput['previewOperation'] | null
+}
+
+export interface DatabaseManyOutput {
+  items: DatabaseManyItem[]
+  total: number
+}
+
 export type DatabaseRotatePasswordPreviewInput =
   | {
       kind: 'mariadb'
@@ -349,6 +394,10 @@ export interface ExecuteDokployProcedureMap {
     input: LibsqlManyInput
     output: LibsqlManyOutput
   }
+  'database.many': {
+    input: DatabaseManyInput
+    output: DatabaseManyOutput
+  }
   'database.rotatePasswordPreview': {
     input: DatabaseRotatePasswordPreviewInput
     output: DatabaseRotatePasswordPreviewOutput
@@ -413,6 +462,7 @@ export interface ExecuteDokployRuntime extends GeneratedDokployRuntime {
     bulkAssignPreview(input: TagBulkAssignPreviewInput): Promise<TagBulkAssignPreviewOutput>
   }
   database: GeneratedModuleRuntime & {
+    many(input: DatabaseManyInput): Promise<DatabaseManyOutput>
     rotatePasswordPreview(
       input: DatabaseRotatePasswordPreviewInput,
     ): Promise<DatabaseRotatePasswordPreviewOutput>

@@ -70,6 +70,28 @@ describe('codemode subprocess runner', () => {
     expect(worker.kill).toHaveBeenCalled()
   })
 
+  it('rejects invalid done payloads for search mode', async () => {
+    const worker = new MockWorker()
+    forkMock.mockReturnValue(worker)
+
+    const { runSearchInSubprocess } = await loadSubprocessRunner()
+    const execution = runSearchInSubprocess({
+      code: 'catalog.searchText("project")',
+      limits: createLimits(),
+    })
+
+    worker.emit('message', {
+      type: 'done',
+      ok: true,
+      result: null,
+      logs: [1],
+    })
+
+    await expect(execution).rejects.toThrow('Sandbox worker sent an invalid message.')
+    expect(worker.disconnect).toHaveBeenCalled()
+    expect(worker.kill).toHaveBeenCalled()
+  })
+
   it('rejects when the worker exits before completing', async () => {
     const worker = new MockWorker()
     forkMock.mockReturnValue(worker)

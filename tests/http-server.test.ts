@@ -782,6 +782,73 @@ describe('http server transport', () => {
     }
   })
 
+  it('supports multiple concurrent reconnect clients on the same session under pressure', async () => {
+    const handle = await startTestHttpServer({ mode: 'codemode' })
+    const primary = await createConnectedHttpClient(handle)
+    const sessionId = primary.transport.sessionId
+
+    expect(sessionId).toEqual(expect.any(String))
+
+    const reconnectClients = await Promise.all(
+      Array.from({ length: 5 }, () => createReconnectHttpClient(handle, sessionId!)),
+    )
+
+    try {
+      const firstWave = await Promise.all(
+        [primary, ...reconnectClients].map(async (client, index) => {
+          const [tools, callResult] = await Promise.all([
+            client.client.listTools(),
+            client.client.callTool({
+              name: 'search',
+              arguments: {
+                code: `catalog.getByTag("project").length + ${index}`,
+              },
+            }),
+          ])
+
+          return { tools, callResult }
+        }),
+      )
+
+      for (const result of firstWave) {
+        expect(result.tools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(result.callResult.isError).not.toBe(true)
+      }
+
+      await closeHttpClient(primary)
+
+      const reconnectWave = await Promise.all(
+        reconnectClients.map((client, index) =>
+          client.client.callTool({
+            name: 'search',
+            arguments: {
+              code: `catalog.getByTag("project").length + ${index + 10}`,
+            },
+          }),
+        ),
+      )
+
+      for (const result of reconnectWave) {
+        expect(result.isError).not.toBe(true)
+      }
+
+      const deleteResult = await deleteSession(handle, sessionId!)
+
+      if (deleteResult.kind === 'response') {
+        expect(deleteResult.response.status).toBe(200)
+      } else {
+        expect(deleteResult.error).toBeInstanceOf(Error)
+      }
+
+      await expectSessionNotFound(handle, sessionId!)
+    } finally {
+      await Promise.allSettled([
+        closeHttpClient(primary),
+        ...reconnectClients.map((client) => closeHttpClient(client)),
+      ])
+    }
+  })
+
   it('survives longer repeated create reconnect and terminate pressure', async () => {
     const handle = await startTestHttpServer({ mode: 'codemode' })
     const priorSessionIds = new Set<string>()
@@ -1362,6 +1429,86 @@ describe('http server transport', () => {
         } else {
           expect(result.value.error).toBeInstanceOf(Error)
         }
+      }
+    } finally {
+      await Promise.allSettled(clients.map((client) => closeHttpClient(client)))
+    }
+  })
+
+  it('drains shutdown under mixed active calls streams and broken request pressure', async () => {
+    const handle = await startTestHttpServer({ mode: 'codemode' })
+    const clients = await Promise.all(
+      Array.from({ length: 6 }, () => createConnectedHttpClient(handle)),
+    )
+    const streamSessions = clients.slice(0, 2).map((client) => client.transport.sessionId!)
+
+    try {
+      const streams = await Promise.all(
+        streamSessions.map((sessionId) => openSessionEventStream(handle, sessionId)),
+      )
+
+      for (const stream of streams) {
+        expect([200, 409]).toContain(stream.response.statusCode)
+        if (stream.response.statusCode === 200) {
+          expect(stream.response.headers['content-type']).toContain('text/event-stream')
+        }
+      }
+
+      const activeCalls = clients.slice(2).map((client, index) =>
+        client.client.callTool({
+          name: 'execute',
+          arguments: {
+            code: buildSleepExecuteCode(175, `shutdown-pressure-${index}`),
+          },
+        }),
+      )
+      const abortedRequests = Array.from({ length: 4 }, () => sendAbortedPartialPost(handle))
+      const truncatedRequests = Array.from({ length: 4 }, () =>
+        sendTruncatedContentLengthPost(handle),
+      )
+
+      await waitFor(20)
+
+      const [callResults, abortedResults, truncatedResults, streamResults] = await Promise.all([
+        Promise.all(activeCalls),
+        Promise.all(abortedRequests),
+        Promise.all(truncatedRequests),
+        Promise.all(
+          streams.map((stream) =>
+            settleWithin(stream.settled, 'shutdown pressure stream cleanup', 4_000),
+          ),
+        ),
+        settleWithin(handle.close(), 'shutdown pressure close', 6_000),
+      ]).then(([calls, aborted, truncated, settledStreams]) => [
+        calls,
+        aborted,
+        truncated,
+        settledStreams,
+      ])
+
+      for (const [index, result] of callResults.entries()) {
+        if (result.isError) {
+          expectConnectionClosedToolError(result)
+        } else {
+          expect(result.structuredContent).toMatchObject({
+            result: {
+              label: `shutdown-pressure-${index}`,
+              slept: 175,
+            },
+          })
+        }
+      }
+
+      for (const result of abortedResults) {
+        expect(['close', 'error']).toContain(result)
+      }
+
+      for (const result of truncatedResults) {
+        expect(['close', 'error', 'data']).toContain(result)
+      }
+
+      for (const result of streamResults) {
+        expect(['aborted', 'close', 'end']).toContain(result)
       }
     } finally {
       await Promise.allSettled(clients.map((client) => closeHttpClient(client)))

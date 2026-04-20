@@ -8,6 +8,7 @@ import type { AddressInfo, Socket } from 'node:net'
 
 import { resolveHttpOptions } from './http/options.js'
 import { createHttpRequestHandler } from './http/request-handler.js'
+import { canWriteResponse, writeJsonRpcError } from './http/responses.js'
 import { createSessionRegistry } from './http/sessions.js'
 import type { HttpServerOptions, StartedHttpServer } from './http/types.js'
 import { parseEnabledTags, parseServerMode, type ServerMode } from './server.js'
@@ -15,6 +16,9 @@ import { parseEnabledTags, parseServerMode, type ServerMode } from './server.js'
 export type { HttpServerOptions, StartedHttpServer } from './http/types.js'
 
 const REQUEST_SHUTDOWN_GRACE_MS = 250
+const HTTP_HEADERS_TIMEOUT_MS = 30_000
+const HTTP_REQUEST_TIMEOUT_MS = 30_000
+const HTTP_KEEP_ALIVE_TIMEOUT_MS = 5_000
 type NodeServer = ReturnType<typeof createNodeServer>
 type NodeServerCloseCallback = (error?: Error) => void
 type NodeServerClose = (callback?: NodeServerCloseCallback) => Server
@@ -58,7 +62,7 @@ function hasEventStreamContentType(res: ServerResponse) {
   return false
 }
 
-function trackActiveRequests(server: NodeServer, isShuttingDown: () => boolean) {
+function createActiveRequestTracker(isShuttingDown: () => boolean) {
   const socketStates = new Map<Socket, { activeRequests: number }>()
   const activeRequests = new Set<{
     req: IncomingMessage
@@ -67,57 +71,58 @@ function trackActiveRequests(server: NodeServer, isShuttingDown: () => boolean) 
     bodyComplete: boolean
   }>()
 
-  server.on('connection', (socket) => {
-    socketStates.set(socket, { activeRequests: 0 })
+  return {
+    onConnection(socket: Socket) {
+      socket.setNoDelay(true)
+      socket.setKeepAlive(true)
+      socketStates.set(socket, { activeRequests: 0 })
 
-    socket.on('close', () => {
-      socketStates.delete(socket)
-    })
-  })
-
-  server.on('request', (req, res) => {
-    const socket = req.socket
-    const socketState = socketStates.get(socket)
-    if (socketState) {
-      socketState.activeRequests += 1
-    }
-
-    const activeRequest = {
-      req,
-      res,
-      socket,
-      bodyComplete: req.complete,
-    }
-    let cleaned = false
-
-    activeRequests.add(activeRequest)
-
-    req.on('end', () => {
-      activeRequest.bodyComplete = true
-    })
-
-    const cleanup = () => {
-      if (cleaned) {
-        return
+      socket.on('close', () => {
+        socketStates.delete(socket)
+      })
+    },
+    trackRequest(req: IncomingMessage, res: ServerResponse) {
+      const socket = req.socket
+      const socketState = socketStates.get(socket) ?? { activeRequests: 0 }
+      if (!socketStates.has(socket)) {
+        socketStates.set(socket, socketState)
       }
+      socketState.activeRequests += 1
 
-      cleaned = true
-      activeRequests.delete(activeRequest)
+      const activeRequest = {
+        req,
+        res,
+        socket,
+        bodyComplete: req.complete,
+      }
+      let cleaned = false
 
-      const trackedSocket = socketStates.get(socket)
-      if (trackedSocket) {
-        trackedSocket.activeRequests = Math.max(0, trackedSocket.activeRequests - 1)
-        if (isShuttingDown() && trackedSocket.activeRequests === 0) {
-          socket.end()
+      activeRequests.add(activeRequest)
+
+      req.on('end', () => {
+        activeRequest.bodyComplete = true
+      })
+
+      const cleanup = () => {
+        if (cleaned) {
+          return
+        }
+
+        cleaned = true
+        activeRequests.delete(activeRequest)
+
+        const trackedSocket = socketStates.get(socket)
+        if (trackedSocket) {
+          trackedSocket.activeRequests = Math.max(0, trackedSocket.activeRequests - 1)
+          if (isShuttingDown() && trackedSocket.activeRequests === 0) {
+            socket.end()
+          }
         }
       }
-    }
 
-    res.on('finish', cleanup)
-    res.on('close', cleanup)
-  })
-
-  return {
+      res.on('finish', cleanup)
+      res.on('close', cleanup)
+    },
     closeIdleSockets() {
       for (const [socket, state] of socketStates) {
         if (state.activeRequests === 0) {
@@ -140,6 +145,20 @@ function trackActiveRequests(server: NodeServer, isShuttingDown: () => boolean) 
       }
     },
   }
+}
+
+function configureServerRuntime(server: NodeServer) {
+  server.headersTimeout = HTTP_HEADERS_TIMEOUT_MS
+  server.requestTimeout = HTTP_REQUEST_TIMEOUT_MS
+  server.keepAliveTimeout = HTTP_KEEP_ALIVE_TIMEOUT_MS
+
+  server.on('clientError', (_error, socket) => {
+    if (socket.destroyed) {
+      return
+    }
+
+    socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n')
+  })
 }
 
 function installManagedClose(server: NodeServer, closeManaged: () => Promise<void>) {
@@ -167,7 +186,25 @@ function installManagedClose(server: NodeServer, closeManaged: () => Promise<voi
 function createManagedHttpServer(options: HttpServerOptions = {}) {
   const resolved = resolveHttpOptions(options)
   const sessions = createSessionRegistry()
-  const server = createNodeServer(createHttpRequestHandler(resolved, sessions))
+  const requestHandler = createHttpRequestHandler(resolved, sessions)
+  const requests = createActiveRequestTracker(() => sessions.isShuttingDown())
+  const server = createNodeServer((req, res) => {
+    requests.trackRequest(req, res)
+
+    void requestHandler(req, res).catch((error) => {
+      if (canWriteResponse(res)) {
+        writeJsonRpcError(
+          req,
+          res,
+          500,
+          error instanceof Error ? error.message : 'Internal server error',
+        )
+        return
+      }
+
+      req.destroy(error instanceof Error ? error : new Error(String(error)))
+    })
+  })
   let closePromise: Promise<void> | undefined
   let cleanupPromise: Promise<void> | undefined
 
@@ -175,7 +212,8 @@ function createManagedHttpServer(options: HttpServerOptions = {}) {
     sessions.beginShutdown()
   }
 
-  const requests = trackActiveRequests(server, () => sessions.isShuttingDown())
+  configureServerRuntime(server)
+  server.on('connection', requests.onConnection)
 
   function ensureCleanup() {
     cleanupPromise ??= sessions.closeAll()

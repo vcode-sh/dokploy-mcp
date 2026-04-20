@@ -1,9 +1,8 @@
 import { createExecuteContext } from '../context/execute-context.js'
 import { createSearchCatalogView } from '../context/search-context.js'
 import type { GatewayCallResult } from '../gateway/api-gateway.js'
-import { resolveSandboxLimits } from './limits.js'
+import { normalizeSandboxLimits, resolveSandboxLimits } from './limits.js'
 import { runSandboxedFunction } from './runner.js'
-import type { SandboxLimits } from './types.js'
 
 const pendingCalls = new Map<
   number,
@@ -14,6 +13,7 @@ const pendingCalls = new Map<
 >()
 
 let requestIdCounter = 0
+let workerRunState: 'idle' | 'running' | 'completed' = 'idle'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -65,6 +65,14 @@ function isValidRunPayload(
   )
 }
 
+function buildDuplicateRunError() {
+  return 'Sandbox worker received a duplicate run payload.'
+}
+
+function buildInvalidLimitsError() {
+  return 'Invalid sandbox worker limits payload.'
+}
+
 function rpcCall(procedure: string, input: Record<string, unknown> = {}) {
   return new Promise((resolve, reject) => {
     requestIdCounter += 1
@@ -101,23 +109,17 @@ function rejectPendingCalls(error: Error) {
   }
 }
 
-process.on('message', async (message: unknown) => {
-  if (!isRecord(message)) {
-    return
-  }
-
-  const payload = message
-
+function handleCallResultMessage(payload: Record<string, unknown>) {
   if (payload.type === 'callResult') {
     if (!Number.isInteger(payload.requestId) || typeof payload.ok !== 'boolean') {
       rejectPendingCalls(buildInvalidCallResultError())
-      return
+      return true
     }
 
     const requestId = Number(payload.requestId)
     const pending = pendingCalls.get(requestId)
     if (!pending) {
-      return
+      return true
     }
 
     pendingCalls.delete(requestId)
@@ -126,50 +128,80 @@ process.on('message', async (message: unknown) => {
     } else {
       pending.reject(new Error(String(payload.error ?? 'Unknown gateway error')))
     }
-    return
+    return true
   }
 
-  if (payload.type !== 'run') {
+  return false
+}
+
+async function reportWorkerFailure(error: string) {
+  try {
+    await sendDoneMessage(false, { error })
+  } catch {
+    // The worker cannot report the failure if the IPC channel is already broken.
+  }
+}
+
+function resolveRunLimits(payload: Record<string, unknown>) {
+  return payload.limits === undefined
+    ? resolveSandboxLimits()
+    : normalizeSandboxLimits(payload.limits)
+}
+
+function createRpcExecutor() {
+  return async (procedure: string, input?: Record<string, unknown>): Promise<GatewayCallResult> => {
+    const data = await rpcCall(procedure, input ?? {})
+    return {
+      data: data as Record<string, unknown>,
+      trace: {
+        procedure,
+        method: 'GET' as const,
+        startedAt: Date.now(),
+        finishedAt: Date.now(),
+        durationMs: 0,
+      },
+    }
+  }
+}
+
+function createRunContext(
+  payload: Record<string, unknown> & { mode: 'search' | 'execute' },
+  maxCalls: number,
+) {
+  if (payload.mode === 'search') {
+    return { catalog: createSearchCatalogView() }
+  }
+
+  const ctx = createExecuteContext(createRpcExecutor(), maxCalls)
+  return {
+    dokploy: ctx.dokploy,
+    helpers: ctx.helpers,
+  }
+}
+
+async function handleRunMessage(payload: Record<string, unknown>) {
+  if (workerRunState !== 'idle') {
+    await reportWorkerFailure(buildDuplicateRunError())
     return
   }
 
   if (!isValidRunPayload(payload)) {
-    await sendDoneMessage(false, {
-      error: 'Invalid sandbox worker run payload.',
-    })
+    workerRunState = 'completed'
+    await reportWorkerFailure('Invalid sandbox worker run payload.')
     return
   }
 
-  try {
-    const limits = (payload.limits as SandboxLimits | undefined) ?? undefined
-    const context =
-      payload.mode === 'search'
-        ? { catalog: createSearchCatalogView() }
-        : (() => {
-            const rpcExecutor = async (
-              procedure: string,
-              input?: Record<string, unknown>,
-            ): Promise<GatewayCallResult> => {
-              const data = await rpcCall(procedure, input ?? {})
-              return {
-                data: data as Record<string, unknown>,
-                trace: {
-                  procedure,
-                  method: 'GET' as const,
-                  startedAt: Date.now(),
-                  finishedAt: Date.now(),
-                  durationMs: 0,
-                },
-              }
-            }
-            const maxCalls = limits?.maxCalls ?? resolveSandboxLimits().maxCalls
-            const ctx = createExecuteContext(rpcExecutor, maxCalls)
-            return {
-              dokploy: ctx.dokploy,
-              helpers: ctx.helpers,
-            }
-          })()
+  const limits = resolveRunLimits(payload)
+  if (!limits) {
+    workerRunState = 'completed'
+    await reportWorkerFailure(buildInvalidLimitsError())
+    return
+  }
 
+  workerRunState = 'running'
+
+  try {
+    const context = createRunContext(payload, limits.maxCalls)
     const execution = await runSandboxedFunction({
       code: payload.code,
       context,
@@ -181,14 +213,32 @@ process.on('message', async (message: unknown) => {
       logs: execution.logs,
     })
   } catch (error) {
-    try {
-      await sendDoneMessage(false, {
-        error: error instanceof Error ? error.message : String(error),
-      })
-    } catch {
-      // The worker cannot report the failure if the IPC channel is already broken.
-    }
+    await reportWorkerFailure(error instanceof Error ? error.message : String(error))
+  } finally {
+    workerRunState = 'completed'
   }
+}
+
+async function handleWorkerMessage(message: unknown) {
+  if (!isRecord(message)) {
+    return
+  }
+
+  const payload = message
+
+  if (handleCallResultMessage(payload)) {
+    return
+  }
+
+  if (payload.type !== 'run') {
+    return
+  }
+
+  await handleRunMessage(payload)
+}
+
+process.on('message', (message: unknown) => {
+  void handleWorkerMessage(message)
 })
 
 process.on('disconnect', () => {

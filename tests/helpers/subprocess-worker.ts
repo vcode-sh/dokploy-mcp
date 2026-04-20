@@ -18,6 +18,7 @@ const unsupportedSubprocessTestWorkerMode = 'unsupported'
 export const subprocessTestWorkerModes = [
   'timeout-call',
   'unserializable-call',
+  'invalid-done',
   'disconnect-after-call',
   'disconnect-immediately',
 ] as const

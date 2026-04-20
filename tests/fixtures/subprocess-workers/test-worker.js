@@ -4,9 +4,15 @@ const procedureCallBase = {
   procedure: 'project.one',
 }
 
-function sendDoneError(error) {
+function sendDoneMessage(payload) {
   process.send?.({
     type: 'done',
+    ...payload,
+  })
+}
+
+function sendDoneError(error) {
+  sendDoneMessage({
     ok: false,
     error,
   })
@@ -49,6 +55,12 @@ function createProcedureCallMode(input, options = {}) {
   }
 }
 
+function createDoneMode(payload) {
+  return () => {
+    sendDoneMessage(payload)
+  }
+}
+
 function createDisconnectAfterCallMode(input) {
   return () => {
     sendProcedureCall(input)
@@ -79,6 +91,11 @@ const modeHandlers = {
     { projectId: 'p1', bad: 1n },
     { reportSendError: true },
   ),
+  'invalid-done': createDoneMode({
+    ok: true,
+    result: null,
+    logs: [1],
+  }),
   'disconnect-after-call': createDisconnectAfterCallMode({ projectId: 'p1' }),
   'disconnect-immediately': createImmediateDisconnectMode(),
 }

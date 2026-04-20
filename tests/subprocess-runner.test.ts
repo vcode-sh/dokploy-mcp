@@ -106,6 +106,21 @@ describe('sandbox subprocess runner', () => {
     expect(worker.kill).toHaveBeenCalledOnce()
   })
 
+  it('rejects when the worker sends an invalid done payload', async () => {
+    const { worker, promise } = await startSearchRun()
+
+    worker.emit('message', {
+      type: 'done',
+      ok: true,
+      result: null,
+      logs: [1],
+    })
+
+    await expect(promise).rejects.toThrow('Sandbox worker sent an invalid message.')
+    expect(worker.disconnect).toHaveBeenCalledOnce()
+    expect(worker.kill).toHaveBeenCalledOnce()
+  })
+
   it('rejects when the worker exits before completing', async () => {
     const { worker, promise } = await startSearchRun()
 

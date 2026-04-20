@@ -5,6 +5,7 @@ import {
   getStringOrNull,
   isRecord,
   validateBooleanFlag,
+  validateStringList,
 } from './shared.js'
 import type { VirtualProcedureContext, VirtualProcedureDefinition } from './types.js'
 
@@ -183,6 +184,12 @@ function createProjectLogsOverviewInputSchema() {
         type: 'string',
         minLength: 1,
       },
+      environmentIds: {
+        type: 'array',
+        items: {
+          type: 'string',
+        },
+      },
       tail: {
         type: 'integer',
       },
@@ -331,6 +338,14 @@ function validateProjectLogsOverviewInput(input: Record<string, unknown>) {
 
   if ('search' in input && input.search !== undefined && typeof input.search !== 'string') {
     errors.push('search must be a string')
+  }
+
+  if ('environmentIds' in input) {
+    errors.push(
+      ...validateStringList(input.environmentIds, 'environmentIds', {
+        requireNonEmptyArray: true,
+      }),
+    )
   }
 
   errors.push(...validateBooleanFlag(input, 'includeDatabases'))
@@ -569,6 +584,14 @@ function createProjectLogSource(
 
 function resolveProjectLogsOptions(input: Record<string, unknown>) {
   return {
+    environmentIds: Array.isArray(input.environmentIds)
+      ? new Set(
+          input.environmentIds
+            .filter((value): value is string => typeof value === 'string')
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0),
+        )
+      : null,
     tail: typeof input.tail === 'number' ? input.tail : undefined,
     search: typeof input.search === 'string' ? input.search : undefined,
     includeDatabases: input.includeDatabases === true,
@@ -579,6 +602,19 @@ function resolveProjectLogsOptions(input: Record<string, unknown>) {
 
 function isValidProjectLogsEnvironment(value: unknown): value is Record<string, unknown> {
   return Boolean(isRecord(value) && getStringOrNull(value.environmentId))
+}
+
+async function resolveProjectLogEnvironments(
+  projectId: string,
+  project: Record<string, unknown>,
+  context: VirtualProcedureContext,
+) {
+  const environments = getArray(project.environments)
+  if (environments.length > 0) {
+    return environments
+  }
+
+  return getArray(await context.call('environment.byProjectId', { projectId }))
 }
 
 function appendProjectApplicationLogRequests(
@@ -654,7 +690,7 @@ function appendProjectDatabaseLogRequests(
   }
 }
 
-function buildProjectLogRequests(project: Record<string, unknown>, input: Record<string, unknown>) {
+function buildProjectLogRequests(environments: unknown[], input: Record<string, unknown>) {
   const options = resolveProjectLogsOptions(input)
   const sources: {
     kind: string
@@ -668,8 +704,16 @@ function buildProjectLogRequests(project: Record<string, unknown>, input: Record
   let applicationCount = 0
   let databaseCount = 0
 
-  for (const environment of getArray(project.environments)) {
+  for (const environment of environments) {
     if (!isValidProjectLogsEnvironment(environment)) {
+      continue
+    }
+
+    if (
+      options.environmentIds &&
+      options.environmentIds.size > 0 &&
+      !options.environmentIds.has(String(environment.environmentId))
+    ) {
       continue
     }
 
@@ -702,7 +746,8 @@ async function executeProjectLogsOverview(
   const projectId = String(input.projectId)
   const project = await context.call('project.one', { projectId })
   const projectRecord = isRecord(project) ? project : {}
-  const { sources, requests } = buildProjectLogRequests(projectRecord, input)
+  const environments = await resolveProjectLogEnvironments(projectId, projectRecord, context)
+  const { sources, requests } = buildProjectLogRequests(environments, input)
   const logsResult =
     requests.length > 0
       ? await context.call('logs.tailMany', { requests })
@@ -761,7 +806,14 @@ export const projectProcedureDefinitions: Record<string, VirtualProcedureDefinit
         'MCP-only virtual helper that discovers project applications and optional databases, then batches their log reads through logs.tailMany.',
       inputKind: 'body',
       requiredInputs: ['projectId'],
-      optionalInputs: ['tail', 'search', 'includeDatabases', 'maxApplications', 'maxDatabases'],
+      optionalInputs: [
+        'environmentIds',
+        'tail',
+        'search',
+        'includeDatabases',
+        'maxApplications',
+        'maxDatabases',
+      ],
       response: {
         type: 'object',
         keys: ['projectId', 'projectName', 'sources', 'items', 'total'],

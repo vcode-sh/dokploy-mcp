@@ -221,6 +221,26 @@ describe('codemode runtime', () => {
     })
   })
 
+  it('search catalog get exposes virtual database.many as an execute-only helper', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('database.many')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('database.many')
+    expect(contract.path).toBe('/virtual/database.many')
+    expect(contract.requiredInputs).toEqual(expect.arrayContaining(['requests']))
+    expect(contract.optionalInputs).toEqual(
+      expect.arrayContaining(['includePasswordRotationPreview']),
+    )
+    expect(contract.response).toEqual({
+      type: 'object',
+      keys: ['items', 'total'],
+    })
+  })
+
   it('search catalog get exposes virtual tag.bulkAssignPreview as an execute-only helper', async () => {
     const result = await searchTool.handler({
       code: "async ({ catalog }) => catalog.get('tag.bulkAssignPreview')",
@@ -365,6 +385,15 @@ describe('codemode runtime', () => {
     expect(payload.result).toEqual(expect.arrayContaining(['libsql.many']))
   })
 
+  it('search can find database.many by helper-specific fields', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("includePasswordRotationPreview").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['database.many']))
+  })
+
   it('search can find tag.bulkAssignPreview by preview-specific fields', async () => {
     const result = await searchTool.handler({
       code: 'async ({ catalog }) => catalog.searchText("bulkAssign").map((entry) => entry.procedure)',
@@ -466,6 +495,10 @@ describe('codemode runtime', () => {
     expectTypeOf(context.dokploy.libsql.many).toBeCallableWith({
       libsqlIds: ['libsql-1'],
     })
+    expectTypeOf(context.dokploy.database.many).toBeCallableWith({
+      requests: [{ kind: 'postgres', postgresId: 'postgres-1' }],
+      includePasswordRotationPreview: true,
+    })
     expectTypeOf(context.dokploy.tag.bulkAssignPreview).toBeCallableWith({
       projectId: 'project-1',
       tagIds: ['tag-1'],
@@ -506,6 +539,10 @@ describe('codemode runtime', () => {
     })
     expectTypeOf(context.dokploy.call).toBeCallableWith('libsql.many', {
       libsqlIds: ['libsql-1'],
+    })
+    expectTypeOf(context.dokploy.call).toBeCallableWith('database.many', {
+      requests: [{ kind: 'mysql', mysqlId: 'mysql-1', passwordType: 'root' }],
+      includePasswordRotationPreview: true,
     })
     expectTypeOf(context.dokploy.call).toBeCallableWith('project.infrastructureOverview', {
       projectId: 'project-1',
@@ -642,6 +679,166 @@ describe('codemode runtime', () => {
         process.env.DOKPLOY_MCP_SANDBOX_MAX_RESPONSE_BYTES = previous
       }
     }
+  })
+
+  it('can execute virtual database.many while preserving input order and optional password rotation previews', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      const resourceId = String(
+        input.redisId ??
+          input.mysqlId ??
+          input.postgresId ??
+          input.mongoId ??
+          input.mariadbId ??
+          '',
+      )
+      calls.push(`${procedure}:${resourceId}`)
+
+      switch (procedure) {
+        case 'redis.one':
+          return {
+            data: {
+              redisId: 'redis-1',
+              name: 'Cache',
+              environmentId: 'env-1',
+              projectId: 'project-1',
+            },
+            trace: {
+              procedure,
+              method: 'GET',
+              startedAt: 0,
+              finishedAt: 1,
+              durationMs: 1,
+            },
+          }
+        case 'mysql.one':
+          return {
+            data: {
+              mysqlId: 'mysql-1',
+              name: 'Primary DB',
+              appName: 'api',
+              environmentId: 'env-1',
+              projectId: 'project-1',
+            },
+            trace: {
+              procedure,
+              method: 'GET',
+              startedAt: 1,
+              finishedAt: 2,
+              durationMs: 1,
+            },
+          }
+        case 'postgres.one':
+          return {
+            data: {
+              postgresId: 'postgres-1',
+              name: 'Analytics',
+              environmentId: 'env-2',
+              projectId: 'project-1',
+            },
+            trace: {
+              procedure,
+              method: 'GET',
+              startedAt: 2,
+              finishedAt: 3,
+              durationMs: 1,
+            },
+          }
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    }, 6)
+
+    const execution = await runSandboxedFunction({
+      code: `
+        async ({ dokploy }) => {
+          return await dokploy.database.many({
+            requests: [
+              { kind: 'redis', redisId: 'redis-1' },
+              { kind: 'mysql', mysqlId: 'mysql-1', passwordType: 'root' },
+              { kind: 'postgres', postgresId: 'postgres-1' },
+            ],
+            includePasswordRotationPreview: true,
+          })
+        }
+      `,
+      context: {
+        dokploy: context.dokploy,
+      },
+    })
+
+    expect(execution.result).toEqual({
+      items: [
+        {
+          kind: 'redis',
+          resourceId: 'redis-1',
+          name: 'Cache',
+          appName: null,
+          environmentId: 'env-1',
+          projectId: 'project-1',
+          detail: {
+            redisId: 'redis-1',
+            name: 'Cache',
+            environmentId: 'env-1',
+            projectId: 'project-1',
+          },
+          passwordRotationPreview: {
+            procedure: 'redis.changePassword',
+            inputTemplate: {
+              redisId: 'redis-1',
+            },
+            requiredSecretField: 'password',
+          },
+        },
+        {
+          kind: 'mysql',
+          resourceId: 'mysql-1',
+          name: 'Primary DB',
+          appName: 'api',
+          environmentId: 'env-1',
+          projectId: 'project-1',
+          detail: {
+            mysqlId: 'mysql-1',
+            name: 'Primary DB',
+            appName: 'api',
+            environmentId: 'env-1',
+            projectId: 'project-1',
+          },
+          passwordRotationPreview: {
+            procedure: 'mysql.changePassword',
+            inputTemplate: {
+              mysqlId: 'mysql-1',
+              type: 'root',
+            },
+            requiredSecretField: 'password',
+          },
+        },
+        {
+          kind: 'postgres',
+          resourceId: 'postgres-1',
+          name: 'Analytics',
+          appName: null,
+          environmentId: 'env-2',
+          projectId: 'project-1',
+          detail: {
+            postgresId: 'postgres-1',
+            name: 'Analytics',
+            environmentId: 'env-2',
+            projectId: 'project-1',
+          },
+          passwordRotationPreview: {
+            procedure: 'postgres.changePassword',
+            inputTemplate: {
+              postgresId: 'postgres-1',
+            },
+            requiredSecretField: 'password',
+          },
+        },
+      ],
+      total: 3,
+    })
+    expect(calls).toEqual(['redis.one:redis-1', 'mysql.one:mysql-1', 'postgres.one:postgres-1'])
+    expect(context.getCalls()).toHaveLength(3)
   })
 
   it('enforces the execute max call budget for virtual application.many fan-out', async () => {
@@ -913,6 +1110,38 @@ describe('codemode runtime', () => {
         },
       }),
     ).rejects.toThrow('libsqlIds[1] must be a non-empty string')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
+  it('validates virtual database.many input before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.database.many({
+              requests: [{ kind: 'redis', passwordType: 'root' }],
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('requests[0].passwordType is only supported for mariadb and mysql')
 
     expect(context.getCalls()).toHaveLength(0)
   })
@@ -1226,6 +1455,40 @@ describe('codemode runtime', () => {
           async ({ dokploy }) => {
             return await dokploy.libsql.many({
               libsqlIds: ['libsql-1', 'libsql-2', 'libsql-3'],
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('Code Mode execute exceeded 2 API calls.')
+  })
+
+  it('enforces the execute max call budget for virtual database.many fan-out', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 2)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.database.many({
+              requests: [
+                { kind: 'postgres', postgresId: 'postgres-1' },
+                { kind: 'redis', redisId: 'redis-1' },
+                { kind: 'mongo', mongoId: 'mongo-1' },
+              ],
             })
           }
         `,

@@ -38,6 +38,43 @@ function flushMicrotasks() {
   return new Promise((resolve) => setTimeout(resolve, 0))
 }
 
+function mockProcessSend(
+  implementation?: (message: unknown, callback?: (error: Error | null) => void) => void,
+) {
+  const sendCalls: unknown[] = []
+  const originalSend = process.send
+
+  process.send = vi.fn((message: unknown, callback?: (error: Error | null) => void) => {
+    sendCalls.push(message)
+    implementation?.(message, callback)
+    callback?.(null)
+    return true
+  }) as typeof process.send
+
+  return {
+    sendCalls,
+    restore() {
+      process.send = originalSend
+    },
+  }
+}
+
+function mockExecuteCallContext() {
+  createExecuteContextMock.mockImplementation(
+    (
+      rpcExecutor: (
+        procedure: string,
+        input?: Record<string, unknown>,
+      ) => Promise<GatewayCallResult>,
+    ) => ({
+      dokploy: {
+        call: (procedure: string, input?: Record<string, unknown>) => rpcExecutor(procedure, input),
+      },
+      helpers: {},
+    }),
+  )
+}
+
 async function loadWorkerEntry() {
   vi.resetModules()
   const existingListeners = new Set(process.listeners('message'))
@@ -440,5 +477,127 @@ describe('codemode worker entry', () => {
 
     cleanup()
     process.send = originalSend
+  })
+
+  it('returns a failed done message when the parent returns a gateway error', async () => {
+    const { sendCalls, restore } = mockProcessSend()
+    mockExecuteCallContext()
+
+    runSandboxedFunctionMock.mockImplementation(
+      async ({
+        context,
+      }: {
+        context: {
+          dokploy: {
+            call: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>
+          }
+        }
+      }) => {
+        await context.dokploy.call('project.one', { projectId: 'project-1' })
+        return {
+          result: null,
+          logs: [],
+        } satisfies SandboxExecutionResult
+      },
+    )
+
+    const cleanup = await loadWorkerEntry()
+    process.emit('message', {
+      type: 'run',
+      mode: 'execute',
+      code: 'await dokploy.call("project.one", { projectId: "project-1" })',
+      limits: createLimits(),
+    })
+    await flushMicrotasks()
+
+    process.emit('message', {
+      type: 'callResult',
+      requestId: 1,
+      ok: false,
+      error: 'Forbidden',
+    })
+    await flushMicrotasks()
+
+    expect(sendCalls).toContainEqual({
+      type: 'done',
+      ok: false,
+      error: 'Forbidden',
+    })
+
+    cleanup()
+    restore()
+  })
+
+  it('ignores unrelated call results until the pending request resolves', async () => {
+    const { sendCalls, restore } = mockProcessSend()
+    mockExecuteCallContext()
+
+    runSandboxedFunctionMock.mockImplementation(
+      async ({
+        context,
+      }: {
+        context: {
+          dokploy: {
+            call: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>
+          }
+        }
+      }) => {
+        const result = await context.dokploy.call('project.one', { projectId: 'project-1' })
+        return {
+          result,
+          logs: [],
+        } satisfies SandboxExecutionResult
+      },
+    )
+
+    const cleanup = await loadWorkerEntry()
+    process.emit('message', {
+      type: 'run',
+      mode: 'execute',
+      code: 'await dokploy.call("project.one", { projectId: "project-1" })',
+      limits: createLimits(),
+    })
+    await flushMicrotasks()
+
+    process.emit('message', {
+      type: 'callResult',
+      requestId: 999,
+      ok: true,
+      data: { ignored: true },
+    })
+    await flushMicrotasks()
+
+    expect(
+      sendCalls.some(
+        (call) =>
+          typeof call === 'object' && call !== null && 'type' in call && call.type === 'done',
+      ),
+    ).toBe(false)
+
+    process.emit('message', {
+      type: 'callResult',
+      requestId: 1,
+      ok: true,
+      data: { projectId: 'project-1', name: 'Project 1' },
+    })
+    await flushMicrotasks()
+
+    expect(sendCalls).toContainEqual(
+      expect.objectContaining({
+        type: 'done',
+        ok: true,
+        result: expect.objectContaining({
+          data: { projectId: 'project-1', name: 'Project 1' },
+          trace: expect.objectContaining({
+            procedure: 'project.one',
+            method: 'GET',
+          }),
+        }),
+        logs: [],
+      }),
+    )
+
+    cleanup()
+    restore()
   })
 })

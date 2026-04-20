@@ -2,7 +2,7 @@ import { fork } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { resolveSandboxLimits } from './limits.js'
+import { normalizeSandboxLimits, resolveSandboxLimits } from './limits.js'
 import type { SandboxExecutionResult, SandboxLimits } from './types.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -58,7 +58,12 @@ function resolveWorkerEnv() {
 }
 
 function resolveLimits(limits?: SandboxLimits) {
-  return limits ?? resolveSandboxLimits()
+  const normalizedLimits = normalizeSandboxLimits(limits)
+  if (!normalizedLimits) {
+    throw new Error('Sandbox limits payload must be an object when provided.')
+  }
+
+  return limits === undefined ? resolveSandboxLimits() : normalizedLimits
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -194,6 +199,9 @@ function createSettlers(
   let settled = false
 
   return {
+    isSettled() {
+      return settled
+    },
     resolve(payload: WorkerDoneMessage) {
       if (settled) {
         return
@@ -259,6 +267,10 @@ function sendExecuteCallResult(
   requestId: number,
   data: unknown,
 ) {
+  if (settle.isSettled()) {
+    return
+  }
+
   sendWorkerMessage(worker, settle, { type: 'callResult', requestId, ok: true, data }, (error) => {
     if (isLikelySerializationError(error)) {
       sendExecuteCallError(worker, settle, requestId, buildCallResultSerializationError())
@@ -275,6 +287,10 @@ function sendWorkerMessage(
   message: Record<string, unknown>,
   onError?: (error: Error) => void,
 ) {
+  if (settle.isSettled()) {
+    return
+  }
+
   const handleError = onError ?? ((error: Error) => settle.reject(error))
 
   try {
@@ -299,8 +315,16 @@ async function handleExecuteWorkerMessage(
   if (isWorkerCallMessage(message)) {
     try {
       const data = await onCall(message.procedure, message.input ?? {})
+      if (settle.isSettled()) {
+        return
+      }
+
       sendExecuteCallResult(worker, settle, message.requestId, data)
     } catch (error) {
+      if (settle.isSettled()) {
+        return
+      }
+
       sendExecuteCallError(
         worker,
         settle,

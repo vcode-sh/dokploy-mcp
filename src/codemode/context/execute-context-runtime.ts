@@ -9,6 +9,8 @@ import {
   type ApplicationManyInput,
   type ApplicationManyOutput,
   buildHelpers,
+  type DatabaseManyInput,
+  type DatabaseManyOutput,
   type DatabaseRotatePasswordPreviewInput,
   type DatabaseRotatePasswordPreviewOutput,
   type DeploymentLatestByTypeInput,
@@ -131,6 +133,11 @@ export function createExecuteContext(executor: CallExecutor, maxCalls: number): 
         ) as Promise<TagBulkAssignPreviewOutput>,
     },
     database: {
+      many: (input: DatabaseManyInput) =>
+        dispatchCall(
+          'database.many',
+          input as unknown as Record<string, unknown>,
+        ) as Promise<DatabaseManyOutput>,
       rotatePasswordPreview: (input: DatabaseRotatePasswordPreviewInput) =>
         dispatchCall(
           'database.rotatePasswordPreview',
