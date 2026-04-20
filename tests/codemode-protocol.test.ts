@@ -29,6 +29,27 @@ async function withClient(server: McpServer, run: (client: Client) => Promise<vo
   }
 }
 
+async function inspectSurface(server: McpServer) {
+  let surface:
+    | {
+        tools: string[]
+        capabilityKeys: string[]
+      }
+    | undefined
+
+  await withClient(server, async (client) => {
+    const { tools } = await client.listTools()
+    surface = {
+      tools: tools.map((tool) => tool.name),
+      capabilityKeys: Object.keys(
+        (client.getServerCapabilities() ?? {}) as Record<string, unknown>,
+      ).sort(),
+    }
+  })
+
+  return surface
+}
+
 describe('protocol surfaces', () => {
   it('codemode surface is intentionally tiny', () => {
     expect(codeModeTools.map((tool) => tool.name)).toEqual(['search', 'execute'])
@@ -46,6 +67,48 @@ describe('protocol surfaces', () => {
     await withClient(server, async (client) => {
       const { tools } = await client.listTools()
       expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+    })
+  })
+
+  it('keeps explicit codemode plumbing backward compatible with direct codemode registration', async () => {
+    const defaultSurface = await inspectSurface(createServer())
+    const explicitSurface = await inspectSurface(createServer({ mode: 'codemode' }))
+    const directSurface = await inspectSurface(createCodeModeServer())
+
+    expect(defaultSurface).toEqual({
+      tools: ['search', 'execute'],
+      capabilityKeys: ['tools'],
+    })
+    expect(explicitSurface).toEqual(defaultSurface)
+    expect(directSurface).toEqual(defaultSurface)
+  })
+
+  it('does not advertise resources, resource templates, or prompts by default', async () => {
+    await withClient(createServer(), async (client) => {
+      await expect(client.listResources()).rejects.toThrow()
+      await expect(client.listResourceTemplates()).rejects.toThrow()
+      await expect(client.listPrompts()).rejects.toThrow()
+    })
+  })
+
+  it('keeps explicit capability flags backward compatible with the current codemode surface', async () => {
+    const surface = await inspectSurface(
+      createServer({
+        mode: 'codemode',
+        capabilityFlags: {
+          resources: true,
+          prompts: true,
+          completions: true,
+          sampling: true,
+          elicitation: true,
+          tasks: true,
+        },
+      }),
+    )
+
+    expect(surface).toEqual({
+      tools: ['search', 'execute'],
+      capabilityKeys: ['tools'],
     })
   })
 })

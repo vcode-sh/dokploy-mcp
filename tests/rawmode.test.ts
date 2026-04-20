@@ -34,6 +34,10 @@ async function withClient(server: McpServer, run: (client: Client) => Promise<vo
   }
 }
 
+function getCapabilityKeys(client: Client) {
+  return Object.keys((client.getServerCapabilities() ?? {}) as Record<string, unknown>).sort()
+}
+
 describe('raw and hybrid server modes', () => {
   it('parses explicit mode and enabled-tags configuration', () => {
     expect(parseServerMode('RAW')).toBe('raw')
@@ -120,5 +124,62 @@ describe('raw and hybrid server modes', () => {
         )
       },
     )
+  })
+
+  it('keeps raw and hybrid plumbing tool-only until new capability families are explicitly added', async () => {
+    for (const options of [
+      { mode: 'raw' as const, enabledTags: ['project'] },
+      { mode: 'hybrid' as const, enabledTags: ['project'] },
+    ]) {
+      await withClient(createServer(options), async (client) => {
+        expect(getCapabilityKeys(client)).toEqual(['tools'])
+        await expect(client.listResources()).rejects.toThrow()
+        await expect(client.listResourceTemplates()).rejects.toThrow()
+        await expect(client.listPrompts()).rejects.toThrow()
+      })
+    }
+  })
+
+  it('keeps raw and hybrid plumbing tool-only even when future capability flags are set', async () => {
+    for (const options of [
+      {
+        mode: 'raw' as const,
+        enabledTags: ['project'],
+        capabilityFlags: { resources: true, prompts: true, tasks: true },
+      },
+      {
+        mode: 'hybrid' as const,
+        enabledTags: ['project'],
+        capabilityFlags: { resources: true, prompts: true, tasks: true },
+      },
+    ]) {
+      await withClient(createServer(options), async (client) => {
+        expect(getCapabilityKeys(client)).toEqual(['tools'])
+        await expect(client.listResources()).rejects.toThrow()
+        await expect(client.listResourceTemplates()).rejects.toThrow()
+        await expect(client.listPrompts()).rejects.toThrow()
+      })
+    }
+  })
+
+  it('resolves shared capability flags alongside raw mode options', () => {
+    expect(
+      resolveServerOptionsFromEnv({
+        DOKPLOY_MCP_MODE: 'raw',
+        DOKPLOY_ENABLED_TAGS: 'project, project , application',
+        DOKPLOY_MCP_CAPABILITIES: 'resources,prompts,completions,sampling,elicitation,tasks',
+      }),
+    ).toEqual({
+      mode: 'raw',
+      enabledTags: ['project', 'application'],
+      capabilityFlags: {
+        resources: true,
+        prompts: true,
+        completions: true,
+        sampling: true,
+        elicitation: true,
+        tasks: true,
+      },
+    })
   })
 })

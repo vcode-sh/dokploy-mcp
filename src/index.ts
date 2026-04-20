@@ -3,10 +3,13 @@
 const args = process.argv.slice(2)
 
 type ServerTransportMode = 'stdio' | 'http'
+type CapabilityFlag = 'resources' | 'prompts' | 'completions' | 'sampling' | 'elicitation' | 'tasks'
+type CapabilityFlags = Partial<Record<CapabilityFlag, boolean>>
 
 interface StartServerOptions {
   mode?: 'codemode' | 'raw' | 'hybrid'
   enabledTags?: string[]
+  capabilityFlags?: CapabilityFlags
   transport: ServerTransportMode
   host?: string
   port?: number
@@ -45,6 +48,27 @@ function parseEnabledTags(value?: string) {
   return tags.length > 0 ? [...new Set(tags)] : undefined
 }
 
+function isCapabilityFlag(value: string): value is CapabilityFlag {
+  return ['resources', 'prompts', 'completions', 'sampling', 'elicitation', 'tasks'].includes(value)
+}
+
+function parseCapabilityFlags(value?: string) {
+  if (!value) {
+    return undefined
+  }
+
+  const flags = value
+    .split(',')
+    .map((flag) => flag.trim().toLowerCase())
+    .filter((flag) => isCapabilityFlag(flag))
+
+  if (flags.length === 0) {
+    return undefined
+  }
+
+  return Object.fromEntries([...new Set(flags)].map((flag) => [flag, true])) as CapabilityFlags
+}
+
 function resolveTransportFromEnv() {
   return process.env.DOKPLOY_MCP_TRANSPORT === 'http' ? 'http' : 'stdio'
 }
@@ -55,7 +79,7 @@ function isServerCommand(command: string | undefined) {
 
 function resolveServerOptions(argumentsList: string[]): StartServerOptions | null {
   if (argumentsList.length === 0) {
-    return {
+    const options: StartServerOptions = {
       transport: resolveTransportFromEnv(),
       mode: process.env.DOKPLOY_MCP_MODE as StartServerOptions['mode'] | undefined,
       enabledTags: parseEnabledTags(process.env.DOKPLOY_ENABLED_TAGS),
@@ -64,6 +88,13 @@ function resolveServerOptions(argumentsList: string[]): StartServerOptions | nul
       mcpPath: process.env.DOKPLOY_MCP_HTTP_PATH,
       healthPath: process.env.DOKPLOY_MCP_HEALTH_PATH,
     }
+
+    const capabilityFlags = parseCapabilityFlags(process.env.DOKPLOY_MCP_CAPABILITIES)
+    if (capabilityFlags) {
+      options.capabilityFlags = capabilityFlags
+    }
+
+    return options
   }
 
   if (!isServerCommand(argumentsList[0])) {
@@ -80,7 +111,7 @@ function resolveServerOptions(argumentsList: string[]): StartServerOptions | nul
           ? 'http'
           : resolveTransportFromEnv()
 
-  return {
+  const options: StartServerOptions = {
     transport,
     mode: parseFlagValue(argumentsList, '--mode') as StartServerOptions['mode'] | undefined,
     enabledTags: parseEnabledTags(parseFlagValue(argumentsList, '--enabled-tags')),
@@ -89,6 +120,13 @@ function resolveServerOptions(argumentsList: string[]): StartServerOptions | nul
     mcpPath: parseFlagValue(argumentsList, '--mcp-path'),
     healthPath: parseFlagValue(argumentsList, '--health-path'),
   }
+
+  const capabilityFlags = parseCapabilityFlags(parseFlagValue(argumentsList, '--capabilities'))
+  if (capabilityFlags) {
+    options.capabilityFlags = capabilityFlags
+  }
+
+  return options
 }
 
 async function startStdioServer(options: StartServerOptions) {
@@ -100,6 +138,7 @@ async function startStdioServer(options: StartServerOptions) {
   const server = createServer({
     mode: options.mode,
     enabledTags: options.enabledTags,
+    capabilityFlags: options.capabilityFlags,
   })
   const transport = new StdioServerTransport()
   await server.connect(transport)
@@ -110,6 +149,7 @@ async function startHttpTransport(options: StartServerOptions) {
   const handle = await startHttpServer({
     mode: options.mode,
     enabledTags: options.enabledTags,
+    capabilityFlags: options.capabilityFlags,
     host: options.host,
     port: options.port,
     mcpPath: options.mcpPath,

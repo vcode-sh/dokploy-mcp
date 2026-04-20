@@ -1,3 +1,4 @@
+import { parseCapabilityFlags } from '../server.js'
 import type { HttpServerOptions, ResolvedHttpServerOptions } from './types.js'
 
 const DEFAULT_HTTP_HOST = '127.0.0.1'
@@ -26,6 +27,8 @@ export function resolveHttpOptions(options: HttpServerOptions = {}): ResolvedHtt
   return {
     mode: options.mode ?? 'codemode',
     enabledTags: options.enabledTags,
+    capabilityFlags:
+      options.capabilityFlags ?? parseCapabilityFlags(process.env.DOKPLOY_MCP_CAPABILITIES),
     host: options.host ?? process.env.DOKPLOY_MCP_HTTP_HOST ?? DEFAULT_HTTP_HOST,
     port: options.port ?? parsePort(process.env.DOKPLOY_MCP_HTTP_PORT) ?? DEFAULT_HTTP_PORT,
     mcpPath: normalizePath(options.mcpPath ?? process.env.DOKPLOY_MCP_HTTP_PATH, DEFAULT_MCP_PATH),
@@ -42,6 +45,7 @@ export function getHealthPayload(options: ResolvedHttpServerOptions) {
     transport: 'http',
     mode: options.mode,
     enabledTags: options.enabledTags ?? [],
+    capabilityFlags: Object.keys(options.capabilityFlags ?? {}).sort(),
     mcpPath: options.mcpPath,
     healthPath: options.healthPath,
   }

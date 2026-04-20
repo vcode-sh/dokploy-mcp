@@ -23,6 +23,7 @@ export interface StartedHttpServer {
 export interface ResolvedHttpServerOptions {
   mode: ServerMode
   enabledTags?: string[]
+  capabilityFlags?: CreateServerOptions['capabilityFlags']
   host: string
   port: number
   mcpPath: string

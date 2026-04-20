@@ -393,6 +393,7 @@ describe('http server transport', () => {
       ok: true,
       transport: 'http',
       mode: 'codemode',
+      capabilityFlags: [],
       mcpPath: '/mcp',
       healthPath: '/health',
     })
@@ -414,6 +415,40 @@ describe('http server transport', () => {
         result: expect.any(Number),
         logs: [],
       })
+    })
+  })
+
+  it('threads future capability flags through HTTP options without advertising unsupported families yet', async () => {
+    const handle = await startTestHttpServer({
+      mode: 'codemode',
+      capabilityFlags: {
+        resources: true,
+        prompts: true,
+        completions: true,
+        sampling: true,
+        elicitation: true,
+        tasks: true,
+      },
+    })
+    const response = await fetch(handle.healthUrl)
+    const payload = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(200)
+    expect(payload).toMatchObject({
+      ok: true,
+      capabilityFlags: ['completions', 'elicitation', 'prompts', 'resources', 'sampling', 'tasks'],
+    })
+
+    await withHttpClient(handle, async (client) => {
+      const { tools } = await client.listTools()
+
+      expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(
+        Object.keys((client.getServerCapabilities() ?? {}) as Record<string, unknown>).sort(),
+      ).toEqual(['tools'])
+      await expect(client.listResources()).rejects.toThrow()
+      await expect(client.listResourceTemplates()).rejects.toThrow()
+      await expect(client.listPrompts()).rejects.toThrow()
     })
   })
 

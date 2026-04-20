@@ -207,6 +207,7 @@ export function createSessionRecord(
   const server = createServer({
     mode: options.mode,
     enabledTags: options.enabledTags,
+    capabilityFlags: options.capabilityFlags,
   })
 
   const transport = new StreamableHTTPServerTransport({
