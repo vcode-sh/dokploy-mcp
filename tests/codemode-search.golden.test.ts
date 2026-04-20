@@ -162,6 +162,7 @@ describe('codemode search golden', () => {
         'postgres.search',
         'postgres.update',
         'project.duplicate',
+        'project.logsOverview',
         'redis.create',
         'redis.move',
         'redis.search',
