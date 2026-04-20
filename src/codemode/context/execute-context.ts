@@ -30,6 +30,16 @@ export interface ApplicationManyOutput {
   total: number
 }
 
+export interface ServerManyInput {
+  serverIds: string[]
+  includeSecurity?: boolean
+}
+
+export interface ServerManyOutput {
+  items: Record<string, unknown>[]
+  total: number
+}
+
 export interface ProjectOverviewInput {
   projectId: string
   pageSize?: number
@@ -58,6 +68,83 @@ export interface ProjectOverviewOutput {
   environments: ProjectOverviewEnvironment[]
 }
 
+export interface ProjectInfrastructureOverviewInput {
+  projectId: string
+  includeServerSecurity?: boolean
+}
+
+export interface ProjectInfrastructureStatusSummary {
+  total: number
+  statusCounts: Record<string, number>
+}
+
+export interface ProjectInfrastructureDatabaseSummary {
+  mariadb: number
+  mongo: number
+  mysql: number
+  postgres: number
+  redis: number
+  total: number
+}
+
+export interface ProjectInfrastructureSecuritySummary {
+  ufw: {
+    installed: boolean | null
+    active: boolean | null
+    defaultIncoming: string | null
+  }
+  ssh: {
+    enabled: boolean | null
+    keyAuth: boolean | null
+    passwordAuth: boolean | null
+    permitRootLogin: string | null
+    usePam: boolean | null
+  }
+  fail2ban: {
+    installed: boolean | null
+    enabled: boolean | null
+    active: boolean | null
+    sshEnabled: boolean | null
+    sshMode: string | null
+  }
+}
+
+export interface ProjectInfrastructureOverviewEnvironment {
+  environmentId: string
+  name: string | null
+  description: string | null
+  isDefault: boolean
+  serverIds: string[]
+  applications: ProjectInfrastructureStatusSummary
+  compose: ProjectInfrastructureStatusSummary
+  databases: ProjectInfrastructureDatabaseSummary
+}
+
+export interface ProjectInfrastructureOverviewServer {
+  serverId: string | null
+  name: string | null
+  serverStatus: string | null
+  serverType: string | null
+  ipAddress: string | null
+  lastDeployment: unknown
+  security: ProjectInfrastructureSecuritySummary | null
+}
+
+export interface ProjectInfrastructureOverviewOutput {
+  projectId: string
+  name: string | null
+  description: string | null
+  environments: ProjectInfrastructureOverviewEnvironment[]
+  servers: ProjectInfrastructureOverviewServer[]
+  totals: {
+    environments: number
+    applications: number
+    compose: number
+    databases: number
+    servers: number
+  }
+}
+
 export interface ExecuteDokployProcedureMap {
   'application.one': {
     input: ExecuteApplicationOneInput
@@ -67,9 +154,17 @@ export interface ExecuteDokployProcedureMap {
     input: ApplicationManyInput
     output: ApplicationManyOutput
   }
+  'server.many': {
+    input: ServerManyInput
+    output: ServerManyOutput
+  }
   'project.overview': {
     input: ProjectOverviewInput
     output: ProjectOverviewOutput
+  }
+  'project.infrastructureOverview': {
+    input: ProjectInfrastructureOverviewInput
+    output: ProjectInfrastructureOverviewOutput
   }
 }
 
@@ -78,6 +173,7 @@ type GeneratedModuleRuntime = Record<string, unknown>
 interface GeneratedDokployRuntime {
   call: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>
   application: GeneratedModuleRuntime
+  server: GeneratedModuleRuntime
   project: GeneratedModuleRuntime
   [moduleName: string]: unknown
 }
@@ -94,8 +190,14 @@ export interface ExecuteDokployRuntime extends GeneratedDokployRuntime {
     ): Promise<ExecuteDokployProcedureMap['application.one']['output']>
     many(input: ApplicationManyInput): Promise<ApplicationManyOutput>
   }
+  server: GeneratedModuleRuntime & {
+    many(input: ServerManyInput): Promise<ServerManyOutput>
+  }
   project: GeneratedModuleRuntime & {
     overview(input: ProjectOverviewInput): Promise<ProjectOverviewOutput>
+    infrastructureOverview(
+      input: ProjectInfrastructureOverviewInput,
+    ): Promise<ProjectInfrastructureOverviewOutput>
   }
 }
 
@@ -204,6 +306,14 @@ export function createExecuteContext(executor: CallExecutor, maxCalls: number): 
           input as unknown as Record<string, unknown>,
         ) as Promise<ApplicationManyOutput>,
     },
+    server: {
+      ...runtime.server,
+      many: (input: ServerManyInput) =>
+        dispatchCall(
+          'server.many',
+          input as unknown as Record<string, unknown>,
+        ) as Promise<ServerManyOutput>,
+    },
     project: {
       ...runtime.project,
       overview: (input: ProjectOverviewInput) =>
@@ -211,6 +321,11 @@ export function createExecuteContext(executor: CallExecutor, maxCalls: number): 
           'project.overview',
           input as unknown as Record<string, unknown>,
         ) as Promise<ProjectOverviewOutput>,
+      infrastructureOverview: (input: ProjectInfrastructureOverviewInput) =>
+        dispatchCall(
+          'project.infrastructureOverview',
+          input as unknown as Record<string, unknown>,
+        ) as Promise<ProjectInfrastructureOverviewOutput>,
     },
   } satisfies ExecuteDokployRuntime
 

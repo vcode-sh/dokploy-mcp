@@ -35,6 +35,41 @@ describe('codemode search golden', () => {
     expect(payload.result as string[]).toContain('notification.createSlack')
   })
 
+  it('finds ssh and certificate reads by private key hints', async () => {
+    const result = await searchTool.handler({
+      code: 'catalog.searchText("private key").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(
+      expect.arrayContaining([
+        'sshKey.one',
+        'sshKey.all',
+        'sshKey.generate',
+        'server.withSSHKey',
+        'certificates.one',
+      ]),
+    )
+  })
+
+  it('finds notification reads by smtp password hints', async () => {
+    const result = await searchTool.handler({
+      code: 'catalog.searchText("smtp password").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['notification.one', 'notification.all']))
+  })
+
+  it('finds permission-scoped project reads by picker hints', async () => {
+    const result = await searchTool.handler({
+      code: 'catalog.searchText("permission-scoped project").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['project.allForPermissions']))
+  })
+
   it('finds compose read procedures', async () => {
     const result = await searchTool.handler({
       code: readFixture('find-compose-read-paths.js'),
@@ -51,6 +86,7 @@ describe('codemode search golden', () => {
         'compose.loadMountsByService',
         'compose.getConvertedCompose',
         'compose.getTags',
+        'compose.readLogs',
       ].sort(),
     )
   })
@@ -77,6 +113,9 @@ describe('codemode search golden', () => {
         'environment.one',
         'environment.remove',
         'environment.update',
+        'libsql.create',
+        'libsql.move',
+        'libsql.update',
         'mariadb.create',
         'mariadb.move',
         'mariadb.search',
@@ -115,6 +154,7 @@ describe('codemode search golden', () => {
         'notification.testEmailConnection',
         'notification.testGotifyConnection',
         'notification.testLarkConnection',
+        'notification.testMattermostConnection',
         'notification.testNtfyConnection',
         'notification.testPushoverConnection',
         'notification.testResendConnection',
@@ -140,6 +180,7 @@ describe('codemode search golden', () => {
         'application.delete',
         'application.deploy',
         'application.disconnectGitProvider',
+        'application.dropDeployment',
         'application.killBuild',
         'application.markRunning',
         'application.move',

@@ -1,11 +1,90 @@
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..', '..')
-const openApiSourcePath = path.join(rootDir, '.openapi', 'openapi')
+const defaultOpenApiSourcePath = path.join(rootDir, 'scripts', 'v2', 'official-openapi-root.json')
+const legacyOpenApiSourcePath = path.join(rootDir, '.openapi', 'openapi')
 const generatedDir = path.join(rootDir, 'src', 'generated')
+const httpMethods = new Set(['delete', 'get', 'head', 'options', 'patch', 'post', 'put', 'trace'])
+
+export const v3ParityTarget = Object.freeze({
+  version: '1.0.0',
+  operationCount: 524,
+  tagCount: 48,
+  extraOperations: [
+    'docker.startContainer',
+    'docker.stopContainer',
+    'docker.killContainer',
+    'project.homeStats',
+    'stripe.updateInvoiceNotifications',
+  ],
+  source: Object.freeze({
+    relativePath: 'scripts/v2/official-openapi-root.json',
+    repository: 'https://github.com/Dokploy/mcp',
+    commit: '0dcb4c0f19eb395cba8830f791b108a52eda8caa',
+    sha256: 'e70b058584ce1cab1f4b08abed11e2c96f4fac2fedcb16062a5ddd4fa6394e3e',
+  }),
+})
+
+function resolveOpenApiSourcePath() {
+  const configuredPath = process.env.DOKPLOY_OPENAPI_SOURCE?.trim()
+  if (configuredPath) {
+    return path.isAbsolute(configuredPath) ? configuredPath : path.resolve(rootDir, configuredPath)
+  }
+
+  if (fs.existsSync(defaultOpenApiSourcePath)) {
+    return defaultOpenApiSourcePath
+  }
+
+  return legacyOpenApiSourcePath
+}
+
+function normalizeOpenApiSource(parsed) {
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    typeof parsed.openapi === 'string' &&
+    parsed.paths &&
+    typeof parsed.paths === 'object'
+  ) {
+    return parsed
+  }
+
+  const envelopeSpec = parsed?.result?.data?.json
+  if (envelopeSpec && typeof envelopeSpec === 'object') {
+    return envelopeSpec
+  }
+
+  throw new Error('Unsupported OpenAPI source format')
+}
+
+function getPrimaryTag(op) {
+  return op.tags?.[0] ?? 'other'
+}
+
+function isHttpMethod(key) {
+  return httpMethods.has(key.toLowerCase())
+}
+
+function listOperations(spec) {
+  const operations = []
+
+  for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
+    for (const [method, op] of Object.entries(pathItem ?? {})) {
+      if (!isHttpMethod(method)) continue
+      operations.push({
+        method: method.toUpperCase(),
+        op,
+        pathKey,
+      })
+    }
+  }
+
+  return operations
+}
 
 function dereferencePath(root, ref) {
   const segments = ref.replace(/^#\//, '').split('/')
@@ -71,14 +150,43 @@ export function ensureGeneratedDir() {
 }
 
 export function loadRawSpec() {
-  const raw = fs.readFileSync(openApiSourcePath, 'utf8')
+  const raw = fs.readFileSync(resolveOpenApiSourcePath(), 'utf8')
   const parsed = JSON.parse(raw)
-  return parsed.result.data.json
+  return normalizeOpenApiSource(parsed)
 }
 
 export function loadResolvedSpec() {
   const raw = fs.readFileSync(path.join(generatedDir, 'openapi-resolved.json'), 'utf8')
   return JSON.parse(raw)
+}
+
+export function countOperations(spec) {
+  return listOperations(spec).length
+}
+
+export function countPrimaryTags(spec) {
+  const tags = new Set()
+
+  for (const { op } of listOperations(spec)) {
+    tags.add(getPrimaryTag(op))
+  }
+
+  return tags.size
+}
+
+export function getOpenApiSourceMetadata() {
+  const sourcePath = resolveOpenApiSourcePath()
+  const raw = fs.readFileSync(sourcePath, 'utf8')
+  const parsed = JSON.parse(raw)
+  const spec = normalizeOpenApiSource(parsed)
+
+  return {
+    operationCount: countOperations(spec),
+    relativePath: path.relative(rootDir, sourcePath),
+    sha256: crypto.createHash('sha256').update(raw).digest('hex'),
+    tagCount: countPrimaryTags(spec),
+    version: spec.info?.version ?? 'unknown',
+  }
 }
 
 export function resolveOpenApiSpec() {
@@ -158,20 +266,26 @@ export function buildOpenApiIndex(spec) {
   const byProcedure = {}
   const byPath = {}
 
-  for (const [pathKey, methods] of Object.entries(spec.paths ?? {})) {
-    const [method, op] = Object.entries(methods)[0]
-    const upperMethod = method.toUpperCase()
-    const tag = op.tags?.[0] ?? 'other'
+  for (const { method, op, pathKey } of listOperations(spec)) {
+    const tag = getPrimaryTag(op)
     const procedure = pathKey.replace(/^\//, '')
-    const input = getInputMetadata(op, upperMethod)
+    const input = getInputMetadata(op, method)
     const responseSchema =
       op.responses?.['200']?.content?.['application/json']?.schema ??
       op.responses?.['201']?.content?.['application/json']?.schema ??
       null
 
+    if (byProcedure[procedure] !== undefined) {
+      throw new Error(`Duplicate generated procedure: ${procedure}`)
+    }
+
+    if (byPath[pathKey] !== undefined) {
+      throw new Error(`Duplicate generated path: ${pathKey}`)
+    }
+
     const entry = {
       procedure,
-      method: upperMethod,
+      method,
       path: pathKey,
       tag,
       summary: op.summary ?? null,
@@ -202,20 +316,23 @@ export function buildOpenApiIndex(spec) {
 
 export function buildProcedureSchemas(spec) {
   const procedures = {}
-  for (const [pathKey, methods] of Object.entries(spec.paths ?? {})) {
-    const [method, op] = Object.entries(methods)[0]
-    const upperMethod = method.toUpperCase()
+
+  for (const { method, op, pathKey } of listOperations(spec)) {
     const procedure = pathKey.replace(/^\//, '')
-    const input = getInputMetadata(op, upperMethod)
+    const input = getInputMetadata(op, method)
     const outputSchema =
       op.responses?.['200']?.content?.['application/json']?.schema ??
       op.responses?.['201']?.content?.['application/json']?.schema ??
       null
 
+    if (procedures[procedure]) {
+      throw new Error(`Duplicate generated procedure schema: ${procedure}`)
+    }
+
     procedures[procedure] = {
-      method: upperMethod,
+      method,
       path: pathKey,
-      tag: op.tags?.[0] ?? 'other',
+      tag: getPrimaryTag(op),
       inputKind: input.inputKind,
       inputSchema: input.schema,
       outputSchema,
@@ -430,7 +547,18 @@ export function buildCatalogTs() {
 export function buildSchemasTs(procedureSchemas) {
   return [
     '// Generated by scripts/v2/build-runtime-schemas.mjs',
-    `export const procedureSchemas = ${JSON.stringify(procedureSchemas, null, 2)} as const`,
+    'export type JsonSchema = Record<string, unknown> | null',
+    '',
+    'export interface ProcedureSchema {',
+    "  method: 'GET' | 'POST'",
+    '  path: string',
+    '  tag: string',
+    "  inputKind: 'query' | 'body'",
+    '  inputSchema: JsonSchema',
+    '  outputSchema: JsonSchema',
+    '}',
+    '',
+    `export const procedureSchemas: Record<string, ProcedureSchema> = ${JSON.stringify(procedureSchemas, null, 2)}`,
     '',
     'export type ProcedureSchemas = typeof procedureSchemas',
   ].join('\n')

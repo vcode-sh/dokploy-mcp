@@ -432,6 +432,104 @@ describe('codemode execute integration', () => {
     })
   })
 
+  it('can execute virtual server.many while preserving input order and optional security', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${String(input.serverId ?? '')}`)
+
+      switch (procedure) {
+        case 'server.one':
+          if (input.serverId === 'server-2') {
+            return {
+              data: {
+                serverId: 'server-2',
+                name: 'Second server',
+                serverStatus: 'inactive',
+                deployments: [{ deploymentId: 'dep-2' }],
+              },
+              trace: trace(procedure, 0),
+            }
+          }
+
+          if (input.serverId === 'server-1') {
+            return {
+              data: {
+                serverId: 'server-1',
+                name: 'First server',
+                serverStatus: 'active',
+                deployments: [{ deploymentId: 'dep-1' }],
+              },
+              trace: trace(procedure, 1),
+            }
+          }
+
+          throw new Error(`Unexpected serverId ${String(input.serverId)}`)
+        case 'server.security':
+          if (input.serverId === 'server-2') {
+            return {
+              data: {
+                ssh: { enabled: false },
+                ufw: { active: false },
+                fail2ban: { active: false },
+              },
+              trace: trace(procedure, 2),
+            }
+          }
+
+          if (input.serverId === 'server-1') {
+            return {
+              data: { ssh: { enabled: true }, ufw: { active: true }, fail2ban: { active: true } },
+              trace: trace(procedure, 3),
+            }
+          }
+
+          throw new Error(`Unexpected security serverId ${String(input.serverId)}`)
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: readFixture('server-many.js'),
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      items: [
+        {
+          serverId: 'server-2',
+          name: 'Second server',
+          serverStatus: 'inactive',
+          deployments: [{ deploymentId: 'dep-2' }],
+          security: {
+            ssh: { enabled: false },
+            ufw: { active: false },
+            fail2ban: { active: false },
+          },
+        },
+        {
+          serverId: 'server-1',
+          name: 'First server',
+          serverStatus: 'active',
+          deployments: [{ deploymentId: 'dep-1' }],
+          security: {
+            ssh: { enabled: true },
+            ufw: { active: true },
+            fail2ban: { active: true },
+          },
+        },
+      ],
+      total: 2,
+    })
+    expect(calls).toEqual([
+      'server.one:server-2',
+      'server.security:server-2',
+      'server.one:server-1',
+      'server.security:server-1',
+    ])
+    expect(context.getCalls()).toHaveLength(4)
+  })
+
   it('can execute virtual project.overview with paginated application discovery', async () => {
     const calls: string[] = []
     const context = buildExecuteContext(async (procedure, input = {}) => {
@@ -577,6 +675,234 @@ describe('codemode execute integration', () => {
       'environment.one:{"environmentId":"env-1"}',
       'application.one:{"applicationId":"app-1","select":["applicationId","name","appName","applicationStatus","domains","mounts","watchPaths","deployments"],"deploymentLimit":1}',
       'application.one:{"applicationId":"app-2","select":["applicationId","name","appName","applicationStatus","domains","mounts","watchPaths","deployments"],"deploymentLimit":1}',
+    ])
+    expect(context.getCalls()).toHaveLength(5)
+  })
+
+  it('can execute virtual project.infrastructureOverview with compact server summaries', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${JSON.stringify(input)}`)
+
+      switch (procedure) {
+        case 'project.one':
+          expect(input).toEqual({ projectId: 'project-1' })
+          return {
+            data: {
+              projectId: 'project-1',
+              name: 'Infra project',
+              description: 'Infrastructure summary target',
+              environments: [
+                {
+                  environmentId: 'env-1',
+                  name: 'Production',
+                  description: 'Primary env',
+                  isDefault: true,
+                  applications: [
+                    { applicationId: 'app-1', applicationStatus: 'running', serverId: 'server-1' },
+                    { applicationId: 'app-2', applicationStatus: 'stopped', serverId: 'server-1' },
+                  ],
+                  compose: [
+                    { composeId: 'compose-1', composeStatus: 'running', serverId: 'server-2' },
+                  ],
+                  mariadb: [],
+                  mongo: [],
+                  mysql: [],
+                  postgres: [{ postgresId: 'pg-1', serverId: 'server-1' }],
+                  redis: [],
+                },
+              ],
+            },
+            trace: trace(procedure, 0),
+          }
+        case 'server.one':
+          if (input.serverId === 'server-1') {
+            return {
+              data: {
+                serverId: 'server-1',
+                name: 'Primary server',
+                serverStatus: 'active',
+                serverType: 'deploy',
+                ipAddress: '10.0.0.1',
+                deployments: [{ deploymentId: 'dep-1', status: 'done' }],
+              },
+              trace: trace(procedure, 1),
+            }
+          }
+
+          if (input.serverId === 'server-2') {
+            return {
+              data: {
+                serverId: 'server-2',
+                name: 'Worker server',
+                serverStatus: 'active',
+                serverType: 'build',
+                ipAddress: '10.0.0.2',
+                deployments: [],
+              },
+              trace: trace(procedure, 2),
+            }
+          }
+
+          throw new Error(`Unexpected serverId ${String(input.serverId)}`)
+        case 'server.security':
+          if (input.serverId === 'server-1') {
+            return {
+              data: {
+                ufw: { installed: true, active: true, defaultIncoming: 'deny' },
+                ssh: {
+                  enabled: true,
+                  keyAuth: true,
+                  passwordAuth: false,
+                  permitRootLogin: 'prohibit-password',
+                  usePam: true,
+                },
+                fail2ban: {
+                  installed: true,
+                  enabled: true,
+                  active: true,
+                  sshEnabled: true,
+                  sshMode: 'normal',
+                },
+              },
+              trace: trace(procedure, 3),
+            }
+          }
+
+          if (input.serverId === 'server-2') {
+            return {
+              data: {
+                ufw: { installed: true, active: false, defaultIncoming: 'allow' },
+                ssh: {
+                  enabled: true,
+                  keyAuth: true,
+                  passwordAuth: true,
+                  permitRootLogin: 'yes',
+                  usePam: false,
+                },
+                fail2ban: {
+                  installed: false,
+                  enabled: false,
+                  active: false,
+                  sshEnabled: false,
+                  sshMode: 'disabled',
+                },
+              },
+              trace: trace(procedure, 4),
+            }
+          }
+
+          throw new Error(`Unexpected security serverId ${String(input.serverId)}`)
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    })
+
+    const execution = await runSandboxedFunction({
+      code: readFixture('project-infrastructure-overview.js'),
+      context: { dokploy: context.dokploy, helpers: context.helpers },
+    })
+
+    expect(execution.result).toEqual({
+      projectId: 'project-1',
+      name: 'Infra project',
+      description: 'Infrastructure summary target',
+      environments: [
+        {
+          environmentId: 'env-1',
+          name: 'Production',
+          description: 'Primary env',
+          isDefault: true,
+          serverIds: ['server-1', 'server-2'],
+          applications: {
+            total: 2,
+            statusCounts: {
+              running: 1,
+              stopped: 1,
+            },
+          },
+          compose: {
+            total: 1,
+            statusCounts: {
+              running: 1,
+            },
+          },
+          databases: {
+            mariadb: 0,
+            mongo: 0,
+            mysql: 0,
+            postgres: 1,
+            redis: 0,
+            total: 1,
+          },
+        },
+      ],
+      servers: [
+        {
+          serverId: 'server-1',
+          name: 'Primary server',
+          serverStatus: 'active',
+          serverType: 'deploy',
+          ipAddress: '10.0.0.1',
+          lastDeployment: { deploymentId: 'dep-1', status: 'done' },
+          security: {
+            ufw: { installed: true, active: true, defaultIncoming: 'deny' },
+            ssh: {
+              enabled: true,
+              keyAuth: true,
+              passwordAuth: false,
+              permitRootLogin: 'prohibit-password',
+              usePam: true,
+            },
+            fail2ban: {
+              installed: true,
+              enabled: true,
+              active: true,
+              sshEnabled: true,
+              sshMode: 'normal',
+            },
+          },
+        },
+        {
+          serverId: 'server-2',
+          name: 'Worker server',
+          serverStatus: 'active',
+          serverType: 'build',
+          ipAddress: '10.0.0.2',
+          lastDeployment: null,
+          security: {
+            ufw: { installed: true, active: false, defaultIncoming: 'allow' },
+            ssh: {
+              enabled: true,
+              keyAuth: true,
+              passwordAuth: true,
+              permitRootLogin: 'yes',
+              usePam: false,
+            },
+            fail2ban: {
+              installed: false,
+              enabled: false,
+              active: false,
+              sshEnabled: false,
+              sshMode: 'disabled',
+            },
+          },
+        },
+      ],
+      totals: {
+        environments: 1,
+        applications: 2,
+        compose: 1,
+        databases: 1,
+        servers: 2,
+      },
+    })
+    expect(calls).toEqual([
+      'project.one:{"projectId":"project-1"}',
+      'server.one:{"serverId":"server-1"}',
+      'server.security:{"serverId":"server-1"}',
+      'server.one:{"serverId":"server-2"}',
+      'server.security:{"serverId":"server-2"}',
     ])
     expect(context.getCalls()).toHaveLength(5)
   })

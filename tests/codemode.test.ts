@@ -126,6 +126,41 @@ describe('codemode runtime', () => {
     )
   })
 
+  it('search catalog get exposes virtual server.many as an execute-only helper', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('server.many')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('server.many')
+    expect(contract.path).toBe('/virtual/server.many')
+    expect(contract.optionalInputs).toEqual(expect.arrayContaining(['includeSecurity']))
+    expect(contract.response).toEqual({
+      type: 'object',
+      keys: ['items', 'total'],
+    })
+  })
+
+  it('search catalog get exposes virtual project.infrastructureOverview as an execute-only helper', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('project.infrastructureOverview')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('project.infrastructureOverview')
+    expect(contract.path).toBe('/virtual/project.infrastructureOverview')
+    expect(contract.requiredInputs).toEqual(expect.arrayContaining(['projectId']))
+    expect(contract.optionalInputs).toEqual(expect.arrayContaining(['includeServerSecurity']))
+    expect(contract.response).toEqual({
+      type: 'object',
+      keys: ['projectId', 'name', 'description', 'environments', 'servers', 'totals'],
+    })
+  })
+
   it('search can find endpoints by manual response hints when OpenAPI is incomplete', async () => {
     const result = await searchTool.handler({
       code: 'async ({ catalog }) => catalog.searchText("watchPaths").map((entry) => entry.procedure)',
@@ -151,6 +186,24 @@ describe('codemode runtime', () => {
 
     const payload = result.structuredContent as { result?: unknown }
     expect(payload.result).toEqual(expect.arrayContaining(['project.overview']))
+  })
+
+  it('search can find server.many by helper-specific inputs', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("includeSecurity").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['server.many']))
+  })
+
+  it('search can find project.infrastructureOverview by infrastructure-specific fields', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("statusCounts").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(expect.arrayContaining(['project.infrastructureOverview']))
   })
 
   it('bounds array search results', async () => {
@@ -217,12 +270,26 @@ describe('codemode runtime', () => {
       applicationIds: ['app-1', 'app-2'],
       includeDeployments: false,
     })
+    expectTypeOf(context.dokploy.server.many).toBeCallableWith({
+      serverIds: ['server-1'],
+      includeSecurity: true,
+    })
     expectTypeOf(context.dokploy.project.overview).toBeCallableWith({
       projectId: 'project-1',
       pageSize: 10,
     })
+    expectTypeOf(context.dokploy.project.infrastructureOverview).toBeCallableWith({
+      projectId: 'project-1',
+      includeServerSecurity: true,
+    })
     expectTypeOf(context.dokploy.call).toBeCallableWith('application.many', {
       applicationIds: ['app-1'],
+    })
+    expectTypeOf(context.dokploy.call).toBeCallableWith('server.many', {
+      serverIds: ['server-1'],
+    })
+    expectTypeOf(context.dokploy.call).toBeCallableWith('project.infrastructureOverview', {
+      projectId: 'project-1',
     })
   })
 
@@ -411,6 +478,42 @@ describe('codemode runtime', () => {
     expect(context.getCalls()).toHaveLength(0)
   })
 
+  it('validates virtual server.many input before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: {
+          procedure,
+          input,
+        },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.server.many({
+              serverIds: ['server-1'],
+              includeSecurity: 'yes',
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('includeSecurity must be a boolean')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
   it('validates virtual project.overview input before issuing upstream calls', async () => {
     const context = buildExecuteContext(async (procedure, input = {}) => {
       return {
@@ -443,6 +546,42 @@ describe('codemode runtime', () => {
         },
       }),
     ).rejects.toThrow('pageSize must be a positive integer')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
+  it('validates virtual project.infrastructureOverview input before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: {
+          procedure,
+          input,
+        },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.project.infrastructureOverview({
+              projectId: 'project-1',
+              includeServerSecurity: 'yes',
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('includeServerSecurity must be a boolean')
 
     expect(context.getCalls()).toHaveLength(0)
   })
@@ -522,5 +661,117 @@ describe('codemode runtime', () => {
         },
       }),
     ).rejects.toThrow('Code Mode execute exceeded 3 API calls.')
+  })
+
+  it('enforces the execute max call budget for virtual server.many fan-out', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      switch (procedure) {
+        case 'server.one':
+          return {
+            data: { serverId: String(input.serverId) },
+            trace: {
+              procedure,
+              method: 'GET',
+              startedAt: 0,
+              finishedAt: 1,
+              durationMs: 1,
+            },
+          }
+        case 'server.security':
+          return {
+            data: { ssh: {}, ufw: {}, fail2ban: {} },
+            trace: {
+              procedure,
+              method: 'GET',
+              startedAt: 0,
+              finishedAt: 1,
+              durationMs: 1,
+            },
+          }
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    }, 3)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.server.many({
+              serverIds: ['server-1', 'server-2'],
+              includeSecurity: true,
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('Code Mode execute exceeded 3 API calls.')
+  })
+
+  it('enforces the execute max call budget for virtual project.infrastructureOverview server fan-out', async () => {
+    const context = buildExecuteContext(async (procedure) => {
+      switch (procedure) {
+        case 'project.one':
+          return {
+            data: {
+              projectId: 'project-1',
+              environments: [
+                {
+                  environmentId: 'env-1',
+                  name: 'Production',
+                  description: 'Prod',
+                  isDefault: true,
+                  applications: [{ applicationId: 'app-1', serverId: 'server-1' }],
+                  compose: [
+                    { composeId: 'compose-1', composeStatus: 'running', serverId: 'server-2' },
+                  ],
+                  mariadb: [],
+                  mongo: [],
+                  mysql: [],
+                  postgres: [],
+                  redis: [],
+                },
+              ],
+            },
+            trace: {
+              procedure,
+              method: 'GET',
+              startedAt: 0,
+              finishedAt: 1,
+              durationMs: 1,
+            },
+          }
+        case 'server.one':
+          return {
+            data: { serverId: 'server-1' },
+            trace: {
+              procedure,
+              method: 'GET',
+              startedAt: 0,
+              finishedAt: 1,
+              durationMs: 1,
+            },
+          }
+        default:
+          throw new Error(`Unexpected procedure ${procedure}`)
+      }
+    }, 2)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.project.infrastructureOverview({
+              projectId: 'project-1',
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('Code Mode execute exceeded 2 API calls.')
   })
 })

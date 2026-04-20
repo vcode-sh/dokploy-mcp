@@ -2,11 +2,17 @@ import { buildTrpcPostBody, buildTrpcQueryString } from '../codemode/gateway/req
 import { resolveConfig } from '../config/resolver.js'
 
 const DEFAULT_TIMEOUT = 30_000
+const VERSION_PROBE_PATH = '/settings.getDokployVersion'
 
 interface ClientConfig {
   baseUrl: string
   apiKey: string
   timeout: number
+}
+
+export interface BackendVersionInfo {
+  state: 'detected' | 'unsupported' | 'unavailable'
+  version: string | null
 }
 
 function getErrorMessage(body: unknown, statusText: string): string {
@@ -72,6 +78,9 @@ function getConfig(): ClientConfig {
 }
 
 let _config: ClientConfig | null = null
+let _backendVersionInfo: BackendVersionInfo | null = null
+let _backendVersionPromise: Promise<BackendVersionInfo> | null = null
+
 function config(): ClientConfig {
   _config ??= getConfig()
   return _config
@@ -99,6 +108,21 @@ export const buildQueryString = buildTrpcQueryString
  */
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException || (error instanceof Error && error.name === 'AbortError')
+}
+
+function getVersionString(data: unknown): string | null {
+  if (typeof data === 'string' && data.trim().length > 0) {
+    return data
+  }
+
+  if (typeof data !== 'object' || data === null) {
+    return null
+  }
+
+  const record = data as Record<string, unknown>
+  return typeof record.version === 'string' && record.version.trim().length > 0
+    ? record.version
+    : null
 }
 
 async function request<T = unknown>(
@@ -152,8 +176,54 @@ async function request<T = unknown>(
   }
 }
 
+async function probeBackendVersion(): Promise<BackendVersionInfo> {
+  try {
+    const data = await request<unknown>('GET', VERSION_PROBE_PATH)
+    const version = getVersionString(data)
+
+    return version ? { state: 'detected', version } : { state: 'unavailable', version: null }
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return { state: 'unsupported', version: null }
+    }
+
+    return { state: 'unavailable', version: null }
+  }
+}
+
+export async function getBackendVersionInfo(): Promise<BackendVersionInfo> {
+  if (_backendVersionInfo) {
+    return _backendVersionInfo
+  }
+
+  if (_backendVersionPromise) {
+    return _backendVersionPromise
+  }
+
+  _backendVersionPromise = probeBackendVersion()
+    .then((info) => {
+      if (info.state !== 'unavailable') {
+        _backendVersionInfo = info
+      }
+
+      return info
+    })
+    .finally(() => {
+      _backendVersionPromise = null
+    })
+
+  return _backendVersionPromise
+}
+
+export function resetApiClientCachesForTests() {
+  _config = null
+  _backendVersionInfo = null
+  _backendVersionPromise = null
+}
+
 export const api = {
   get: <T = unknown>(path: string, params?: Record<string, unknown>) =>
     request<T>('GET', path, params),
   post: <T = unknown>(path: string, body?: unknown) => request<T>('POST', path, body),
+  getBackendVersionInfo,
 }

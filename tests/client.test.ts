@@ -1,5 +1,22 @@
-import { describe, expect, it } from 'vitest'
-import { ApiError, buildQueryString, unwrapTrpcResponse } from '../src/api/client.js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  ApiError,
+  api,
+  buildQueryString,
+  resetApiClientCachesForTests,
+  unwrapTrpcResponse,
+} from '../src/api/client.js'
+
+beforeEach(() => {
+  resetApiClientCachesForTests()
+})
+
+afterEach(() => {
+  resetApiClientCachesForTests()
+  vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 describe('ApiError', () => {
   it('extracts message from body object', () => {
@@ -85,6 +102,134 @@ describe('buildQueryString', () => {
   })
 })
 
+describe('getBackendVersionInfo', () => {
+  it('caches successful version probes across calls', async () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://dokploy.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'test-api-key')
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      async text() {
+        return JSON.stringify({
+          result: {
+            data: {
+              json: 'v0.28.8',
+            },
+          },
+        })
+      },
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const first = await api.getBackendVersionInfo()
+    const second = await api.getBackendVersionInfo()
+
+    expect(first).toEqual({ state: 'detected', version: 'v0.28.8' })
+    expect(second).toEqual(first)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://dokploy.example.com/api/trpc/settings.getDokployVersion',
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({
+          'x-api-key': 'test-api-key',
+        }),
+      }),
+    )
+  })
+
+  it('caches unsupported version probes to avoid repeated compatibility checks', async () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://dokploy.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'test-api-key')
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      async text() {
+        return JSON.stringify({ message: 'missing' })
+      },
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const first = await api.getBackendVersionInfo()
+    const second = await api.getBackendVersionInfo()
+
+    expect(first).toEqual({ state: 'unsupported', version: null })
+    expect(second).toEqual(first)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts version payloads returned as objects', async () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://dokploy.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'test-api-key')
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      async text() {
+        return JSON.stringify({
+          result: {
+            data: {
+              json: {
+                version: 'v0.29.0',
+              },
+            },
+          },
+        })
+      },
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(api.getBackendVersionInfo()).resolves.toEqual({
+      state: 'detected',
+      version: 'v0.29.0',
+    })
+  })
+
+  it('does not cache unavailable probe failures forever', async () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://dokploy.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'test-api-key')
+
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        async text() {
+          return JSON.stringify({
+            result: {
+              data: {
+                json: 'v0.28.8',
+              },
+            },
+          })
+        },
+      })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(api.getBackendVersionInfo()).resolves.toEqual({
+      state: 'unavailable',
+      version: null,
+    })
+    await expect(api.getBackendVersionInfo()).resolves.toEqual({
+      state: 'detected',
+      version: 'v0.28.8',
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})
+
 describe('unwrapTrpcResponse', () => {
   it('unwraps the standard tRPC response envelope', () => {
     expect(
@@ -103,5 +248,21 @@ describe('unwrapTrpcResponse', () => {
   it('returns non-tRPC payloads unchanged', () => {
     const payload = [{ projectId: 'abc123' }]
     expect(unwrapTrpcResponse(payload)).toBe(payload)
+  })
+})
+
+describe('request helpers', () => {
+  it('turns aborted requests into timeout errors', async () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://dokploy.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'test-api-key')
+
+    const abortError = new Error('aborted')
+    abortError.name = 'AbortError'
+
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError))
+
+    await expect(api.get('/project.all')).rejects.toThrow(
+      'Request to /project.all timed out after 30000ms',
+    )
   })
 })

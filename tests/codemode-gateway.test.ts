@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '../src/api/client.js'
 import { invokeProcedure, invokeProcedureWithApi } from '../src/codemode/gateway/api-gateway.js'
@@ -73,10 +73,10 @@ describe('codemode gateway validation', () => {
   it('rejects generated integer inputs that are not integers', async () => {
     await expect(
       invokeProcedureWithApi(
-        'application.update',
+        'application.readLogs',
         {
           applicationId: 'app-1',
-          stopGracePeriodSwarm: 1.5,
+          tail: 1.5,
         },
         {
           async get() {
@@ -89,8 +89,8 @@ describe('codemode gateway validation', () => {
       ),
     ).rejects.toMatchObject({
       type: 'validation_error',
-      procedure: 'application.update',
-      message: expect.stringContaining('stopGracePeriodSwarm must be an integer'),
+      procedure: 'application.readLogs',
+      message: expect.stringContaining('tail must be an integer'),
     })
   })
 
@@ -156,6 +156,33 @@ describe('codemode gateway validation', () => {
       procedure: 'project.one',
       message: 'Dokploy API error (404): missing',
     })
+  })
+
+  it('does not probe backend version for ordinary 404 responses', async () => {
+    const getBackendVersionInfo = vi.fn().mockResolvedValue({
+      state: 'detected',
+      version: 'v0.28.8',
+    })
+    const fakeApi = {
+      async get() {
+        throw new ApiError(404, 'Not Found', { message: 'missing' }, '/project.one')
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+      getBackendVersionInfo,
+    }
+
+    await expect(
+      invokeProcedureWithApi('project.one', { projectId: 'p1' }, fakeApi),
+    ).rejects.toEqual({
+      ok: false,
+      type: 'dokploy_error',
+      status: 404,
+      procedure: 'project.one',
+      message: 'Dokploy API error (404): missing',
+    })
+    expect(getBackendVersionInfo).not.toHaveBeenCalled()
   })
 
   it('maps auth errors to compact gateway errors', async () => {

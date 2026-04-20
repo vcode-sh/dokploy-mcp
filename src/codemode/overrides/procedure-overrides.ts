@@ -11,9 +11,17 @@ interface ProcedureOverride {
   transformResponse?: (data: unknown, input: Record<string, unknown>) => unknown
 }
 
+function createCaseInsensitiveKeySet(keys: string[]) {
+  return new Set(keys.map((key) => key.toLowerCase()))
+}
+
+function hasSecretKey(secretKeys: ReadonlySet<string>, key: string) {
+  return secretKeys.has(key.toLowerCase())
+}
+
 // Keys that hold credentials in git-provider objects (github, gitea, gitlab, bitbucket).
 // Redacted by default — callers must pass includeSecrets: true to receive them.
-const gitProviderSecretKeys = new Set([
+const gitProviderSecretKeys = createCaseInsensitiveKeySet([
   // GitHub App
   'githubClientSecret',
   'githubPrivateKey',
@@ -32,7 +40,44 @@ const gitProviderSecretKeys = new Set([
   'privateKeyPass',
 ])
 
-const sshSecretKeys = new Set(['privateKey', 'privateKeyPass'])
+const sshSecretKeys = createCaseInsensitiveKeySet([
+  'privateKey',
+  'privateKeyPass',
+  'encPrivateKey',
+  'encPrivateKeyPass',
+  'decryptionPvk',
+])
+
+const destinationSecretKeys = createCaseInsensitiveKeySet(['accessKey', 'secretAccessKey'])
+
+const providerStyleSecretKeys = createCaseInsensitiveKeySet([
+  'accessKey',
+  'accessToken',
+  'apiKey',
+  'apiToken',
+  'appPassword',
+  'appToken',
+  'botToken',
+  'clientSecret',
+  'decryptionPvk',
+  'encPrivateKey',
+  'encPrivateKeyPass',
+  'githubClientSecret',
+  'githubPrivateKey',
+  'githubWebhookSecret',
+  'headers',
+  'password',
+  'privateKey',
+  'privateKeyPass',
+  'refreshToken',
+  'secret',
+  'secretAccessKey',
+  'token',
+  'userKey',
+  'webhookUrl',
+])
+
+const certificateSecretKeys = createCaseInsensitiveKeySet(['privateKey'])
 
 // Top-level keys on an application object that contain nested git-provider data
 const gitProviderNestingKeys = new Set(['github', 'gitea', 'gitlab', 'bitbucket'])
@@ -40,7 +85,7 @@ const gitProviderNestingKeys = new Set(['github', 'gitea', 'gitlab', 'bitbucket'
 function redactRecord(value: Record<string, unknown>): Record<string, unknown> {
   const redacted: Record<string, unknown> = {}
   for (const [key, val] of Object.entries(value)) {
-    if (gitProviderSecretKeys.has(key)) {
+    if (hasSecretKey(gitProviderSecretKeys, key)) {
       redacted[key] = '[REDACTED]'
     } else if (isRecord(val)) {
       redacted[key] = redactRecord(val)
@@ -64,7 +109,7 @@ function redactGitProviderSecrets(data: unknown): unknown {
   const result: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(data)) {
-    if (gitProviderSecretKeys.has(key)) {
+    if (hasSecretKey(gitProviderSecretKeys, key)) {
       result[key] = '[REDACTED]'
       changed = true
     } else if (gitProviderNestingKeys.has(key) && isRecord(value)) {
@@ -97,7 +142,7 @@ function redactSecretKeysDeep(data: unknown, secretKeys: ReadonlySet<string>): u
   const result: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(data)) {
-    if (secretKeys.has(key)) {
+    if (hasSecretKey(secretKeys, key)) {
       result[key] = '[REDACTED]'
       changed = true
       continue
@@ -118,9 +163,15 @@ function redactGitProviderArray(data: unknown): unknown {
   return data.map((item) => redactGitProviderSecrets(item))
 }
 
-function transformSshSecretResponse(data: unknown) {
-  return redactSecretKeysDeep(data, sshSecretKeys)
+function transformWithDeepSecretGate(secretKeys: ReadonlySet<string>) {
+  return (data: unknown, input: Record<string, unknown>) =>
+    input.includeSecrets === true ? data : redactSecretKeysDeep(data, secretKeys)
 }
+
+const transformSshSecretResponse = transformWithDeepSecretGate(sshSecretKeys)
+const transformDestinationSecretResponse = transformWithDeepSecretGate(destinationSecretKeys)
+const transformProviderStyleSecretResponse = transformWithDeepSecretGate(providerStyleSecretKeys)
+const transformCertificateSecretResponse = transformWithDeepSecretGate(certificateSecretKeys)
 
 const applicationOneMcpOnlyKeys = new Set([
   'select',
@@ -290,6 +341,38 @@ function withIncludeSecrets(schema: Record<string, unknown>) {
   }
 }
 
+const emptyIncludeSecretsInputSchema = withIncludeSecrets({
+  type: 'object',
+  properties: {},
+  required: [],
+  additionalProperties: false,
+})
+
+function createIdInputSchema(idKey: string) {
+  return withIncludeSecrets({
+    type: 'object',
+    properties: {
+      [idKey]: {
+        type: 'string',
+        minLength: 1,
+      },
+    },
+    required: [idKey],
+    additionalProperties: false,
+  })
+}
+
+const sshKeyGenerateInputSchema = withIncludeSecrets({
+  type: 'object',
+  properties: {
+    type: {
+      type: 'string',
+      enum: ['rsa', 'ed25519'],
+    },
+  },
+  additionalProperties: false,
+})
+
 const procedureOverrides: Record<string, ProcedureOverride> = {
   'application.one': {
     inputSchema: applicationOneInputSchema,
@@ -308,6 +391,8 @@ const procedureOverrides: Record<string, ProcedureOverride> = {
     transformResponse: transformWithSecretGate,
   },
   'github.githubProviders': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
     transformResponse: transformArrayWithSecretGate,
   },
   'gitea.one': {
@@ -320,6 +405,11 @@ const procedureOverrides: Record<string, ProcedureOverride> = {
     mapInput: mapIncludeSecretsInput,
     transformResponse: transformWithSecretGate,
   },
+  'gitea.giteaProviders': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformArrayWithSecretGate,
+  },
   'gitlab.one': {
     inputSchema: withIncludeSecrets({
       type: 'object',
@@ -329,6 +419,11 @@ const procedureOverrides: Record<string, ProcedureOverride> = {
     }),
     mapInput: mapIncludeSecretsInput,
     transformResponse: transformWithSecretGate,
+  },
+  'gitlab.gitlabProviders': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformArrayWithSecretGate,
   },
   'bitbucket.one': {
     inputSchema: withIncludeSecrets({
@@ -340,19 +435,74 @@ const procedureOverrides: Record<string, ProcedureOverride> = {
     mapInput: mapIncludeSecretsInput,
     transformResponse: transformWithSecretGate,
   },
-  'gitProvider.getAll': {
+  'bitbucket.bitbucketProviders': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
     transformResponse: transformArrayWithSecretGate,
   },
+  'gitProvider.getAll': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformArrayWithSecretGate,
+  },
+  'destination.one': {
+    inputSchema: createIdInputSchema('destinationId'),
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformDestinationSecretResponse,
+  },
+  'destination.all': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformDestinationSecretResponse,
+  },
+  'notification.one': {
+    inputSchema: createIdInputSchema('notificationId'),
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformProviderStyleSecretResponse,
+  },
+  'notification.all': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformProviderStyleSecretResponse,
+  },
+  'certificates.one': {
+    inputSchema: createIdInputSchema('certificateId'),
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformCertificateSecretResponse,
+  },
+  'certificates.all': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformCertificateSecretResponse,
+  },
+  'sso.one': {
+    inputSchema: createIdInputSchema('providerId'),
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformProviderStyleSecretResponse,
+  },
   'server.withSSHKey': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
     transformResponse: transformSshSecretResponse,
   },
   'sshKey.all': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
     transformResponse: transformSshSecretResponse,
   },
   'sshKey.generate': {
+    inputSchema: sshKeyGenerateInputSchema,
+    mapInput: mapIncludeSecretsInput,
     transformResponse: transformSshSecretResponse,
   },
   'sshKey.one': {
+    inputSchema: createIdInputSchema('sshKeyId'),
+    mapInput: mapIncludeSecretsInput,
+    transformResponse: transformSshSecretResponse,
+  },
+  'sshKey.allForApps': {
+    inputSchema: emptyIncludeSecretsInputSchema,
+    mapInput: mapIncludeSecretsInput,
     transformResponse: transformSshSecretResponse,
   },
 }

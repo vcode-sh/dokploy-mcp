@@ -11,6 +11,9 @@ export type JsonValue =
 export type admin_setupMonitoring_Input = { "metricsConfig": { "server": { "refreshRate": number; "port": number; "token": string; "urlCallback": string; "retentionDays": number; "cronJob": string; "thresholds": { "cpu": number; "memory": number } }; "containers": { "refreshRate": number; "services": { "include"?: Array<unknown>; "exclude"?: Array<unknown> } } } }
 export type admin_setupMonitoring_Output = Record<string, unknown>
 
+export type ai_analyzeLogs_Input = { "aiId": string; "logs": string; "context": "build" | "runtime" }
+export type ai_analyzeLogs_Output = Record<string, unknown>
+
 export type ai_create_Input = { "name": string; "apiUrl": string; "apiKey": string; "model": string; "isEnabled": boolean }
 export type ai_create_Output = Record<string, unknown>
 
@@ -26,6 +29,9 @@ export type ai_get_Output = Record<string, unknown>
 export type ai_getAll_Input = Record<string, unknown>
 export type ai_getAll_Output = Record<string, unknown>
 
+export type ai_getEnabledProviders_Input = Record<string, unknown>
+export type ai_getEnabledProviders_Output = Record<string, unknown>
+
 export type ai_getModels_Input = { "apiUrl": string; "apiKey": string }
 export type ai_getModels_Output = Record<string, unknown>
 
@@ -34,6 +40,9 @@ export type ai_one_Output = Record<string, unknown>
 
 export type ai_suggest_Input = { "aiId": string; "input": string; "serverId"?: string }
 export type ai_suggest_Output = Record<string, unknown>
+
+export type ai_testConnection_Input = { "apiUrl": string; "apiKey": string; "model": string }
+export type ai_testConnection_Output = Record<string, unknown>
 
 export type ai_update_Input = { "aiId": string; "name"?: string; "apiUrl"?: string; "apiKey"?: string; "model"?: string; "isEnabled"?: boolean; "createdAt"?: string }
 export type ai_update_Output = Record<string, unknown>
@@ -59,6 +68,9 @@ export type application_deploy_Output = Record<string, unknown>
 export type application_disconnectGitProvider_Input = { "applicationId": string }
 export type application_disconnectGitProvider_Output = Record<string, unknown>
 
+export type application_dropDeployment_Input = Record<string, unknown>
+export type application_dropDeployment_Output = Record<string, unknown>
+
 export type application_killBuild_Input = { "applicationId": string }
 export type application_killBuild_Output = Record<string, unknown>
 
@@ -73,6 +85,9 @@ export type application_one_Output = Record<string, unknown>
 
 export type application_readAppMonitoring_Input = { "appName": string }
 export type application_readAppMonitoring_Output = Record<string, unknown>
+
+export type application_readLogs_Input = { "applicationId": string; "tail"?: number; "since"?: string; "search"?: string }
+export type application_readLogs_Output = Record<string, unknown>
 
 export type application_readTraefikConfig_Input = { "applicationId": string }
 export type application_readTraefikConfig_Output = Record<string, unknown>
@@ -119,7 +134,7 @@ export type application_start_Output = Record<string, unknown>
 export type application_stop_Input = { "applicationId": string }
 export type application_stop_Output = Record<string, unknown>
 
-export type application_update_Input = { "applicationId": string; "name"?: string; "appName"?: string; "description"?: string | null; "env"?: string | null; "previewEnv"?: string | null; "watchPaths"?: Array<string> | null; "previewBuildArgs"?: string | null; "previewBuildSecrets"?: string | null; "previewLabels"?: Array<string> | null; "previewWildcard"?: string | null; "previewPort"?: number | null; "previewHttps"?: boolean; "previewPath"?: string | null; "previewCertificateType"?: "letsencrypt" | "none" | "custom"; "previewCustomCertResolver"?: string | null; "previewLimit"?: number | null; "isPreviewDeploymentsActive"?: boolean | null; "previewRequireCollaboratorPermissions"?: boolean | null; "rollbackActive"?: boolean | null; "buildArgs"?: string | null; "buildSecrets"?: string | null; "memoryReservation"?: string | null; "memoryLimit"?: string | null; "cpuReservation"?: string | null; "cpuLimit"?: string | null; "title"?: string | null; "enabled"?: boolean | null; "subtitle"?: string | null; "command"?: string | null; "args"?: Array<string> | null; "refreshToken"?: string | null; "sourceType"?: "github" | "docker" | "git" | "gitlab" | "bitbucket" | "gitea" | "drop"; "cleanCache"?: boolean | null; "repository"?: string | null; "owner"?: string | null; "branch"?: string | null; "buildPath"?: string | null; "triggerType"?: "push" | "tag" | null; "autoDeploy"?: boolean | null; "gitlabProjectId"?: number | null; "gitlabRepository"?: string | null; "gitlabOwner"?: string | null; "gitlabBranch"?: string | null; "gitlabBuildPath"?: string | null; "gitlabPathNamespace"?: string | null; "giteaRepository"?: string | null; "giteaOwner"?: string | null; "giteaBranch"?: string | null; "giteaBuildPath"?: string | null; "bitbucketRepository"?: string | null; "bitbucketRepositorySlug"?: string | null; "bitbucketOwner"?: string | null; "bitbucketBranch"?: string | null; "bitbucketBuildPath"?: string | null; "username"?: string | null; "password"?: string | null; "dockerImage"?: string | null; "registryUrl"?: string | null; "customGitUrl"?: string | null; "customGitBranch"?: string | null; "customGitBuildPath"?: string | null; "customGitSSHKeyId"?: string | null; "enableSubmodules"?: boolean; "dockerfile"?: string | null; "dockerContextPath"?: string | null; "dockerBuildStage"?: string | null; "dropBuildPath"?: string | null; "healthCheckSwarm"?: { "Test"?: Array<unknown>; "Interval"?: number; "Timeout"?: number; "StartPeriod"?: number; "Retries"?: number } | null | null; "restartPolicySwarm"?: { "Condition"?: string; "Delay"?: number; "MaxAttempts"?: number; "Window"?: number } | null | null; "placementSwarm"?: { "Constraints"?: Array<unknown>; "Preferences"?: Array<unknown>; "MaxReplicas"?: number; "Platforms"?: Array<unknown> } | null | null; "updateConfigSwarm"?: { "Parallelism": number; "Delay"?: number; "FailureAction"?: string; "Monitor"?: number; "MaxFailureRatio"?: number; "Order": string } | null | null; "rollbackConfigSwarm"?: { "Parallelism": number; "Delay"?: number; "FailureAction"?: string; "Monitor"?: number; "MaxFailureRatio"?: number; "Order": string } | null | null; "modeSwarm"?: { "Replicated"?: { "Replicas"?: unknown }; "Global"?: Record<string, unknown>; "ReplicatedJob"?: { "MaxConcurrent"?: unknown; "TotalCompletions"?: unknown }; "GlobalJob"?: Record<string, unknown> } | null | null; "labelsSwarm"?: Record<string, string> | null | null; "networkSwarm"?: Array<{ "Target"?: unknown; "Aliases"?: unknown; "DriverOpts"?: unknown }> | null | null; "stopGracePeriodSwarm"?: number | null | null; "endpointSpecSwarm"?: { "Mode"?: string; "Ports"?: Array<unknown> } | null | null; "ulimitsSwarm"?: Array<{ "Name": unknown; "Soft": unknown; "Hard": unknown }> | null | null; "replicas"?: number; "applicationStatus"?: "idle" | "running" | "done" | "error"; "buildType"?: "dockerfile" | "heroku_buildpacks" | "paketo_buildpacks" | "nixpacks" | "static" | "railpack"; "railpackVersion"?: string | null; "herokuVersion"?: string | null; "publishDirectory"?: string | null; "isStaticSpa"?: boolean | null; "createEnvFile"?: boolean; "createdAt"?: string; "registryId"?: string | null; "rollbackRegistryId"?: string | null; "environmentId"?: string; "githubId"?: string | null; "gitlabId"?: string | null; "giteaId"?: string | null; "bitbucketId"?: string | null; "buildServerId"?: string | null; "buildRegistryId"?: string | null }
+export type application_update_Input = { "applicationId": string; "name"?: string; "appName"?: string; "description"?: string | null; "env"?: string | null; "previewEnv"?: string | null; "watchPaths"?: Array<string> | null; "previewBuildArgs"?: string | null; "previewBuildSecrets"?: string | null; "previewLabels"?: Array<string> | null; "previewWildcard"?: string | null; "previewPort"?: number | null; "previewHttps"?: boolean; "previewPath"?: string | null; "previewCertificateType"?: "letsencrypt" | "none" | "custom"; "previewCustomCertResolver"?: string | null; "previewLimit"?: number | null; "isPreviewDeploymentsActive"?: boolean | null; "previewRequireCollaboratorPermissions"?: boolean | null; "rollbackActive"?: boolean | null; "buildArgs"?: string | null; "buildSecrets"?: string | null; "memoryReservation"?: string | null; "memoryLimit"?: string | null; "cpuReservation"?: string | null; "cpuLimit"?: string | null; "title"?: string | null; "enabled"?: boolean | null; "subtitle"?: string | null; "command"?: string | null; "args"?: Array<string> | null; "icon"?: string | null | null; "refreshToken"?: string | null; "sourceType"?: "github" | "docker" | "git" | "gitlab" | "bitbucket" | "gitea" | "drop"; "cleanCache"?: boolean | null; "repository"?: string | null; "owner"?: string | null; "branch"?: string | null; "buildPath"?: string | null; "triggerType"?: "push" | "tag" | null; "autoDeploy"?: boolean | null; "gitlabProjectId"?: number | null; "gitlabRepository"?: string | null; "gitlabOwner"?: string | null; "gitlabBranch"?: string | null; "gitlabBuildPath"?: string | null; "gitlabPathNamespace"?: string | null; "giteaRepository"?: string | null; "giteaOwner"?: string | null; "giteaBranch"?: string | null; "giteaBuildPath"?: string | null; "bitbucketRepository"?: string | null; "bitbucketRepositorySlug"?: string | null; "bitbucketOwner"?: string | null; "bitbucketBranch"?: string | null; "bitbucketBuildPath"?: string | null; "username"?: string | null; "password"?: string | null; "dockerImage"?: string | null; "registryUrl"?: string | null; "customGitUrl"?: string | null; "customGitBranch"?: string | null; "customGitBuildPath"?: string | null; "customGitSSHKeyId"?: string | null; "enableSubmodules"?: boolean; "dockerfile"?: string | null; "dockerContextPath"?: string | null; "dockerBuildStage"?: string | null; "dropBuildPath"?: string | null; "healthCheckSwarm"?: { "Test"?: Array<unknown>; "Interval"?: number; "Timeout"?: number; "StartPeriod"?: number; "Retries"?: number } | null | null; "restartPolicySwarm"?: { "Condition"?: string; "Delay"?: number; "MaxAttempts"?: number; "Window"?: number } | null | null; "placementSwarm"?: { "Constraints"?: Array<unknown>; "Preferences"?: Array<unknown>; "MaxReplicas"?: number; "Platforms"?: Array<unknown> } | null | null; "updateConfigSwarm"?: { "Parallelism": number; "Delay"?: number; "FailureAction"?: string; "Monitor"?: number; "MaxFailureRatio"?: number; "Order": string } | null | null; "rollbackConfigSwarm"?: { "Parallelism": number; "Delay"?: number; "FailureAction"?: string; "Monitor"?: number; "MaxFailureRatio"?: number; "Order": string } | null | null; "modeSwarm"?: { "Replicated"?: { "Replicas"?: unknown }; "Global"?: Record<string, unknown>; "ReplicatedJob"?: { "MaxConcurrent"?: unknown; "TotalCompletions"?: unknown }; "GlobalJob"?: Record<string, unknown> } | null | null; "labelsSwarm"?: Record<string, string> | null | null; "networkSwarm"?: Array<{ "Target"?: unknown; "Aliases"?: unknown; "DriverOpts"?: unknown }> | null | null; "stopGracePeriodSwarm"?: number | null | null; "endpointSpecSwarm"?: { "Mode"?: string; "Ports"?: Array<unknown> } | null | null; "ulimitsSwarm"?: Array<{ "Name": unknown; "Soft": unknown; "Hard": unknown }> | null | null; "replicas"?: number; "applicationStatus"?: "idle" | "running" | "done" | "error"; "buildType"?: "dockerfile" | "heroku_buildpacks" | "paketo_buildpacks" | "nixpacks" | "static" | "railpack"; "railpackVersion"?: string | null; "herokuVersion"?: string | null; "publishDirectory"?: string | null; "isStaticSpa"?: boolean | null; "createEnvFile"?: boolean; "createdAt"?: string; "registryId"?: string | null; "rollbackRegistryId"?: string | null; "environmentId"?: string; "githubId"?: string | null; "gitlabId"?: string | null; "giteaId"?: string | null; "bitbucketId"?: string | null; "buildServerId"?: string | null; "buildRegistryId"?: string | null }
 export type application_update_Output = Record<string, unknown>
 
 export type application_updateTraefikConfig_Input = { "applicationId": string; "traefikConfig": string }
@@ -128,7 +143,7 @@ export type application_updateTraefikConfig_Output = Record<string, unknown>
 export type auditLog_all_Input = { "userId"?: string; "userEmail"?: string; "resourceName"?: string; "action"?: "create" | "update" | "delete" | "deploy" | "cancel" | "redeploy" | "login" | "logout"; "resourceType"?: "project" | "service" | "environment" | "deployment" | "user" | "customRole" | "domain" | "certificate" | "registry" | "server" | "sshKey" | "gitProvider" | "notification" | "settings" | "session"; "from"?: string; "to"?: string; "limit"?: number; "offset"?: number }
 export type auditLog_all_Output = Record<string, unknown>
 
-export type backup_create_Input = { "schedule": string; "enabled"?: boolean | null; "prefix": string; "destinationId": string; "keepLatestCount"?: number | null; "database": string; "mariadbId"?: string | null; "mysqlId"?: string | null; "postgresId"?: string | null; "mongoId"?: string | null; "databaseType": "postgres" | "mariadb" | "mysql" | "mongo" | "web-server"; "userId"?: string | null; "backupType"?: "database" | "compose"; "composeId"?: string | null; "serviceName"?: string | null; "metadata"?: unknown | null }
+export type backup_create_Input = { "schedule": string; "enabled"?: boolean | null; "prefix": string; "destinationId": string; "keepLatestCount"?: number | null; "database": string; "mariadbId"?: string | null; "mysqlId"?: string | null; "postgresId"?: string | null; "mongoId"?: string | null; "libsqlId"?: string | null; "databaseType": "postgres" | "mariadb" | "mysql" | "mongo" | "web-server" | "libsql"; "userId"?: string | null; "backupType"?: "database" | "compose"; "composeId"?: string | null; "serviceName"?: string | null; "metadata"?: unknown | null }
 export type backup_create_Output = Record<string, unknown>
 
 export type backup_listBackupFiles_Input = { "destinationId": string; "search": string; "serverId"?: string }
@@ -136,6 +151,9 @@ export type backup_listBackupFiles_Output = Record<string, unknown>
 
 export type backup_manualBackupCompose_Input = { "backupId": string }
 export type backup_manualBackupCompose_Output = Record<string, unknown>
+
+export type backup_manualBackupLibsql_Input = { "backupId": string }
+export type backup_manualBackupLibsql_Output = Record<string, unknown>
 
 export type backup_manualBackupMariadb_Input = { "backupId": string }
 export type backup_manualBackupMariadb_Output = Record<string, unknown>
@@ -158,7 +176,7 @@ export type backup_one_Output = Record<string, unknown>
 export type backup_remove_Input = { "backupId": string }
 export type backup_remove_Output = Record<string, unknown>
 
-export type backup_update_Input = { "schedule": string; "enabled": boolean | null; "prefix": string; "backupId": string; "destinationId": string; "database": string; "keepLatestCount": number | null; "serviceName": string | null; "metadata": unknown | null; "databaseType": "postgres" | "mariadb" | "mysql" | "mongo" | "web-server" }
+export type backup_update_Input = { "schedule": string; "enabled": boolean | null; "prefix": string; "backupId": string; "destinationId": string; "database": string; "keepLatestCount": number | null; "serviceName": string | null; "metadata": unknown | null; "databaseType": "postgres" | "mariadb" | "mysql" | "mongo" | "web-server" | "libsql" }
 export type backup_update_Output = Record<string, unknown>
 
 export type bitbucket_bitbucketProviders_Input = Record<string, unknown>
@@ -193,6 +211,9 @@ export type certificates_one_Output = Record<string, unknown>
 
 export type certificates_remove_Input = { "certificateId": string }
 export type certificates_remove_Output = Record<string, unknown>
+
+export type certificates_update_Input = { "certificateId": string; "name"?: string; "certificateData"?: string; "privateKey"?: string }
+export type certificates_update_Output = Record<string, unknown>
 
 export type cluster_addManager_Input = { "serverId"?: string }
 export type cluster_addManager_Output = Record<string, unknown>
@@ -269,11 +290,17 @@ export type compose_processTemplate_Output = Record<string, unknown>
 export type compose_randomizeCompose_Input = { "composeId": string; "suffix"?: string }
 export type compose_randomizeCompose_Output = Record<string, unknown>
 
+export type compose_readLogs_Input = { "composeId": string; "containerId": string; "tail"?: number; "since"?: string; "search"?: string }
+export type compose_readLogs_Output = Record<string, unknown>
+
 export type compose_redeploy_Input = { "composeId": string; "title"?: string; "description"?: string }
 export type compose_redeploy_Output = Record<string, unknown>
 
 export type compose_refreshToken_Input = { "composeId": string }
 export type compose_refreshToken_Output = Record<string, unknown>
+
+export type compose_saveEnvironment_Input = { "composeId": string; "env": string | null }
+export type compose_saveEnvironment_Output = Record<string, unknown>
 
 export type compose_search_Input = { "q"?: string; "name"?: string; "appName"?: string; "description"?: string; "projectId"?: string; "environmentId"?: string; "limit"?: number; "offset"?: number }
 export type compose_search_Output = Record<string, unknown>
@@ -335,7 +362,7 @@ export type deployment_removeDeployment_Output = Record<string, unknown>
 export type destination_all_Input = Record<string, unknown>
 export type destination_all_Output = Record<string, unknown>
 
-export type destination_create_Input = { "name": string; "provider": string | null; "accessKey": string; "bucket": string; "region": string; "endpoint": string; "secretAccessKey": string; "serverId"?: string }
+export type destination_create_Input = { "name": string; "provider": string | null; "accessKey": string; "bucket": string; "region": string; "endpoint": string; "secretAccessKey": string; "additionalFlags": Array<string> | null; "serverId"?: string }
 export type destination_create_Output = Record<string, unknown>
 
 export type destination_one_Input = { "destinationId": string }
@@ -344,10 +371,10 @@ export type destination_one_Output = Record<string, unknown>
 export type destination_remove_Input = { "destinationId": string }
 export type destination_remove_Output = Record<string, unknown>
 
-export type destination_testConnection_Input = { "name": string; "provider": string | null; "accessKey": string; "bucket": string; "region": string; "endpoint": string; "secretAccessKey": string; "serverId"?: string }
+export type destination_testConnection_Input = { "name": string; "provider": string | null; "accessKey": string; "bucket": string; "region": string; "endpoint": string; "secretAccessKey": string; "additionalFlags": Array<string> | null; "serverId"?: string }
 export type destination_testConnection_Output = Record<string, unknown>
 
-export type destination_update_Input = { "name": string; "accessKey": string; "bucket": string; "region": string; "endpoint": string; "secretAccessKey": string; "destinationId": string; "provider": string | null; "serverId"?: string }
+export type destination_update_Input = { "name": string; "accessKey": string; "bucket": string; "region": string; "endpoint": string; "secretAccessKey": string; "destinationId": string; "provider": string | null; "additionalFlags": Array<string> | null; "serverId"?: string }
 export type destination_update_Output = Record<string, unknown>
 
 export type docker_getConfig_Input = { "containerId": string; "serverId"?: string }
@@ -368,8 +395,23 @@ export type docker_getServiceContainersByAppName_Output = Record<string, unknown
 export type docker_getStackContainersByAppName_Input = { "appName": string; "serverId"?: string }
 export type docker_getStackContainersByAppName_Output = Record<string, unknown>
 
-export type docker_restartContainer_Input = { "containerId": string }
+export type docker_killContainer_Input = { "containerId": string; "serverId"?: string }
+export type docker_killContainer_Output = Record<string, unknown>
+
+export type docker_removeContainer_Input = { "containerId": string; "serverId"?: string }
+export type docker_removeContainer_Output = Record<string, unknown>
+
+export type docker_restartContainer_Input = { "containerId": string; "serverId"?: string }
 export type docker_restartContainer_Output = Record<string, unknown>
+
+export type docker_startContainer_Input = { "containerId": string; "serverId"?: string }
+export type docker_startContainer_Output = Record<string, unknown>
+
+export type docker_stopContainer_Input = { "containerId": string; "serverId"?: string }
+export type docker_stopContainer_Output = Record<string, unknown>
+
+export type docker_uploadFileToContainer_Input = Record<string, unknown>
+export type docker_uploadFileToContainer_Output = Record<string, unknown>
 
 export type domain_byApplicationId_Input = { "applicationId": string }
 export type domain_byApplicationId_Output = Record<string, unknown>
@@ -380,7 +422,7 @@ export type domain_byComposeId_Output = Record<string, unknown>
 export type domain_canGenerateTraefikMeDomains_Input = { "serverId": string }
 export type domain_canGenerateTraefikMeDomains_Output = Record<string, unknown>
 
-export type domain_create_Input = { "host": string; "path"?: string | null; "port"?: number | null; "https"?: boolean; "applicationId"?: string | null; "certificateType"?: "letsencrypt" | "none" | "custom"; "customCertResolver"?: string | null; "composeId"?: string | null; "serviceName"?: string | null; "domainType"?: "compose" | "application" | "preview" | null; "previewDeploymentId"?: string | null; "internalPath"?: string | null; "stripPath"?: boolean }
+export type domain_create_Input = { "host": string; "path"?: string | null; "port"?: number | null; "customEntrypoint"?: string | null; "https"?: boolean; "applicationId"?: string | null; "certificateType"?: "letsencrypt" | "none" | "custom"; "customCertResolver"?: string | null; "composeId"?: string | null; "serviceName"?: string | null; "domainType"?: "compose" | "application" | "preview" | null; "previewDeploymentId"?: string | null; "internalPath"?: string | null; "stripPath"?: boolean; "middlewares"?: Array<string> | null }
 export type domain_create_Output = Record<string, unknown>
 
 export type domain_delete_Input = { "domainId": string }
@@ -392,7 +434,7 @@ export type domain_generateDomain_Output = Record<string, unknown>
 export type domain_one_Input = { "domainId": string }
 export type domain_one_Output = Record<string, unknown>
 
-export type domain_update_Input = { "host": string; "path"?: string | null; "port"?: number | null; "https"?: boolean; "certificateType"?: "letsencrypt" | "none" | "custom"; "customCertResolver"?: string | null; "serviceName"?: string | null; "domainType"?: "compose" | "application" | "preview" | null; "internalPath"?: string | null; "stripPath"?: boolean; "domainId": string }
+export type domain_update_Input = { "host": string; "path"?: string | null; "port"?: number | null; "customEntrypoint"?: string | null; "https"?: boolean; "certificateType"?: "letsencrypt" | "none" | "custom"; "customCertResolver"?: string | null; "serviceName"?: string | null; "domainType"?: "compose" | "application" | "preview" | null; "internalPath"?: string | null; "stripPath"?: boolean; "middlewares"?: Array<string> | null; "domainId": string }
 export type domain_update_Output = Record<string, unknown>
 
 export type domain_validateDomain_Input = { "domain": string; "serverIp"?: string }
@@ -419,11 +461,17 @@ export type environment_search_Output = Record<string, unknown>
 export type environment_update_Input = { "environmentId": string; "name"?: string; "description"?: string; "projectId"?: string; "env"?: string }
 export type environment_update_Output = Record<string, unknown>
 
+export type gitProvider_allForPermissions_Input = Record<string, unknown>
+export type gitProvider_allForPermissions_Output = Record<string, unknown>
+
 export type gitProvider_getAll_Input = Record<string, unknown>
 export type gitProvider_getAll_Output = Record<string, unknown>
 
 export type gitProvider_remove_Input = { "gitProviderId": string }
 export type gitProvider_remove_Output = Record<string, unknown>
+
+export type gitProvider_toggleShare_Input = { "gitProviderId": string; "sharedWithOrganization": boolean }
+export type gitProvider_toggleShare_Output = Record<string, unknown>
 
 export type gitea_create_Input = { "giteaId"?: string; "giteaUrl": string; "giteaInternalUrl"?: string | null; "redirectUri"?: string; "clientId"?: string; "clientSecret"?: string; "gitProviderId"?: string; "accessToken"?: string; "refreshToken"?: string; "expiresAt"?: number; "scopes"?: string; "lastAuthenticatedAt"?: number; "name": string; "giteaUsername"?: string; "organizationName"?: string }
 export type gitea_create_Output = Record<string, unknown>
@@ -488,6 +536,48 @@ export type gitlab_testConnection_Output = Record<string, unknown>
 export type gitlab_update_Input = { "applicationId"?: string; "secret"?: string; "groupName"?: string; "redirectUri"?: string; "name": string; "gitlabId": string; "gitlabUrl": string; "gitProviderId": string; "gitlabInternalUrl"?: string | null }
 export type gitlab_update_Output = Record<string, unknown>
 
+export type libsql_changeStatus_Input = { "libsqlId": string; "applicationStatus": "idle" | "running" | "done" | "error" }
+export type libsql_changeStatus_Output = Record<string, unknown>
+
+export type libsql_create_Input = { "name": string; "appName": string; "dockerImage": string; "environmentId": string; "description": string | null; "databaseUser": string; "databasePassword": string; "sqldNode": "primary" | "replica"; "sqldPrimaryUrl": string | null | null; "enableNamespaces": boolean; "serverId": string | null }
+export type libsql_create_Output = Record<string, unknown>
+
+export type libsql_deploy_Input = { "libsqlId": string }
+export type libsql_deploy_Output = Record<string, unknown>
+
+export type libsql_move_Input = { "libsqlId": string; "targetEnvironmentId": string }
+export type libsql_move_Output = Record<string, unknown>
+
+export type libsql_one_Input = { "libsqlId": string }
+export type libsql_one_Output = Record<string, unknown>
+
+export type libsql_readLogs_Input = { "libsqlId": string; "tail"?: number; "since"?: string; "search"?: string }
+export type libsql_readLogs_Output = Record<string, unknown>
+
+export type libsql_rebuild_Input = { "libsqlId": string }
+export type libsql_rebuild_Output = Record<string, unknown>
+
+export type libsql_reload_Input = { "libsqlId": string; "appName": string }
+export type libsql_reload_Output = Record<string, unknown>
+
+export type libsql_remove_Input = { "libsqlId": string }
+export type libsql_remove_Output = Record<string, unknown>
+
+export type libsql_saveEnvironment_Input = { "libsqlId": string; "env": string | null }
+export type libsql_saveEnvironment_Output = Record<string, unknown>
+
+export type libsql_saveExternalPorts_Input = { "libsqlId": string; "externalPort"?: number | null; "externalGRPCPort"?: number | null; "externalAdminPort"?: number | null }
+export type libsql_saveExternalPorts_Output = Record<string, unknown>
+
+export type libsql_start_Input = { "libsqlId": string }
+export type libsql_start_Output = Record<string, unknown>
+
+export type libsql_stop_Input = { "libsqlId": string }
+export type libsql_stop_Output = Record<string, unknown>
+
+export type libsql_update_Input = { "libsqlId": string; "name"?: string; "appName"?: string; "description"?: string | null; "databaseUser"?: string; "databasePassword"?: string; "sqldNode"?: "primary" | "replica"; "sqldPrimaryUrl"?: string | null | null; "enableNamespaces"?: boolean; "dockerImage"?: string; "command"?: string | null; "env"?: string | null; "memoryReservation"?: string | null; "memoryLimit"?: string | null; "cpuReservation"?: string | null; "cpuLimit"?: string | null; "externalPort"?: number | null; "externalGRPCPort"?: number | null; "externalAdminPort"?: number | null; "applicationStatus"?: "idle" | "running" | "done" | "error"; "healthCheckSwarm"?: { "Test"?: Array<unknown>; "Interval"?: number; "Timeout"?: number; "StartPeriod"?: number; "Retries"?: number } | null | null; "restartPolicySwarm"?: { "Condition"?: string; "Delay"?: number; "MaxAttempts"?: number; "Window"?: number } | null | null; "placementSwarm"?: { "Constraints"?: Array<unknown>; "Preferences"?: Array<unknown>; "MaxReplicas"?: number; "Platforms"?: Array<unknown> } | null | null; "updateConfigSwarm"?: { "Parallelism": number; "Delay"?: number; "FailureAction"?: string; "Monitor"?: number; "MaxFailureRatio"?: number; "Order": string } | null | null; "rollbackConfigSwarm"?: { "Parallelism": number; "Delay"?: number; "FailureAction"?: string; "Monitor"?: number; "MaxFailureRatio"?: number; "Order": string } | null | null; "modeSwarm"?: { "Replicated"?: { "Replicas"?: unknown }; "Global"?: Record<string, unknown>; "ReplicatedJob"?: { "MaxConcurrent"?: unknown; "TotalCompletions"?: unknown }; "GlobalJob"?: Record<string, unknown> } | null | null; "labelsSwarm"?: Record<string, string> | null | null; "networkSwarm"?: Array<{ "Target"?: unknown; "Aliases"?: unknown; "DriverOpts"?: unknown }> | null | null; "stopGracePeriodSwarm"?: number | null | null; "endpointSpecSwarm"?: { "Mode"?: string; "Ports"?: Array<unknown> } | null | null; "replicas"?: number; "createdAt"?: string; "environmentId"?: string }
+export type libsql_update_Output = Record<string, unknown>
+
 export type licenseKey_activate_Input = { "licenseKey": string }
 export type licenseKey_activate_Output = Record<string, unknown>
 
@@ -506,6 +596,9 @@ export type licenseKey_updateEnterpriseSettings_Output = Record<string, unknown>
 export type licenseKey_validate_Input = Record<string, unknown>
 export type licenseKey_validate_Output = Record<string, unknown>
 
+export type mariadb_changePassword_Input = { "mariadbId": string; "password": string; "type"?: "user" | "root" }
+export type mariadb_changePassword_Output = Record<string, unknown>
+
 export type mariadb_changeStatus_Input = { "mariadbId": string; "applicationStatus": "idle" | "running" | "done" | "error" }
 export type mariadb_changeStatus_Output = Record<string, unknown>
 
@@ -520,6 +613,9 @@ export type mariadb_move_Output = Record<string, unknown>
 
 export type mariadb_one_Input = { "mariadbId": string }
 export type mariadb_one_Output = Record<string, unknown>
+
+export type mariadb_readLogs_Input = { "mariadbId": string; "tail"?: number; "since"?: string; "search"?: string }
+export type mariadb_readLogs_Output = Record<string, unknown>
 
 export type mariadb_rebuild_Input = { "mariadbId": string }
 export type mariadb_rebuild_Output = Record<string, unknown>
@@ -548,6 +644,9 @@ export type mariadb_stop_Output = Record<string, unknown>
 export type mariadb_update_Input = { "mariadbId": string; "name"?: string; "appName"?: string; "description"?: string | null; "databaseName"?: string; "databaseUser"?: string; "databasePassword"?: string; "databaseRootPassword"?: string; "dockerImage"?: string; "command"?: string | null; "args"?: Array<string> | null; "env"?: string | null; "memoryReservation"?: string | null; "memoryLimit"?: string | null; "cpuReservation"?: string | null; "cpuLimit"?: string | null; "externalPort"?: number | null; "applicationStatus"?: "idle" | "running" | "done" | "error"; "healthCheckSwarm"?: { "Test"?: Array<unknown>; "Interval"?: number; "Timeout"?: number; "StartPeriod"?: number; "Retries"?: number } | null | null; "restartPolicySwarm"?: { "Condition"?: string; "Delay"?: number; "MaxAttempts"?: number; "Window"?: number } | null | null; "placementSwarm"?: { "Constraints"?: Array<unknown>; "Preferences"?: Array<unknown>; "MaxReplicas"?: number; "Platforms"?: Array<unknown> } | null | null; "updateConfigSwarm"?: { "Parallelism": number; "Delay"?: number; "FailureAction"?: string; "Monitor"?: number; "MaxFailureRatio"?: number; "Order": string } | null | null; "rollbackConfigSwarm"?: { "Parallelism": number; "Delay"?: number; "FailureAction"?: string; "Monitor"?: number; "MaxFailureRatio"?: number; "Order": string } | null | null; "modeSwarm"?: { "Replicated"?: { "Replicas"?: unknown }; "Global"?: Record<string, unknown>; "ReplicatedJob"?: { "MaxConcurrent"?: unknown; "TotalCompletions"?: unknown }; "GlobalJob"?: Record<string, unknown> } | null | null; "labelsSwarm"?: Record<string, string> | null | null; "networkSwarm"?: Array<{ "Target"?: unknown; "Aliases"?: unknown; "DriverOpts"?: unknown }> | null | null; "stopGracePeriodSwarm"?: number | null | null; "endpointSpecSwarm"?: { "Mode"?: string; "Ports"?: Array<unknown> } | null | null; "ulimitsSwarm"?: Array<{ "Name": unknown; "Soft": unknown; "Hard": unknown }> | null | null; "replicas"?: number; "createdAt"?: string; "environmentId"?: string }
 export type mariadb_update_Output = Record<string, unknown>
 
+export type mongo_changePassword_Input = { "mongoId": string; "password": string }
+export type mongo_changePassword_Output = Record<string, unknown>
+
 export type mongo_changeStatus_Input = { "mongoId": string; "applicationStatus": "idle" | "running" | "done" | "error" }
 export type mongo_changeStatus_Output = Record<string, unknown>
 
@@ -562,6 +661,9 @@ export type mongo_move_Output = Record<string, unknown>
 
 export type mongo_one_Input = { "mongoId": string }
 export type mongo_one_Output = Record<string, unknown>
+
+export type mongo_readLogs_Input = { "mongoId": string; "tail"?: number; "since"?: string; "search"?: string }
+export type mongo_readLogs_Output = Record<string, unknown>
 
 export type mongo_rebuild_Input = { "mongoId": string }
 export type mongo_rebuild_Output = Record<string, unknown>
@@ -593,10 +695,10 @@ export type mongo_update_Output = Record<string, unknown>
 export type mounts_allNamedByApplicationId_Input = { "applicationId": string }
 export type mounts_allNamedByApplicationId_Output = Record<string, unknown>
 
-export type mounts_create_Input = { "type": "bind" | "volume" | "file"; "hostPath"?: string | null; "volumeName"?: string | null; "content"?: string | null; "mountPath": string; "serviceType"?: "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose"; "filePath"?: string | null; "serviceId": string }
+export type mounts_create_Input = { "type": "bind" | "volume" | "file"; "hostPath"?: string | null; "volumeName"?: string | null; "content"?: string | null; "mountPath": string; "filePath"?: string | null; "serviceType"?: "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose" | "libsql"; "serviceId": string }
 export type mounts_create_Output = Record<string, unknown>
 
-export type mounts_listByServiceId_Input = { "serviceId": string; "serviceType": "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose" }
+export type mounts_listByServiceId_Input = { "serviceType": string; "serviceId": string }
 export type mounts_listByServiceId_Output = Record<string, unknown>
 
 export type mounts_one_Input = { "mountId": string }
@@ -605,8 +707,11 @@ export type mounts_one_Output = Record<string, unknown>
 export type mounts_remove_Input = { "mountId": string }
 export type mounts_remove_Output = Record<string, unknown>
 
-export type mounts_update_Input = { "mountId": string; "type"?: "bind" | "volume" | "file"; "hostPath"?: string | null; "volumeName"?: string | null; "filePath"?: string | null; "content"?: string | null; "serviceType"?: "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose"; "mountPath"?: string; "applicationId"?: string | null; "postgresId"?: string | null; "mariadbId"?: string | null; "mongoId"?: string | null; "mysqlId"?: string | null; "redisId"?: string | null; "composeId"?: string | null }
+export type mounts_update_Input = { "mountId": string; "type"?: "bind" | "volume" | "file"; "hostPath"?: string | null; "volumeName"?: string | null; "filePath"?: string | null; "content"?: string | null; "serviceType"?: "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose" | "libsql"; "mountPath"?: string; "applicationId"?: string | null; "composeId"?: string | null; "libsqlId"?: string | null; "mariadbId"?: string | null; "mongoId"?: string | null; "mysqlId"?: string | null; "postgresId"?: string | null; "redisId"?: string | null }
 export type mounts_update_Output = Record<string, unknown>
+
+export type mysql_changePassword_Input = { "mysqlId": string; "password": string; "type"?: "user" | "root" }
+export type mysql_changePassword_Output = Record<string, unknown>
 
 export type mysql_changeStatus_Input = { "mysqlId": string; "applicationStatus": "idle" | "running" | "done" | "error" }
 export type mysql_changeStatus_Output = Record<string, unknown>
@@ -622,6 +727,9 @@ export type mysql_move_Output = Record<string, unknown>
 
 export type mysql_one_Input = { "mysqlId": string }
 export type mysql_one_Output = Record<string, unknown>
+
+export type mysql_readLogs_Input = { "mysqlId": string; "tail"?: number; "since"?: string; "search"?: string }
+export type mysql_readLogs_Output = Record<string, unknown>
 
 export type mysql_rebuild_Input = { "mysqlId": string }
 export type mysql_rebuild_Output = Record<string, unknown>
@@ -653,37 +761,40 @@ export type mysql_update_Output = Record<string, unknown>
 export type notification_all_Input = Record<string, unknown>
 export type notification_all_Output = Record<string, unknown>
 
-export type notification_createCustom_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name": string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "endpoint": string; "headers"?: Record<string, string> }
+export type notification_createCustom_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name": string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "endpoint": string; "headers"?: Record<string, string> }
 export type notification_createCustom_Output = Record<string, unknown>
 
-export type notification_createDiscord_Input = { "appBuildError": boolean; "databaseBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "webhookUrl": string; "decoration": boolean }
+export type notification_createDiscord_Input = { "appBuildError": boolean; "databaseBackup": boolean; "dokployBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "webhookUrl": string; "decoration": boolean }
 export type notification_createDiscord_Output = Record<string, unknown>
 
-export type notification_createEmail_Input = { "appBuildError": boolean; "databaseBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "smtpServer": string; "smtpPort": number; "username": string; "password": string; "fromAddress": string; "toAddresses": Array<string> }
+export type notification_createEmail_Input = { "appBuildError": boolean; "databaseBackup": boolean; "dokployBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "smtpServer": string; "smtpPort": number; "username": string; "password": string; "fromAddress": string; "toAddresses": Array<string> }
 export type notification_createEmail_Output = Record<string, unknown>
 
-export type notification_createGotify_Input = { "appBuildError": boolean; "databaseBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverUrl": string; "appToken": string; "priority": number; "decoration": boolean }
+export type notification_createGotify_Input = { "appBuildError": boolean; "databaseBackup": boolean; "dokployBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverUrl": string; "appToken": string; "priority": number; "decoration": boolean }
 export type notification_createGotify_Output = Record<string, unknown>
 
-export type notification_createLark_Input = { "appBuildError": boolean; "databaseBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "webhookUrl": string }
+export type notification_createLark_Input = { "appBuildError": boolean; "databaseBackup": boolean; "dokployBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "webhookUrl": string }
 export type notification_createLark_Output = Record<string, unknown>
 
-export type notification_createNtfy_Input = { "appBuildError": boolean; "databaseBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverUrl": string; "topic": string; "accessToken": string; "priority": number }
+export type notification_createMattermost_Input = { "appBuildError": boolean; "databaseBackup": boolean; "dokployBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "webhookUrl": string; "channel"?: string; "username"?: string }
+export type notification_createMattermost_Output = Record<string, unknown>
+
+export type notification_createNtfy_Input = { "appBuildError": boolean; "databaseBackup": boolean; "dokployBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverUrl": string; "topic": string; "accessToken": string; "priority": number }
 export type notification_createNtfy_Output = Record<string, unknown>
 
-export type notification_createPushover_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name": string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "userKey": string; "apiToken": string; "priority"?: number; "retry"?: number | null; "expire"?: number | null }
+export type notification_createPushover_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name": string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "userKey": string; "apiToken": string; "priority"?: number; "retry"?: number | null; "expire"?: number | null }
 export type notification_createPushover_Output = Record<string, unknown>
 
-export type notification_createResend_Input = { "appBuildError": boolean; "databaseBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "apiKey": string; "fromAddress": string; "toAddresses": Array<string> }
+export type notification_createResend_Input = { "appBuildError": boolean; "databaseBackup": boolean; "dokployBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "apiKey": string; "fromAddress": string; "toAddresses": Array<string> }
 export type notification_createResend_Output = Record<string, unknown>
 
-export type notification_createSlack_Input = { "appBuildError": boolean; "databaseBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "webhookUrl": string; "channel": string }
+export type notification_createSlack_Input = { "appBuildError": boolean; "databaseBackup": boolean; "dokployBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "webhookUrl": string; "channel": string }
 export type notification_createSlack_Output = Record<string, unknown>
 
-export type notification_createTeams_Input = { "appBuildError": boolean; "databaseBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "webhookUrl": string }
+export type notification_createTeams_Input = { "appBuildError": boolean; "databaseBackup": boolean; "dokployBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "webhookUrl": string }
 export type notification_createTeams_Output = Record<string, unknown>
 
-export type notification_createTelegram_Input = { "appBuildError": boolean; "databaseBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "botToken": string; "chatId": string; "messageThreadId": string }
+export type notification_createTelegram_Input = { "appBuildError": boolean; "databaseBackup": boolean; "dokployBackup": boolean; "volumeBackup": boolean; "dokployRestart": boolean; "name": string; "appDeploy": boolean; "dockerCleanup": boolean; "serverThreshold": boolean; "botToken": string; "chatId": string; "messageThreadId": string }
 export type notification_createTelegram_Output = Record<string, unknown>
 
 export type notification_getEmailProviders_Input = Record<string, unknown>
@@ -713,6 +824,9 @@ export type notification_testGotifyConnection_Output = Record<string, unknown>
 export type notification_testLarkConnection_Input = { "webhookUrl": string }
 export type notification_testLarkConnection_Output = Record<string, unknown>
 
+export type notification_testMattermostConnection_Input = { "webhookUrl": string; "channel"?: string; "username"?: string }
+export type notification_testMattermostConnection_Output = Record<string, unknown>
+
 export type notification_testNtfyConnection_Input = { "serverUrl": string; "topic": string; "accessToken": string; "priority": number }
 export type notification_testNtfyConnection_Output = Record<string, unknown>
 
@@ -731,37 +845,40 @@ export type notification_testTeamsConnection_Output = Record<string, unknown>
 export type notification_testTelegramConnection_Input = { "botToken": string; "chatId": string; "messageThreadId": string }
 export type notification_testTelegramConnection_Output = Record<string, unknown>
 
-export type notification_updateCustom_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "endpoint"?: string; "headers"?: Record<string, string>; "notificationId": string; "customId": string; "organizationId"?: string }
+export type notification_updateCustom_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "endpoint"?: string; "headers"?: Record<string, string>; "notificationId": string; "customId": string; "organizationId"?: string }
 export type notification_updateCustom_Output = Record<string, unknown>
 
-export type notification_updateDiscord_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "webhookUrl"?: string; "decoration"?: boolean; "notificationId": string; "discordId": string; "organizationId"?: string }
+export type notification_updateDiscord_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "webhookUrl"?: string; "decoration"?: boolean; "notificationId": string; "discordId": string; "organizationId"?: string }
 export type notification_updateDiscord_Output = Record<string, unknown>
 
-export type notification_updateEmail_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "smtpServer"?: string; "smtpPort"?: number; "username"?: string; "password"?: string; "fromAddress"?: string; "toAddresses"?: Array<string>; "notificationId": string; "emailId": string; "organizationId"?: string }
+export type notification_updateEmail_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "smtpServer"?: string; "smtpPort"?: number; "username"?: string; "password"?: string; "fromAddress"?: string; "toAddresses"?: Array<string>; "notificationId": string; "emailId": string; "organizationId"?: string }
 export type notification_updateEmail_Output = Record<string, unknown>
 
-export type notification_updateGotify_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverUrl"?: string; "appToken"?: string; "priority"?: number; "decoration"?: boolean; "notificationId": string; "gotifyId": string; "organizationId"?: string }
+export type notification_updateGotify_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverUrl"?: string; "appToken"?: string; "priority"?: number; "decoration"?: boolean; "notificationId": string; "gotifyId": string; "organizationId"?: string }
 export type notification_updateGotify_Output = Record<string, unknown>
 
-export type notification_updateLark_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "webhookUrl"?: string; "notificationId": string; "larkId": string; "organizationId"?: string }
+export type notification_updateLark_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "webhookUrl"?: string; "notificationId": string; "larkId": string; "organizationId"?: string }
 export type notification_updateLark_Output = Record<string, unknown>
 
-export type notification_updateNtfy_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverUrl"?: string; "topic"?: string; "accessToken"?: string; "priority"?: number; "notificationId": string; "ntfyId": string; "organizationId"?: string }
+export type notification_updateMattermost_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "webhookUrl"?: string; "channel"?: string; "username"?: string; "notificationId": string; "mattermostId": string; "organizationId"?: string }
+export type notification_updateMattermost_Output = Record<string, unknown>
+
+export type notification_updateNtfy_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverUrl"?: string; "topic"?: string; "accessToken"?: string; "priority"?: number; "notificationId": string; "ntfyId": string; "organizationId"?: string }
 export type notification_updateNtfy_Output = Record<string, unknown>
 
-export type notification_updatePushover_Input = { "notificationId": string; "pushoverId": string; "organizationId"?: string; "userKey"?: string; "apiToken"?: string; "priority"?: number; "retry"?: number | null; "expire"?: number | null; "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean }
+export type notification_updatePushover_Input = { "notificationId": string; "pushoverId": string; "organizationId"?: string; "userKey"?: string; "apiToken"?: string; "priority"?: number; "retry"?: number | null; "expire"?: number | null; "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean }
 export type notification_updatePushover_Output = Record<string, unknown>
 
-export type notification_updateResend_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "apiKey"?: string; "fromAddress"?: string; "toAddresses"?: Array<string>; "notificationId": string; "resendId": string; "organizationId"?: string }
+export type notification_updateResend_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "apiKey"?: string; "fromAddress"?: string; "toAddresses"?: Array<string>; "notificationId": string; "resendId": string; "organizationId"?: string }
 export type notification_updateResend_Output = Record<string, unknown>
 
-export type notification_updateSlack_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "webhookUrl"?: string; "channel"?: string; "notificationId": string; "slackId": string; "organizationId"?: string }
+export type notification_updateSlack_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "webhookUrl"?: string; "channel"?: string; "notificationId": string; "slackId": string; "organizationId"?: string }
 export type notification_updateSlack_Output = Record<string, unknown>
 
-export type notification_updateTeams_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "webhookUrl"?: string; "notificationId": string; "teamsId": string; "organizationId"?: string }
+export type notification_updateTeams_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "webhookUrl"?: string; "notificationId": string; "teamsId": string; "organizationId"?: string }
 export type notification_updateTeams_Output = Record<string, unknown>
 
-export type notification_updateTelegram_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "botToken"?: string; "chatId"?: string; "messageThreadId"?: string; "notificationId": string; "telegramId": string; "organizationId"?: string }
+export type notification_updateTelegram_Input = { "appBuildError"?: boolean; "databaseBackup"?: boolean; "dokployBackup"?: boolean; "volumeBackup"?: boolean; "dokployRestart"?: boolean; "name"?: string; "appDeploy"?: boolean; "dockerCleanup"?: boolean; "serverThreshold"?: boolean; "botToken"?: string; "chatId"?: string; "messageThreadId"?: string; "notificationId": string; "telegramId": string; "organizationId"?: string }
 export type notification_updateTelegram_Output = Record<string, unknown>
 
 export type organization_active_Input = Record<string, unknown>
@@ -845,6 +962,9 @@ export type port_one_Output = Record<string, unknown>
 export type port_update_Input = { "portId": string; "publishedPort": number; "publishMode": "ingress" | "host"; "targetPort": number; "protocol": "tcp" | "udp" }
 export type port_update_Output = Record<string, unknown>
 
+export type postgres_changePassword_Input = { "postgresId": string; "password": string }
+export type postgres_changePassword_Output = Record<string, unknown>
+
 export type postgres_changeStatus_Input = { "postgresId": string; "applicationStatus": "idle" | "running" | "done" | "error" }
 export type postgres_changeStatus_Output = Record<string, unknown>
 
@@ -859,6 +979,9 @@ export type postgres_move_Output = Record<string, unknown>
 
 export type postgres_one_Input = { "postgresId": string }
 export type postgres_one_Output = Record<string, unknown>
+
+export type postgres_readLogs_Input = { "postgresId": string; "tail"?: number; "since"?: string; "search"?: string }
+export type postgres_readLogs_Output = Record<string, unknown>
 
 export type postgres_rebuild_Input = { "postgresId": string }
 export type postgres_rebuild_Output = Record<string, unknown>
@@ -908,8 +1031,11 @@ export type project_allForPermissions_Output = Record<string, unknown>
 export type project_create_Input = { "name": string; "description"?: string | null; "env"?: string }
 export type project_create_Output = Record<string, unknown>
 
-export type project_duplicate_Input = { "sourceEnvironmentId": string; "name": string; "description"?: string; "includeServices"?: boolean; "selectedServices"?: Array<{ "id": string; "type": "application" | "postgres" | "mariadb" | "mongo" | "mysql" | "redis" | "compose" }>; "duplicateInSameProject"?: boolean }
+export type project_duplicate_Input = { "sourceEnvironmentId": string; "name": string; "description"?: string; "includeServices"?: boolean; "selectedServices"?: Array<{ "id": string; "type": "application" | "compose" | "libsql" | "mariadb" | "mongo" | "mysql" | "postgres" | "redis" }>; "duplicateInSameProject"?: boolean }
 export type project_duplicate_Output = Record<string, unknown>
+
+export type project_homeStats_Input = Record<string, unknown>
+export type project_homeStats_Output = Record<string, unknown>
 
 export type project_one_Input = { "projectId": string }
 export type project_one_Output = Record<string, unknown>
@@ -935,6 +1061,9 @@ export type redirects_one_Output = Record<string, unknown>
 export type redirects_update_Input = { "redirectId": string; "regex": string; "replacement": string; "permanent": boolean }
 export type redirects_update_Output = Record<string, unknown>
 
+export type redis_changePassword_Input = { "redisId": string; "password": string }
+export type redis_changePassword_Output = Record<string, unknown>
+
 export type redis_changeStatus_Input = { "redisId": string; "applicationStatus": "idle" | "running" | "done" | "error" }
 export type redis_changeStatus_Output = Record<string, unknown>
 
@@ -949,6 +1078,9 @@ export type redis_move_Output = Record<string, unknown>
 
 export type redis_one_Input = { "redisId": string }
 export type redis_one_Output = Record<string, unknown>
+
+export type redis_readLogs_Input = { "redisId": string; "tail"?: number; "since"?: string; "search"?: string }
+export type redis_readLogs_Output = Record<string, unknown>
 
 export type redis_rebuild_Input = { "redisId": string }
 export type redis_rebuild_Output = Record<string, unknown>
@@ -1037,6 +1169,9 @@ export type security_update_Output = Record<string, unknown>
 export type server_all_Input = Record<string, unknown>
 export type server_all_Output = Record<string, unknown>
 
+export type server_allForPermissions_Input = Record<string, unknown>
+export type server_allForPermissions_Output = Record<string, unknown>
+
 export type server_buildServers_Input = Record<string, unknown>
 export type server_buildServers_Output = Record<string, unknown>
 
@@ -1088,6 +1223,9 @@ export type settings_assignDomainServer_Output = Record<string, unknown>
 export type settings_checkGPUStatus_Input = { "serverId"?: string }
 export type settings_checkGPUStatus_Output = Record<string, unknown>
 
+export type settings_checkInfrastructureHealth_Input = Record<string, unknown>
+export type settings_checkInfrastructureHealth_Output = Record<string, unknown>
+
 export type settings_cleanAll_Input = { "serverId"?: string }
 export type settings_cleanAll_Output = Record<string, unknown>
 
@@ -1117,6 +1255,9 @@ export type settings_cleanUnusedImages_Output = Record<string, unknown>
 
 export type settings_cleanUnusedVolumes_Input = { "serverId"?: string }
 export type settings_cleanUnusedVolumes_Output = Record<string, unknown>
+
+export type settings_getDockerDiskUsage_Input = Record<string, unknown>
+export type settings_getDockerDiskUsage_Output = Record<string, unknown>
 
 export type settings_getDokployCloudIps_Input = Record<string, unknown>
 export type settings_getDokployCloudIps_Output = Record<string, unknown>
@@ -1232,6 +1373,9 @@ export type settings_writeTraefikEnv_Output = Record<string, unknown>
 export type sshKey_all_Input = Record<string, unknown>
 export type sshKey_all_Output = Record<string, unknown>
 
+export type sshKey_allForApps_Input = Record<string, unknown>
+export type sshKey_allForApps_Output = Record<string, unknown>
+
 export type sshKey_create_Input = { "name": string; "description"?: string | null; "privateKey": string; "publicKey": string; "organizationId": string }
 export type sshKey_create_Output = Record<string, unknown>
 
@@ -1295,8 +1439,14 @@ export type stripe_getInvoices_Output = Record<string, unknown>
 export type stripe_getProducts_Input = Record<string, unknown>
 export type stripe_getProducts_Output = Record<string, unknown>
 
+export type stripe_updateInvoiceNotifications_Input = { "enabled": boolean }
+export type stripe_updateInvoiceNotifications_Output = Record<string, unknown>
+
 export type stripe_upgradeSubscription_Input = { "tier": "hobby" | "startup"; "serverQuantity": number; "isAnnual": boolean }
 export type stripe_upgradeSubscription_Output = Record<string, unknown>
+
+export type swarm_getContainerStats_Input = { "serverId"?: string }
+export type swarm_getContainerStats_Output = Record<string, unknown>
 
 export type swarm_getNodeApps_Input = { "serverId"?: string }
 export type swarm_getNodeApps_Output = Record<string, unknown>
@@ -1307,10 +1457,34 @@ export type swarm_getNodeInfo_Output = Record<string, unknown>
 export type swarm_getNodes_Input = { "serverId"?: string }
 export type swarm_getNodes_Output = Record<string, unknown>
 
+export type tag_all_Input = Record<string, unknown>
+export type tag_all_Output = Record<string, unknown>
+
+export type tag_assignToProject_Input = { "projectId": string; "tagId": string }
+export type tag_assignToProject_Output = Record<string, unknown>
+
+export type tag_bulkAssign_Input = { "projectId": string; "tagIds": Array<string> }
+export type tag_bulkAssign_Output = Record<string, unknown>
+
+export type tag_create_Input = { "name": string; "color"?: string | null }
+export type tag_create_Output = Record<string, unknown>
+
+export type tag_one_Input = { "tagId": string }
+export type tag_one_Output = Record<string, unknown>
+
+export type tag_remove_Input = { "tagId": string }
+export type tag_remove_Output = Record<string, unknown>
+
+export type tag_removeFromProject_Input = { "projectId": string; "tagId": string }
+export type tag_removeFromProject_Output = Record<string, unknown>
+
+export type tag_update_Input = { "tagId": string; "name"?: string; "color"?: string | null; "createdAt"?: string; "organizationId"?: string }
+export type tag_update_Output = Record<string, unknown>
+
 export type user_all_Input = Record<string, unknown>
 export type user_all_Output = Record<string, unknown>
 
-export type user_assignPermissions_Input = { "id": string; "accessedProjects": Array<string>; "accessedEnvironments": Array<string>; "accessedServices": Array<string>; "canCreateProjects": boolean; "canCreateServices": boolean; "canDeleteProjects": boolean; "canDeleteServices": boolean; "canAccessToDocker": boolean; "canAccessToTraefikFiles": boolean; "canAccessToAPI": boolean; "canAccessToSSHKeys": boolean; "canAccessToGitProviders": boolean; "canDeleteEnvironments": boolean; "canCreateEnvironments": boolean }
+export type user_assignPermissions_Input = { "id": string; "accessedProjects": Array<string>; "accessedEnvironments": Array<string>; "accessedServices": Array<string>; "accessedGitProviders": Array<string>; "accessedServers": Array<string>; "canCreateProjects": boolean; "canCreateServices": boolean; "canDeleteProjects": boolean; "canDeleteServices": boolean; "canAccessToDocker": boolean; "canAccessToTraefikFiles": boolean; "canAccessToAPI": boolean; "canAccessToSSHKeys": boolean; "canAccessToGitProviders": boolean; "canDeleteEnvironments": boolean; "canCreateEnvironments": boolean }
 export type user_assignPermissions_Output = Record<string, unknown>
 
 export type user_checkUserOrganizations_Input = { "userId": string }
@@ -1318,6 +1492,9 @@ export type user_checkUserOrganizations_Output = Record<string, unknown>
 
 export type user_createApiKey_Input = { "name": string; "prefix"?: string; "expiresIn"?: number; "metadata": { "organizationId": string }; "rateLimitEnabled"?: boolean; "rateLimitTimeWindow"?: number; "rateLimitMax"?: number; "remaining"?: number; "refillAmount"?: number; "refillInterval"?: number }
 export type user_createApiKey_Output = Record<string, unknown>
+
+export type user_createUserWithCredentials_Input = { "email": string; "password": string; "role": string }
+export type user_createUserWithCredentials_Output = Record<string, unknown>
 
 export type user_deleteApiKey_Input = { "apiKeyId": string }
 export type user_deleteApiKey_Output = Record<string, unknown>
@@ -1330,6 +1507,9 @@ export type user_get_Output = Record<string, unknown>
 
 export type user_getBackups_Input = Record<string, unknown>
 export type user_getBackups_Output = Record<string, unknown>
+
+export type user_getBookmarkedTemplates_Input = Record<string, unknown>
+export type user_getBookmarkedTemplates_Output = Record<string, unknown>
 
 export type user_getContainerMetrics_Input = { "url": string; "token": string; "appName": string; "dataPoints": string }
 export type user_getContainerMetrics_Output = Record<string, unknown>
@@ -1364,16 +1544,19 @@ export type user_sendInvitation_Output = Record<string, unknown>
 export type user_session_Input = Record<string, unknown>
 export type user_session_Output = Record<string, unknown>
 
-export type user_update_Input = { "id"?: string; "firstName"?: string; "lastName"?: string; "isRegistered"?: boolean; "expirationDate"?: string; "createdAt2"?: string; "createdAt"?: string | null; "twoFactorEnabled"?: boolean | null; "email"?: string; "emailVerified"?: boolean; "image"?: string | null; "banned"?: boolean | null; "banReason"?: string | null; "banExpires"?: string | null; "updatedAt"?: string; "enablePaidFeatures"?: boolean; "allowImpersonation"?: boolean; "enableEnterpriseFeatures"?: boolean; "licenseKey"?: string | null; "stripeCustomerId"?: string | null; "stripeSubscriptionId"?: string | null; "serversQuantity"?: number; "password"?: string; "currentPassword"?: string }
+export type user_toggleTemplateBookmark_Input = { "templateId": string }
+export type user_toggleTemplateBookmark_Output = Record<string, unknown>
+
+export type user_update_Input = { "id"?: string; "firstName"?: string; "lastName"?: string; "isRegistered"?: boolean; "expirationDate"?: string; "createdAt2"?: string; "createdAt"?: string | null; "twoFactorEnabled"?: boolean | null; "email"?: string; "emailVerified"?: boolean; "image"?: string | null; "banned"?: boolean | null; "banReason"?: string | null; "banExpires"?: string | null; "updatedAt"?: string; "enablePaidFeatures"?: boolean; "allowImpersonation"?: boolean; "enableEnterpriseFeatures"?: boolean; "licenseKey"?: string | null; "stripeCustomerId"?: string | null; "stripeSubscriptionId"?: string | null; "serversQuantity"?: number; "sendInvoiceNotifications"?: boolean; "password"?: string; "currentPassword"?: string }
 export type user_update_Output = Record<string, unknown>
 
-export type volumeBackups_create_Input = { "name": string; "volumeName": string; "prefix": string; "serviceType"?: "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose"; "appName"?: string; "serviceName"?: string | null; "turnOff"?: boolean; "cronExpression": string; "keepLatestCount"?: number | null; "enabled"?: boolean | null; "applicationId"?: string | null; "postgresId"?: string | null; "mariadbId"?: string | null; "mongoId"?: string | null; "mysqlId"?: string | null; "redisId"?: string | null; "composeId"?: string | null; "createdAt"?: string; "destinationId": string }
+export type volumeBackups_create_Input = { "name": string; "volumeName": string; "prefix": string; "serviceType"?: "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose" | "libsql"; "appName"?: string; "serviceName"?: string | null; "turnOff"?: boolean; "cronExpression": string; "keepLatestCount"?: number | null; "enabled"?: boolean | null; "applicationId"?: string | null; "postgresId"?: string | null; "mariadbId"?: string | null; "mongoId"?: string | null; "mysqlId"?: string | null; "redisId"?: string | null; "libsqlId"?: string | null; "composeId"?: string | null; "createdAt"?: string; "destinationId": string }
 export type volumeBackups_create_Output = Record<string, unknown>
 
 export type volumeBackups_delete_Input = { "volumeBackupId": string }
 export type volumeBackups_delete_Output = Record<string, unknown>
 
-export type volumeBackups_list_Input = { "id": string; "volumeBackupType": "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose" }
+export type volumeBackups_list_Input = { "id": string; "volumeBackupType": "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose" | "libsql" }
 export type volumeBackups_list_Output = Record<string, unknown>
 
 export type volumeBackups_one_Input = { "volumeBackupId": string }
@@ -1382,7 +1565,7 @@ export type volumeBackups_one_Output = Record<string, unknown>
 export type volumeBackups_runManually_Input = { "volumeBackupId": string }
 export type volumeBackups_runManually_Output = Record<string, unknown>
 
-export type volumeBackups_update_Input = { "name": string; "volumeName": string; "prefix": string; "serviceType"?: "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose"; "appName"?: string; "serviceName"?: string | null; "turnOff"?: boolean; "cronExpression": string; "keepLatestCount"?: number | null; "enabled"?: boolean | null; "applicationId"?: string | null; "postgresId"?: string | null; "mariadbId"?: string | null; "mongoId"?: string | null; "mysqlId"?: string | null; "redisId"?: string | null; "composeId"?: string | null; "createdAt"?: string; "destinationId": string; "volumeBackupId": string }
+export type volumeBackups_update_Input = { "name": string; "volumeName": string; "prefix": string; "serviceType"?: "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose" | "libsql"; "appName"?: string; "serviceName"?: string | null; "turnOff"?: boolean; "cronExpression": string; "keepLatestCount"?: number | null; "enabled"?: boolean | null; "applicationId"?: string | null; "postgresId"?: string | null; "mariadbId"?: string | null; "mongoId"?: string | null; "mysqlId"?: string | null; "redisId"?: string | null; "libsqlId"?: string | null; "composeId"?: string | null; "createdAt"?: string; "destinationId": string; "volumeBackupId": string }
 export type volumeBackups_update_Output = Record<string, unknown>
 
 export type whitelabeling_get_Input = Record<string, unknown>
@@ -1399,14 +1582,17 @@ export type whitelabeling_update_Output = Record<string, unknown>
 
 export interface DokployProcedureMap {
   "admin.setupMonitoring": { input: admin_setupMonitoring_Input; output: admin_setupMonitoring_Output }
+  "ai.analyzeLogs": { input: ai_analyzeLogs_Input; output: ai_analyzeLogs_Output }
   "ai.create": { input: ai_create_Input; output: ai_create_Output }
   "ai.delete": { input: ai_delete_Input; output: ai_delete_Output }
   "ai.deploy": { input: ai_deploy_Input; output: ai_deploy_Output }
   "ai.get": { input: ai_get_Input; output: ai_get_Output }
   "ai.getAll": { input: ai_getAll_Input; output: ai_getAll_Output }
+  "ai.getEnabledProviders": { input: ai_getEnabledProviders_Input; output: ai_getEnabledProviders_Output }
   "ai.getModels": { input: ai_getModels_Input; output: ai_getModels_Output }
   "ai.one": { input: ai_one_Input; output: ai_one_Output }
   "ai.suggest": { input: ai_suggest_Input; output: ai_suggest_Output }
+  "ai.testConnection": { input: ai_testConnection_Input; output: ai_testConnection_Output }
   "ai.update": { input: ai_update_Input; output: ai_update_Output }
   "application.cancelDeployment": { input: application_cancelDeployment_Input; output: application_cancelDeployment_Output }
   "application.cleanQueues": { input: application_cleanQueues_Input; output: application_cleanQueues_Output }
@@ -1415,11 +1601,13 @@ export interface DokployProcedureMap {
   "application.delete": { input: application_delete_Input; output: application_delete_Output }
   "application.deploy": { input: application_deploy_Input; output: application_deploy_Output }
   "application.disconnectGitProvider": { input: application_disconnectGitProvider_Input; output: application_disconnectGitProvider_Output }
+  "application.dropDeployment": { input: application_dropDeployment_Input; output: application_dropDeployment_Output }
   "application.killBuild": { input: application_killBuild_Input; output: application_killBuild_Output }
   "application.markRunning": { input: application_markRunning_Input; output: application_markRunning_Output }
   "application.move": { input: application_move_Input; output: application_move_Output }
   "application.one": { input: application_one_Input; output: application_one_Output }
   "application.readAppMonitoring": { input: application_readAppMonitoring_Input; output: application_readAppMonitoring_Output }
+  "application.readLogs": { input: application_readLogs_Input; output: application_readLogs_Output }
   "application.readTraefikConfig": { input: application_readTraefikConfig_Input; output: application_readTraefikConfig_Output }
   "application.redeploy": { input: application_redeploy_Input; output: application_redeploy_Output }
   "application.refreshToken": { input: application_refreshToken_Input; output: application_refreshToken_Output }
@@ -1441,6 +1629,7 @@ export interface DokployProcedureMap {
   "backup.create": { input: backup_create_Input; output: backup_create_Output }
   "backup.listBackupFiles": { input: backup_listBackupFiles_Input; output: backup_listBackupFiles_Output }
   "backup.manualBackupCompose": { input: backup_manualBackupCompose_Input; output: backup_manualBackupCompose_Output }
+  "backup.manualBackupLibsql": { input: backup_manualBackupLibsql_Input; output: backup_manualBackupLibsql_Output }
   "backup.manualBackupMariadb": { input: backup_manualBackupMariadb_Input; output: backup_manualBackupMariadb_Output }
   "backup.manualBackupMongo": { input: backup_manualBackupMongo_Input; output: backup_manualBackupMongo_Output }
   "backup.manualBackupMySql": { input: backup_manualBackupMySql_Input; output: backup_manualBackupMySql_Output }
@@ -1460,6 +1649,7 @@ export interface DokployProcedureMap {
   "certificates.create": { input: certificates_create_Input; output: certificates_create_Output }
   "certificates.one": { input: certificates_one_Input; output: certificates_one_Output }
   "certificates.remove": { input: certificates_remove_Input; output: certificates_remove_Output }
+  "certificates.update": { input: certificates_update_Input; output: certificates_update_Output }
   "cluster.addManager": { input: cluster_addManager_Input; output: cluster_addManager_Output }
   "cluster.addWorker": { input: cluster_addWorker_Input; output: cluster_addWorker_Output }
   "cluster.getNodes": { input: cluster_getNodes_Input; output: cluster_getNodes_Output }
@@ -1485,8 +1675,10 @@ export interface DokployProcedureMap {
   "compose.one": { input: compose_one_Input; output: compose_one_Output }
   "compose.processTemplate": { input: compose_processTemplate_Input; output: compose_processTemplate_Output }
   "compose.randomizeCompose": { input: compose_randomizeCompose_Input; output: compose_randomizeCompose_Output }
+  "compose.readLogs": { input: compose_readLogs_Input; output: compose_readLogs_Output }
   "compose.redeploy": { input: compose_redeploy_Input; output: compose_redeploy_Output }
   "compose.refreshToken": { input: compose_refreshToken_Input; output: compose_refreshToken_Output }
+  "compose.saveEnvironment": { input: compose_saveEnvironment_Input; output: compose_saveEnvironment_Output }
   "compose.search": { input: compose_search_Input; output: compose_search_Output }
   "compose.start": { input: compose_start_Input; output: compose_start_Output }
   "compose.stop": { input: compose_stop_Input; output: compose_stop_Output }
@@ -1518,7 +1710,12 @@ export interface DokployProcedureMap {
   "docker.getContainersByAppNameMatch": { input: docker_getContainersByAppNameMatch_Input; output: docker_getContainersByAppNameMatch_Output }
   "docker.getServiceContainersByAppName": { input: docker_getServiceContainersByAppName_Input; output: docker_getServiceContainersByAppName_Output }
   "docker.getStackContainersByAppName": { input: docker_getStackContainersByAppName_Input; output: docker_getStackContainersByAppName_Output }
+  "docker.killContainer": { input: docker_killContainer_Input; output: docker_killContainer_Output }
+  "docker.removeContainer": { input: docker_removeContainer_Input; output: docker_removeContainer_Output }
   "docker.restartContainer": { input: docker_restartContainer_Input; output: docker_restartContainer_Output }
+  "docker.startContainer": { input: docker_startContainer_Input; output: docker_startContainer_Output }
+  "docker.stopContainer": { input: docker_stopContainer_Input; output: docker_stopContainer_Output }
+  "docker.uploadFileToContainer": { input: docker_uploadFileToContainer_Input; output: docker_uploadFileToContainer_Output }
   "domain.byApplicationId": { input: domain_byApplicationId_Input; output: domain_byApplicationId_Output }
   "domain.byComposeId": { input: domain_byComposeId_Input; output: domain_byComposeId_Output }
   "domain.canGenerateTraefikMeDomains": { input: domain_canGenerateTraefikMeDomains_Input; output: domain_canGenerateTraefikMeDomains_Output }
@@ -1535,8 +1732,10 @@ export interface DokployProcedureMap {
   "environment.remove": { input: environment_remove_Input; output: environment_remove_Output }
   "environment.search": { input: environment_search_Input; output: environment_search_Output }
   "environment.update": { input: environment_update_Input; output: environment_update_Output }
+  "gitProvider.allForPermissions": { input: gitProvider_allForPermissions_Input; output: gitProvider_allForPermissions_Output }
   "gitProvider.getAll": { input: gitProvider_getAll_Input; output: gitProvider_getAll_Output }
   "gitProvider.remove": { input: gitProvider_remove_Input; output: gitProvider_remove_Output }
+  "gitProvider.toggleShare": { input: gitProvider_toggleShare_Input; output: gitProvider_toggleShare_Output }
   "gitea.create": { input: gitea_create_Input; output: gitea_create_Output }
   "gitea.getGiteaBranches": { input: gitea_getGiteaBranches_Input; output: gitea_getGiteaBranches_Output }
   "gitea.getGiteaRepositories": { input: gitea_getGiteaRepositories_Input; output: gitea_getGiteaRepositories_Output }
@@ -1558,17 +1757,33 @@ export interface DokployProcedureMap {
   "gitlab.one": { input: gitlab_one_Input; output: gitlab_one_Output }
   "gitlab.testConnection": { input: gitlab_testConnection_Input; output: gitlab_testConnection_Output }
   "gitlab.update": { input: gitlab_update_Input; output: gitlab_update_Output }
+  "libsql.changeStatus": { input: libsql_changeStatus_Input; output: libsql_changeStatus_Output }
+  "libsql.create": { input: libsql_create_Input; output: libsql_create_Output }
+  "libsql.deploy": { input: libsql_deploy_Input; output: libsql_deploy_Output }
+  "libsql.move": { input: libsql_move_Input; output: libsql_move_Output }
+  "libsql.one": { input: libsql_one_Input; output: libsql_one_Output }
+  "libsql.readLogs": { input: libsql_readLogs_Input; output: libsql_readLogs_Output }
+  "libsql.rebuild": { input: libsql_rebuild_Input; output: libsql_rebuild_Output }
+  "libsql.reload": { input: libsql_reload_Input; output: libsql_reload_Output }
+  "libsql.remove": { input: libsql_remove_Input; output: libsql_remove_Output }
+  "libsql.saveEnvironment": { input: libsql_saveEnvironment_Input; output: libsql_saveEnvironment_Output }
+  "libsql.saveExternalPorts": { input: libsql_saveExternalPorts_Input; output: libsql_saveExternalPorts_Output }
+  "libsql.start": { input: libsql_start_Input; output: libsql_start_Output }
+  "libsql.stop": { input: libsql_stop_Input; output: libsql_stop_Output }
+  "libsql.update": { input: libsql_update_Input; output: libsql_update_Output }
   "licenseKey.activate": { input: licenseKey_activate_Input; output: licenseKey_activate_Output }
   "licenseKey.deactivate": { input: licenseKey_deactivate_Input; output: licenseKey_deactivate_Output }
   "licenseKey.getEnterpriseSettings": { input: licenseKey_getEnterpriseSettings_Input; output: licenseKey_getEnterpriseSettings_Output }
   "licenseKey.haveValidLicenseKey": { input: licenseKey_haveValidLicenseKey_Input; output: licenseKey_haveValidLicenseKey_Output }
   "licenseKey.updateEnterpriseSettings": { input: licenseKey_updateEnterpriseSettings_Input; output: licenseKey_updateEnterpriseSettings_Output }
   "licenseKey.validate": { input: licenseKey_validate_Input; output: licenseKey_validate_Output }
+  "mariadb.changePassword": { input: mariadb_changePassword_Input; output: mariadb_changePassword_Output }
   "mariadb.changeStatus": { input: mariadb_changeStatus_Input; output: mariadb_changeStatus_Output }
   "mariadb.create": { input: mariadb_create_Input; output: mariadb_create_Output }
   "mariadb.deploy": { input: mariadb_deploy_Input; output: mariadb_deploy_Output }
   "mariadb.move": { input: mariadb_move_Input; output: mariadb_move_Output }
   "mariadb.one": { input: mariadb_one_Input; output: mariadb_one_Output }
+  "mariadb.readLogs": { input: mariadb_readLogs_Input; output: mariadb_readLogs_Output }
   "mariadb.rebuild": { input: mariadb_rebuild_Input; output: mariadb_rebuild_Output }
   "mariadb.reload": { input: mariadb_reload_Input; output: mariadb_reload_Output }
   "mariadb.remove": { input: mariadb_remove_Input; output: mariadb_remove_Output }
@@ -1578,11 +1793,13 @@ export interface DokployProcedureMap {
   "mariadb.start": { input: mariadb_start_Input; output: mariadb_start_Output }
   "mariadb.stop": { input: mariadb_stop_Input; output: mariadb_stop_Output }
   "mariadb.update": { input: mariadb_update_Input; output: mariadb_update_Output }
+  "mongo.changePassword": { input: mongo_changePassword_Input; output: mongo_changePassword_Output }
   "mongo.changeStatus": { input: mongo_changeStatus_Input; output: mongo_changeStatus_Output }
   "mongo.create": { input: mongo_create_Input; output: mongo_create_Output }
   "mongo.deploy": { input: mongo_deploy_Input; output: mongo_deploy_Output }
   "mongo.move": { input: mongo_move_Input; output: mongo_move_Output }
   "mongo.one": { input: mongo_one_Input; output: mongo_one_Output }
+  "mongo.readLogs": { input: mongo_readLogs_Input; output: mongo_readLogs_Output }
   "mongo.rebuild": { input: mongo_rebuild_Input; output: mongo_rebuild_Output }
   "mongo.reload": { input: mongo_reload_Input; output: mongo_reload_Output }
   "mongo.remove": { input: mongo_remove_Input; output: mongo_remove_Output }
@@ -1598,11 +1815,13 @@ export interface DokployProcedureMap {
   "mounts.one": { input: mounts_one_Input; output: mounts_one_Output }
   "mounts.remove": { input: mounts_remove_Input; output: mounts_remove_Output }
   "mounts.update": { input: mounts_update_Input; output: mounts_update_Output }
+  "mysql.changePassword": { input: mysql_changePassword_Input; output: mysql_changePassword_Output }
   "mysql.changeStatus": { input: mysql_changeStatus_Input; output: mysql_changeStatus_Output }
   "mysql.create": { input: mysql_create_Input; output: mysql_create_Output }
   "mysql.deploy": { input: mysql_deploy_Input; output: mysql_deploy_Output }
   "mysql.move": { input: mysql_move_Input; output: mysql_move_Output }
   "mysql.one": { input: mysql_one_Input; output: mysql_one_Output }
+  "mysql.readLogs": { input: mysql_readLogs_Input; output: mysql_readLogs_Output }
   "mysql.rebuild": { input: mysql_rebuild_Input; output: mysql_rebuild_Output }
   "mysql.reload": { input: mysql_reload_Input; output: mysql_reload_Output }
   "mysql.remove": { input: mysql_remove_Input; output: mysql_remove_Output }
@@ -1618,6 +1837,7 @@ export interface DokployProcedureMap {
   "notification.createEmail": { input: notification_createEmail_Input; output: notification_createEmail_Output }
   "notification.createGotify": { input: notification_createGotify_Input; output: notification_createGotify_Output }
   "notification.createLark": { input: notification_createLark_Input; output: notification_createLark_Output }
+  "notification.createMattermost": { input: notification_createMattermost_Input; output: notification_createMattermost_Output }
   "notification.createNtfy": { input: notification_createNtfy_Input; output: notification_createNtfy_Output }
   "notification.createPushover": { input: notification_createPushover_Input; output: notification_createPushover_Output }
   "notification.createResend": { input: notification_createResend_Input; output: notification_createResend_Output }
@@ -1633,6 +1853,7 @@ export interface DokployProcedureMap {
   "notification.testEmailConnection": { input: notification_testEmailConnection_Input; output: notification_testEmailConnection_Output }
   "notification.testGotifyConnection": { input: notification_testGotifyConnection_Input; output: notification_testGotifyConnection_Output }
   "notification.testLarkConnection": { input: notification_testLarkConnection_Input; output: notification_testLarkConnection_Output }
+  "notification.testMattermostConnection": { input: notification_testMattermostConnection_Input; output: notification_testMattermostConnection_Output }
   "notification.testNtfyConnection": { input: notification_testNtfyConnection_Input; output: notification_testNtfyConnection_Output }
   "notification.testPushoverConnection": { input: notification_testPushoverConnection_Input; output: notification_testPushoverConnection_Output }
   "notification.testResendConnection": { input: notification_testResendConnection_Input; output: notification_testResendConnection_Output }
@@ -1644,6 +1865,7 @@ export interface DokployProcedureMap {
   "notification.updateEmail": { input: notification_updateEmail_Input; output: notification_updateEmail_Output }
   "notification.updateGotify": { input: notification_updateGotify_Input; output: notification_updateGotify_Output }
   "notification.updateLark": { input: notification_updateLark_Input; output: notification_updateLark_Output }
+  "notification.updateMattermost": { input: notification_updateMattermost_Input; output: notification_updateMattermost_Output }
   "notification.updateNtfy": { input: notification_updateNtfy_Input; output: notification_updateNtfy_Output }
   "notification.updatePushover": { input: notification_updatePushover_Input; output: notification_updatePushover_Output }
   "notification.updateResend": { input: notification_updateResend_Input; output: notification_updateResend_Output }
@@ -1677,11 +1899,13 @@ export interface DokployProcedureMap {
   "port.delete": { input: port_delete_Input; output: port_delete_Output }
   "port.one": { input: port_one_Input; output: port_one_Output }
   "port.update": { input: port_update_Input; output: port_update_Output }
+  "postgres.changePassword": { input: postgres_changePassword_Input; output: postgres_changePassword_Output }
   "postgres.changeStatus": { input: postgres_changeStatus_Input; output: postgres_changeStatus_Output }
   "postgres.create": { input: postgres_create_Input; output: postgres_create_Output }
   "postgres.deploy": { input: postgres_deploy_Input; output: postgres_deploy_Output }
   "postgres.move": { input: postgres_move_Input; output: postgres_move_Output }
   "postgres.one": { input: postgres_one_Input; output: postgres_one_Output }
+  "postgres.readLogs": { input: postgres_readLogs_Input; output: postgres_readLogs_Output }
   "postgres.rebuild": { input: postgres_rebuild_Input; output: postgres_rebuild_Output }
   "postgres.reload": { input: postgres_reload_Input; output: postgres_reload_Output }
   "postgres.remove": { input: postgres_remove_Input; output: postgres_remove_Output }
@@ -1699,6 +1923,7 @@ export interface DokployProcedureMap {
   "project.allForPermissions": { input: project_allForPermissions_Input; output: project_allForPermissions_Output }
   "project.create": { input: project_create_Input; output: project_create_Output }
   "project.duplicate": { input: project_duplicate_Input; output: project_duplicate_Output }
+  "project.homeStats": { input: project_homeStats_Input; output: project_homeStats_Output }
   "project.one": { input: project_one_Input; output: project_one_Output }
   "project.remove": { input: project_remove_Input; output: project_remove_Output }
   "project.search": { input: project_search_Input; output: project_search_Output }
@@ -1707,11 +1932,13 @@ export interface DokployProcedureMap {
   "redirects.delete": { input: redirects_delete_Input; output: redirects_delete_Output }
   "redirects.one": { input: redirects_one_Input; output: redirects_one_Output }
   "redirects.update": { input: redirects_update_Input; output: redirects_update_Output }
+  "redis.changePassword": { input: redis_changePassword_Input; output: redis_changePassword_Output }
   "redis.changeStatus": { input: redis_changeStatus_Input; output: redis_changeStatus_Output }
   "redis.create": { input: redis_create_Input; output: redis_create_Output }
   "redis.deploy": { input: redis_deploy_Input; output: redis_deploy_Output }
   "redis.move": { input: redis_move_Input; output: redis_move_Output }
   "redis.one": { input: redis_one_Input; output: redis_one_Output }
+  "redis.readLogs": { input: redis_readLogs_Input; output: redis_readLogs_Output }
   "redis.rebuild": { input: redis_rebuild_Input; output: redis_rebuild_Output }
   "redis.reload": { input: redis_reload_Input; output: redis_reload_Output }
   "redis.remove": { input: redis_remove_Input; output: redis_remove_Output }
@@ -1741,6 +1968,7 @@ export interface DokployProcedureMap {
   "security.one": { input: security_one_Input; output: security_one_Output }
   "security.update": { input: security_update_Input; output: security_update_Output }
   "server.all": { input: server_all_Input; output: server_all_Output }
+  "server.allForPermissions": { input: server_allForPermissions_Input; output: server_allForPermissions_Output }
   "server.buildServers": { input: server_buildServers_Input; output: server_buildServers_Output }
   "server.count": { input: server_count_Input; output: server_count_Output }
   "server.create": { input: server_create_Input; output: server_create_Output }
@@ -1758,6 +1986,7 @@ export interface DokployProcedureMap {
   "server.withSSHKey": { input: server_withSSHKey_Input; output: server_withSSHKey_Output }
   "settings.assignDomainServer": { input: settings_assignDomainServer_Input; output: settings_assignDomainServer_Output }
   "settings.checkGPUStatus": { input: settings_checkGPUStatus_Input; output: settings_checkGPUStatus_Output }
+  "settings.checkInfrastructureHealth": { input: settings_checkInfrastructureHealth_Input; output: settings_checkInfrastructureHealth_Output }
   "settings.cleanAll": { input: settings_cleanAll_Input; output: settings_cleanAll_Output }
   "settings.cleanAllDeploymentQueue": { input: settings_cleanAllDeploymentQueue_Input; output: settings_cleanAllDeploymentQueue_Output }
   "settings.cleanDockerBuilder": { input: settings_cleanDockerBuilder_Input; output: settings_cleanDockerBuilder_Output }
@@ -1768,6 +1997,7 @@ export interface DokployProcedureMap {
   "settings.cleanStoppedContainers": { input: settings_cleanStoppedContainers_Input; output: settings_cleanStoppedContainers_Output }
   "settings.cleanUnusedImages": { input: settings_cleanUnusedImages_Input; output: settings_cleanUnusedImages_Output }
   "settings.cleanUnusedVolumes": { input: settings_cleanUnusedVolumes_Input; output: settings_cleanUnusedVolumes_Output }
+  "settings.getDockerDiskUsage": { input: settings_getDockerDiskUsage_Input; output: settings_getDockerDiskUsage_Output }
   "settings.getDokployCloudIps": { input: settings_getDokployCloudIps_Input; output: settings_getDokployCloudIps_Output }
   "settings.getDokployVersion": { input: settings_getDokployVersion_Input; output: settings_getDokployVersion_Output }
   "settings.getIp": { input: settings_getIp_Input; output: settings_getIp_Output }
@@ -1806,6 +2036,7 @@ export interface DokployProcedureMap {
   "settings.updateWebServerTraefikConfig": { input: settings_updateWebServerTraefikConfig_Input; output: settings_updateWebServerTraefikConfig_Output }
   "settings.writeTraefikEnv": { input: settings_writeTraefikEnv_Input; output: settings_writeTraefikEnv_Output }
   "sshKey.all": { input: sshKey_all_Input; output: sshKey_all_Output }
+  "sshKey.allForApps": { input: sshKey_allForApps_Input; output: sshKey_allForApps_Output }
   "sshKey.create": { input: sshKey_create_Input; output: sshKey_create_Output }
   "sshKey.generate": { input: sshKey_generate_Input; output: sshKey_generate_Output }
   "sshKey.one": { input: sshKey_one_Input; output: sshKey_one_Output }
@@ -1827,18 +2058,30 @@ export interface DokployProcedureMap {
   "stripe.getCurrentPlan": { input: stripe_getCurrentPlan_Input; output: stripe_getCurrentPlan_Output }
   "stripe.getInvoices": { input: stripe_getInvoices_Input; output: stripe_getInvoices_Output }
   "stripe.getProducts": { input: stripe_getProducts_Input; output: stripe_getProducts_Output }
+  "stripe.updateInvoiceNotifications": { input: stripe_updateInvoiceNotifications_Input; output: stripe_updateInvoiceNotifications_Output }
   "stripe.upgradeSubscription": { input: stripe_upgradeSubscription_Input; output: stripe_upgradeSubscription_Output }
+  "swarm.getContainerStats": { input: swarm_getContainerStats_Input; output: swarm_getContainerStats_Output }
   "swarm.getNodeApps": { input: swarm_getNodeApps_Input; output: swarm_getNodeApps_Output }
   "swarm.getNodeInfo": { input: swarm_getNodeInfo_Input; output: swarm_getNodeInfo_Output }
   "swarm.getNodes": { input: swarm_getNodes_Input; output: swarm_getNodes_Output }
+  "tag.all": { input: tag_all_Input; output: tag_all_Output }
+  "tag.assignToProject": { input: tag_assignToProject_Input; output: tag_assignToProject_Output }
+  "tag.bulkAssign": { input: tag_bulkAssign_Input; output: tag_bulkAssign_Output }
+  "tag.create": { input: tag_create_Input; output: tag_create_Output }
+  "tag.one": { input: tag_one_Input; output: tag_one_Output }
+  "tag.remove": { input: tag_remove_Input; output: tag_remove_Output }
+  "tag.removeFromProject": { input: tag_removeFromProject_Input; output: tag_removeFromProject_Output }
+  "tag.update": { input: tag_update_Input; output: tag_update_Output }
   "user.all": { input: user_all_Input; output: user_all_Output }
   "user.assignPermissions": { input: user_assignPermissions_Input; output: user_assignPermissions_Output }
   "user.checkUserOrganizations": { input: user_checkUserOrganizations_Input; output: user_checkUserOrganizations_Output }
   "user.createApiKey": { input: user_createApiKey_Input; output: user_createApiKey_Output }
+  "user.createUserWithCredentials": { input: user_createUserWithCredentials_Input; output: user_createUserWithCredentials_Output }
   "user.deleteApiKey": { input: user_deleteApiKey_Input; output: user_deleteApiKey_Output }
   "user.generateToken": { input: user_generateToken_Input; output: user_generateToken_Output }
   "user.get": { input: user_get_Input; output: user_get_Output }
   "user.getBackups": { input: user_getBackups_Input; output: user_getBackups_Output }
+  "user.getBookmarkedTemplates": { input: user_getBookmarkedTemplates_Input; output: user_getBookmarkedTemplates_Output }
   "user.getContainerMetrics": { input: user_getContainerMetrics_Input; output: user_getContainerMetrics_Output }
   "user.getInvitations": { input: user_getInvitations_Input; output: user_getInvitations_Output }
   "user.getMetricsToken": { input: user_getMetricsToken_Input; output: user_getMetricsToken_Output }
@@ -1850,6 +2093,7 @@ export interface DokployProcedureMap {
   "user.remove": { input: user_remove_Input; output: user_remove_Output }
   "user.sendInvitation": { input: user_sendInvitation_Input; output: user_sendInvitation_Output }
   "user.session": { input: user_session_Input; output: user_session_Output }
+  "user.toggleTemplateBookmark": { input: user_toggleTemplateBookmark_Input; output: user_toggleTemplateBookmark_Output }
   "user.update": { input: user_update_Input; output: user_update_Output }
   "volumeBackups.create": { input: volumeBackups_create_Input; output: volumeBackups_create_Output }
   "volumeBackups.delete": { input: volumeBackups_delete_Input; output: volumeBackups_delete_Output }
@@ -1869,14 +2113,17 @@ export interface DokploySdk {
     setupMonitoring(input: admin_setupMonitoring_Input): Promise<admin_setupMonitoring_Output>
   }
   ai: {
+    analyzeLogs(input: ai_analyzeLogs_Input): Promise<ai_analyzeLogs_Output>
     create(input: ai_create_Input): Promise<ai_create_Output>
     delete(input: ai_delete_Input): Promise<ai_delete_Output>
     deploy(input: ai_deploy_Input): Promise<ai_deploy_Output>
     get(input: ai_get_Input): Promise<ai_get_Output>
     getAll(input: ai_getAll_Input): Promise<ai_getAll_Output>
+    getEnabledProviders(input: ai_getEnabledProviders_Input): Promise<ai_getEnabledProviders_Output>
     getModels(input: ai_getModels_Input): Promise<ai_getModels_Output>
     one(input: ai_one_Input): Promise<ai_one_Output>
     suggest(input: ai_suggest_Input): Promise<ai_suggest_Output>
+    testConnection(input: ai_testConnection_Input): Promise<ai_testConnection_Output>
     update(input: ai_update_Input): Promise<ai_update_Output>
   }
   application: {
@@ -1887,11 +2134,13 @@ export interface DokploySdk {
     delete(input: application_delete_Input): Promise<application_delete_Output>
     deploy(input: application_deploy_Input): Promise<application_deploy_Output>
     disconnectGitProvider(input: application_disconnectGitProvider_Input): Promise<application_disconnectGitProvider_Output>
+    dropDeployment(input: application_dropDeployment_Input): Promise<application_dropDeployment_Output>
     killBuild(input: application_killBuild_Input): Promise<application_killBuild_Output>
     markRunning(input: application_markRunning_Input): Promise<application_markRunning_Output>
     move(input: application_move_Input): Promise<application_move_Output>
     one(input: application_one_Input): Promise<application_one_Output>
     readAppMonitoring(input: application_readAppMonitoring_Input): Promise<application_readAppMonitoring_Output>
+    readLogs(input: application_readLogs_Input): Promise<application_readLogs_Output>
     readTraefikConfig(input: application_readTraefikConfig_Input): Promise<application_readTraefikConfig_Output>
     redeploy(input: application_redeploy_Input): Promise<application_redeploy_Output>
     refreshToken(input: application_refreshToken_Input): Promise<application_refreshToken_Output>
@@ -1917,6 +2166,7 @@ export interface DokploySdk {
     create(input: backup_create_Input): Promise<backup_create_Output>
     listBackupFiles(input: backup_listBackupFiles_Input): Promise<backup_listBackupFiles_Output>
     manualBackupCompose(input: backup_manualBackupCompose_Input): Promise<backup_manualBackupCompose_Output>
+    manualBackupLibsql(input: backup_manualBackupLibsql_Input): Promise<backup_manualBackupLibsql_Output>
     manualBackupMariadb(input: backup_manualBackupMariadb_Input): Promise<backup_manualBackupMariadb_Output>
     manualBackupMongo(input: backup_manualBackupMongo_Input): Promise<backup_manualBackupMongo_Output>
     manualBackupMySql(input: backup_manualBackupMySql_Input): Promise<backup_manualBackupMySql_Output>
@@ -1940,6 +2190,7 @@ export interface DokploySdk {
     create(input: certificates_create_Input): Promise<certificates_create_Output>
     one(input: certificates_one_Input): Promise<certificates_one_Output>
     remove(input: certificates_remove_Input): Promise<certificates_remove_Output>
+    update(input: certificates_update_Input): Promise<certificates_update_Output>
   }
   cluster: {
     addManager(input: cluster_addManager_Input): Promise<cluster_addManager_Output>
@@ -1969,8 +2220,10 @@ export interface DokploySdk {
     one(input: compose_one_Input): Promise<compose_one_Output>
     processTemplate(input: compose_processTemplate_Input): Promise<compose_processTemplate_Output>
     randomizeCompose(input: compose_randomizeCompose_Input): Promise<compose_randomizeCompose_Output>
+    readLogs(input: compose_readLogs_Input): Promise<compose_readLogs_Output>
     redeploy(input: compose_redeploy_Input): Promise<compose_redeploy_Output>
     refreshToken(input: compose_refreshToken_Input): Promise<compose_refreshToken_Output>
+    saveEnvironment(input: compose_saveEnvironment_Input): Promise<compose_saveEnvironment_Output>
     search(input: compose_search_Input): Promise<compose_search_Output>
     start(input: compose_start_Input): Promise<compose_start_Output>
     stop(input: compose_stop_Input): Promise<compose_stop_Output>
@@ -2010,7 +2263,12 @@ export interface DokploySdk {
     getContainersByAppNameMatch(input: docker_getContainersByAppNameMatch_Input): Promise<docker_getContainersByAppNameMatch_Output>
     getServiceContainersByAppName(input: docker_getServiceContainersByAppName_Input): Promise<docker_getServiceContainersByAppName_Output>
     getStackContainersByAppName(input: docker_getStackContainersByAppName_Input): Promise<docker_getStackContainersByAppName_Output>
+    killContainer(input: docker_killContainer_Input): Promise<docker_killContainer_Output>
+    removeContainer(input: docker_removeContainer_Input): Promise<docker_removeContainer_Output>
     restartContainer(input: docker_restartContainer_Input): Promise<docker_restartContainer_Output>
+    startContainer(input: docker_startContainer_Input): Promise<docker_startContainer_Output>
+    stopContainer(input: docker_stopContainer_Input): Promise<docker_stopContainer_Output>
+    uploadFileToContainer(input: docker_uploadFileToContainer_Input): Promise<docker_uploadFileToContainer_Output>
   }
   domain: {
     byApplicationId(input: domain_byApplicationId_Input): Promise<domain_byApplicationId_Output>
@@ -2060,8 +2318,26 @@ export interface DokploySdk {
     update(input: gitlab_update_Input): Promise<gitlab_update_Output>
   }
   gitProvider: {
+    allForPermissions(input: gitProvider_allForPermissions_Input): Promise<gitProvider_allForPermissions_Output>
     getAll(input: gitProvider_getAll_Input): Promise<gitProvider_getAll_Output>
     remove(input: gitProvider_remove_Input): Promise<gitProvider_remove_Output>
+    toggleShare(input: gitProvider_toggleShare_Input): Promise<gitProvider_toggleShare_Output>
+  }
+  libsql: {
+    changeStatus(input: libsql_changeStatus_Input): Promise<libsql_changeStatus_Output>
+    create(input: libsql_create_Input): Promise<libsql_create_Output>
+    deploy(input: libsql_deploy_Input): Promise<libsql_deploy_Output>
+    move(input: libsql_move_Input): Promise<libsql_move_Output>
+    one(input: libsql_one_Input): Promise<libsql_one_Output>
+    readLogs(input: libsql_readLogs_Input): Promise<libsql_readLogs_Output>
+    rebuild(input: libsql_rebuild_Input): Promise<libsql_rebuild_Output>
+    reload(input: libsql_reload_Input): Promise<libsql_reload_Output>
+    remove(input: libsql_remove_Input): Promise<libsql_remove_Output>
+    saveEnvironment(input: libsql_saveEnvironment_Input): Promise<libsql_saveEnvironment_Output>
+    saveExternalPorts(input: libsql_saveExternalPorts_Input): Promise<libsql_saveExternalPorts_Output>
+    start(input: libsql_start_Input): Promise<libsql_start_Output>
+    stop(input: libsql_stop_Input): Promise<libsql_stop_Output>
+    update(input: libsql_update_Input): Promise<libsql_update_Output>
   }
   licenseKey: {
     activate(input: licenseKey_activate_Input): Promise<licenseKey_activate_Output>
@@ -2072,11 +2348,13 @@ export interface DokploySdk {
     validate(input: licenseKey_validate_Input): Promise<licenseKey_validate_Output>
   }
   mariadb: {
+    changePassword(input: mariadb_changePassword_Input): Promise<mariadb_changePassword_Output>
     changeStatus(input: mariadb_changeStatus_Input): Promise<mariadb_changeStatus_Output>
     create(input: mariadb_create_Input): Promise<mariadb_create_Output>
     deploy(input: mariadb_deploy_Input): Promise<mariadb_deploy_Output>
     move(input: mariadb_move_Input): Promise<mariadb_move_Output>
     one(input: mariadb_one_Input): Promise<mariadb_one_Output>
+    readLogs(input: mariadb_readLogs_Input): Promise<mariadb_readLogs_Output>
     rebuild(input: mariadb_rebuild_Input): Promise<mariadb_rebuild_Output>
     reload(input: mariadb_reload_Input): Promise<mariadb_reload_Output>
     remove(input: mariadb_remove_Input): Promise<mariadb_remove_Output>
@@ -2088,11 +2366,13 @@ export interface DokploySdk {
     update(input: mariadb_update_Input): Promise<mariadb_update_Output>
   }
   mongo: {
+    changePassword(input: mongo_changePassword_Input): Promise<mongo_changePassword_Output>
     changeStatus(input: mongo_changeStatus_Input): Promise<mongo_changeStatus_Output>
     create(input: mongo_create_Input): Promise<mongo_create_Output>
     deploy(input: mongo_deploy_Input): Promise<mongo_deploy_Output>
     move(input: mongo_move_Input): Promise<mongo_move_Output>
     one(input: mongo_one_Input): Promise<mongo_one_Output>
+    readLogs(input: mongo_readLogs_Input): Promise<mongo_readLogs_Output>
     rebuild(input: mongo_rebuild_Input): Promise<mongo_rebuild_Output>
     reload(input: mongo_reload_Input): Promise<mongo_reload_Output>
     remove(input: mongo_remove_Input): Promise<mongo_remove_Output>
@@ -2112,11 +2392,13 @@ export interface DokploySdk {
     update(input: mounts_update_Input): Promise<mounts_update_Output>
   }
   mysql: {
+    changePassword(input: mysql_changePassword_Input): Promise<mysql_changePassword_Output>
     changeStatus(input: mysql_changeStatus_Input): Promise<mysql_changeStatus_Output>
     create(input: mysql_create_Input): Promise<mysql_create_Output>
     deploy(input: mysql_deploy_Input): Promise<mysql_deploy_Output>
     move(input: mysql_move_Input): Promise<mysql_move_Output>
     one(input: mysql_one_Input): Promise<mysql_one_Output>
+    readLogs(input: mysql_readLogs_Input): Promise<mysql_readLogs_Output>
     rebuild(input: mysql_rebuild_Input): Promise<mysql_rebuild_Output>
     reload(input: mysql_reload_Input): Promise<mysql_reload_Output>
     remove(input: mysql_remove_Input): Promise<mysql_remove_Output>
@@ -2134,6 +2416,7 @@ export interface DokploySdk {
     createEmail(input: notification_createEmail_Input): Promise<notification_createEmail_Output>
     createGotify(input: notification_createGotify_Input): Promise<notification_createGotify_Output>
     createLark(input: notification_createLark_Input): Promise<notification_createLark_Output>
+    createMattermost(input: notification_createMattermost_Input): Promise<notification_createMattermost_Output>
     createNtfy(input: notification_createNtfy_Input): Promise<notification_createNtfy_Output>
     createPushover(input: notification_createPushover_Input): Promise<notification_createPushover_Output>
     createResend(input: notification_createResend_Input): Promise<notification_createResend_Output>
@@ -2149,6 +2432,7 @@ export interface DokploySdk {
     testEmailConnection(input: notification_testEmailConnection_Input): Promise<notification_testEmailConnection_Output>
     testGotifyConnection(input: notification_testGotifyConnection_Input): Promise<notification_testGotifyConnection_Output>
     testLarkConnection(input: notification_testLarkConnection_Input): Promise<notification_testLarkConnection_Output>
+    testMattermostConnection(input: notification_testMattermostConnection_Input): Promise<notification_testMattermostConnection_Output>
     testNtfyConnection(input: notification_testNtfyConnection_Input): Promise<notification_testNtfyConnection_Output>
     testPushoverConnection(input: notification_testPushoverConnection_Input): Promise<notification_testPushoverConnection_Output>
     testResendConnection(input: notification_testResendConnection_Input): Promise<notification_testResendConnection_Output>
@@ -2160,6 +2444,7 @@ export interface DokploySdk {
     updateEmail(input: notification_updateEmail_Input): Promise<notification_updateEmail_Output>
     updateGotify(input: notification_updateGotify_Input): Promise<notification_updateGotify_Output>
     updateLark(input: notification_updateLark_Input): Promise<notification_updateLark_Output>
+    updateMattermost(input: notification_updateMattermost_Input): Promise<notification_updateMattermost_Output>
     updateNtfy(input: notification_updateNtfy_Input): Promise<notification_updateNtfy_Output>
     updatePushover(input: notification_updatePushover_Input): Promise<notification_updatePushover_Output>
     updateResend(input: notification_updateResend_Input): Promise<notification_updateResend_Output>
@@ -2201,11 +2486,13 @@ export interface DokploySdk {
     update(input: port_update_Input): Promise<port_update_Output>
   }
   postgres: {
+    changePassword(input: postgres_changePassword_Input): Promise<postgres_changePassword_Output>
     changeStatus(input: postgres_changeStatus_Input): Promise<postgres_changeStatus_Output>
     create(input: postgres_create_Input): Promise<postgres_create_Output>
     deploy(input: postgres_deploy_Input): Promise<postgres_deploy_Output>
     move(input: postgres_move_Input): Promise<postgres_move_Output>
     one(input: postgres_one_Input): Promise<postgres_one_Output>
+    readLogs(input: postgres_readLogs_Input): Promise<postgres_readLogs_Output>
     rebuild(input: postgres_rebuild_Input): Promise<postgres_rebuild_Output>
     reload(input: postgres_reload_Input): Promise<postgres_reload_Output>
     remove(input: postgres_remove_Input): Promise<postgres_remove_Output>
@@ -2227,6 +2514,7 @@ export interface DokploySdk {
     allForPermissions(input: project_allForPermissions_Input): Promise<project_allForPermissions_Output>
     create(input: project_create_Input): Promise<project_create_Output>
     duplicate(input: project_duplicate_Input): Promise<project_duplicate_Output>
+    homeStats(input: project_homeStats_Input): Promise<project_homeStats_Output>
     one(input: project_one_Input): Promise<project_one_Output>
     remove(input: project_remove_Input): Promise<project_remove_Output>
     search(input: project_search_Input): Promise<project_search_Output>
@@ -2239,11 +2527,13 @@ export interface DokploySdk {
     update(input: redirects_update_Input): Promise<redirects_update_Output>
   }
   redis: {
+    changePassword(input: redis_changePassword_Input): Promise<redis_changePassword_Output>
     changeStatus(input: redis_changeStatus_Input): Promise<redis_changeStatus_Output>
     create(input: redis_create_Input): Promise<redis_create_Output>
     deploy(input: redis_deploy_Input): Promise<redis_deploy_Output>
     move(input: redis_move_Input): Promise<redis_move_Output>
     one(input: redis_one_Input): Promise<redis_one_Output>
+    readLogs(input: redis_readLogs_Input): Promise<redis_readLogs_Output>
     rebuild(input: redis_rebuild_Input): Promise<redis_rebuild_Output>
     reload(input: redis_reload_Input): Promise<redis_reload_Output>
     remove(input: redis_remove_Input): Promise<redis_remove_Output>
@@ -2283,6 +2573,7 @@ export interface DokploySdk {
   }
   server: {
     all(input: server_all_Input): Promise<server_all_Output>
+    allForPermissions(input: server_allForPermissions_Input): Promise<server_allForPermissions_Output>
     buildServers(input: server_buildServers_Input): Promise<server_buildServers_Output>
     count(input: server_count_Input): Promise<server_count_Output>
     create(input: server_create_Input): Promise<server_create_Output>
@@ -2302,6 +2593,7 @@ export interface DokploySdk {
   settings: {
     assignDomainServer(input: settings_assignDomainServer_Input): Promise<settings_assignDomainServer_Output>
     checkGPUStatus(input: settings_checkGPUStatus_Input): Promise<settings_checkGPUStatus_Output>
+    checkInfrastructureHealth(input: settings_checkInfrastructureHealth_Input): Promise<settings_checkInfrastructureHealth_Output>
     cleanAll(input: settings_cleanAll_Input): Promise<settings_cleanAll_Output>
     cleanAllDeploymentQueue(input: settings_cleanAllDeploymentQueue_Input): Promise<settings_cleanAllDeploymentQueue_Output>
     cleanDockerBuilder(input: settings_cleanDockerBuilder_Input): Promise<settings_cleanDockerBuilder_Output>
@@ -2312,6 +2604,7 @@ export interface DokploySdk {
     cleanStoppedContainers(input: settings_cleanStoppedContainers_Input): Promise<settings_cleanStoppedContainers_Output>
     cleanUnusedImages(input: settings_cleanUnusedImages_Input): Promise<settings_cleanUnusedImages_Output>
     cleanUnusedVolumes(input: settings_cleanUnusedVolumes_Input): Promise<settings_cleanUnusedVolumes_Output>
+    getDockerDiskUsage(input: settings_getDockerDiskUsage_Input): Promise<settings_getDockerDiskUsage_Output>
     getDokployCloudIps(input: settings_getDokployCloudIps_Input): Promise<settings_getDokployCloudIps_Output>
     getDokployVersion(input: settings_getDokployVersion_Input): Promise<settings_getDokployVersion_Output>
     getIp(input: settings_getIp_Input): Promise<settings_getIp_Output>
@@ -2352,6 +2645,7 @@ export interface DokploySdk {
   }
   sshKey: {
     all(input: sshKey_all_Input): Promise<sshKey_all_Output>
+    allForApps(input: sshKey_allForApps_Input): Promise<sshKey_allForApps_Output>
     create(input: sshKey_create_Input): Promise<sshKey_create_Output>
     generate(input: sshKey_generate_Input): Promise<sshKey_generate_Output>
     one(input: sshKey_one_Input): Promise<sshKey_one_Output>
@@ -2377,22 +2671,36 @@ export interface DokploySdk {
     getCurrentPlan(input: stripe_getCurrentPlan_Input): Promise<stripe_getCurrentPlan_Output>
     getInvoices(input: stripe_getInvoices_Input): Promise<stripe_getInvoices_Output>
     getProducts(input: stripe_getProducts_Input): Promise<stripe_getProducts_Output>
+    updateInvoiceNotifications(input: stripe_updateInvoiceNotifications_Input): Promise<stripe_updateInvoiceNotifications_Output>
     upgradeSubscription(input: stripe_upgradeSubscription_Input): Promise<stripe_upgradeSubscription_Output>
   }
   swarm: {
+    getContainerStats(input: swarm_getContainerStats_Input): Promise<swarm_getContainerStats_Output>
     getNodeApps(input: swarm_getNodeApps_Input): Promise<swarm_getNodeApps_Output>
     getNodeInfo(input: swarm_getNodeInfo_Input): Promise<swarm_getNodeInfo_Output>
     getNodes(input: swarm_getNodes_Input): Promise<swarm_getNodes_Output>
+  }
+  tag: {
+    all(input: tag_all_Input): Promise<tag_all_Output>
+    assignToProject(input: tag_assignToProject_Input): Promise<tag_assignToProject_Output>
+    bulkAssign(input: tag_bulkAssign_Input): Promise<tag_bulkAssign_Output>
+    create(input: tag_create_Input): Promise<tag_create_Output>
+    one(input: tag_one_Input): Promise<tag_one_Output>
+    remove(input: tag_remove_Input): Promise<tag_remove_Output>
+    removeFromProject(input: tag_removeFromProject_Input): Promise<tag_removeFromProject_Output>
+    update(input: tag_update_Input): Promise<tag_update_Output>
   }
   user: {
     all(input: user_all_Input): Promise<user_all_Output>
     assignPermissions(input: user_assignPermissions_Input): Promise<user_assignPermissions_Output>
     checkUserOrganizations(input: user_checkUserOrganizations_Input): Promise<user_checkUserOrganizations_Output>
     createApiKey(input: user_createApiKey_Input): Promise<user_createApiKey_Output>
+    createUserWithCredentials(input: user_createUserWithCredentials_Input): Promise<user_createUserWithCredentials_Output>
     deleteApiKey(input: user_deleteApiKey_Input): Promise<user_deleteApiKey_Output>
     generateToken(input: user_generateToken_Input): Promise<user_generateToken_Output>
     get(input: user_get_Input): Promise<user_get_Output>
     getBackups(input: user_getBackups_Input): Promise<user_getBackups_Output>
+    getBookmarkedTemplates(input: user_getBookmarkedTemplates_Input): Promise<user_getBookmarkedTemplates_Output>
     getContainerMetrics(input: user_getContainerMetrics_Input): Promise<user_getContainerMetrics_Output>
     getInvitations(input: user_getInvitations_Input): Promise<user_getInvitations_Output>
     getMetricsToken(input: user_getMetricsToken_Input): Promise<user_getMetricsToken_Output>
@@ -2404,6 +2712,7 @@ export interface DokploySdk {
     remove(input: user_remove_Input): Promise<user_remove_Output>
     sendInvitation(input: user_sendInvitation_Input): Promise<user_sendInvitation_Output>
     session(input: user_session_Input): Promise<user_session_Output>
+    toggleTemplateBookmark(input: user_toggleTemplateBookmark_Input): Promise<user_toggleTemplateBookmark_Output>
     update(input: user_update_Input): Promise<user_update_Output>
   }
   volumeBackups: {

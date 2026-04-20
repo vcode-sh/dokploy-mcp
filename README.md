@@ -4,9 +4,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org/)
 
-MCP server for [Dokploy](https://dokploy.com). Two tools. 463 API procedures. Your AI agent can now deploy, configure, and manage your entire infrastructure without memorizing hundreds of endpoint definitions first.
+MCP server for [Dokploy](https://dokploy.com). Two tools by default. 524 generated API procedures behind Code Mode, plus optional raw and hybrid server modes when you explicitly want endpoint-per-tool MCP.
 
 Most MCP servers dump hundreds of tool schemas into your context window and call it a day. This one doesn't. **Code Mode** gives your agent `search` and `execute` -- it finds what it needs from a compact API catalog, writes a workflow, and the sandbox runs the whole thing in one call. Create an app, set env vars, mount volumes, configure domains, deploy -- all in a single round-trip.
+
+v3 also adds:
+
+- optional `raw` mode for one-tool-per-procedure MCP
+- optional `hybrid` mode for Code Mode plus filtered raw tools
+- Streamable HTTP transport with a health endpoint
+- compatibility-aware errors when the MCP catalog is newer than the connected Dokploy server
 
 The result: **99.4% fewer tokens** on tool definitions. Your context window can go back to doing its actual job.
 
@@ -62,6 +69,8 @@ return app.name
 ```
 
 One `execute` call can spin up an app, configure resource limits, set env vars, create file mounts, attach a domain with HTTPS, deploy, wait for it to come up, verify, and clean up. Eight API calls. One context window round-trip.
+
+That remains the default public surface in v3. Raw MCP tools are now opt-in, not the baseline.
 
 **Token comparison:**
 
@@ -138,6 +147,11 @@ await dokploy.project.overview({ projectId: "id" })
 
 These are discoverable via `search` (`catalog.get("application.many")`, `catalog.get("project.overview")`). They are MCP-side virtual procedures, not Dokploy HTTP endpoints.
 
+v3 adds more Code Mode helpers for batched and infrastructure-oriented reads, including:
+
+- `server.many`
+- `project.infrastructureOverview`
+
 ## Sandbox helpers
 
 Available as globals inside `execute`:
@@ -157,6 +171,13 @@ Available as globals inside `execute`:
 | `DOKPLOY_URL` | Yes | Your Dokploy panel URL |
 | `DOKPLOY_API_KEY` | Yes | API key from Dokploy settings |
 | `DOKPLOY_TIMEOUT` | No | Request timeout in ms (default: `30000`) |
+| `DOKPLOY_MCP_MODE` | No | `codemode` (default), `raw`, or `hybrid` |
+| `DOKPLOY_ENABLED_TAGS` | No | Comma-separated tag filter for `raw` or `hybrid` mode |
+| `DOKPLOY_MCP_TRANSPORT` | No | `stdio` (default) or `http` |
+| `DOKPLOY_MCP_HTTP_HOST` | No | HTTP bind host (default: `127.0.0.1`) |
+| `DOKPLOY_MCP_HTTP_PORT` | No | HTTP bind port (default: `3000`) |
+| `DOKPLOY_MCP_HTTP_PATH` | No | MCP HTTP path (default: `/mcp`) |
+| `DOKPLOY_MCP_HEALTH_PATH` | No | HTTP health path (default: `/health`) |
 
 Resolution order: env vars > `~/.config/dokploy-mcp/config.json` > Dokploy CLI config. First match wins.
 
@@ -173,16 +194,64 @@ Resolution order: env vars > `~/.config/dokploy-mcp/config.json` > Dokploy CLI c
 
 </details>
 
+## Server modes
+
+`codemode` is the default and still exposes only:
+
+- `search`
+- `execute`
+
+If you explicitly want endpoint-per-tool MCP, v3 also supports:
+
+- `raw` mode: one MCP tool per generated Dokploy procedure
+- `hybrid` mode: Code Mode plus filtered raw tools
+
+Examples:
+
+```bash
+npx @vibetools/dokploy-mcp serve-stdio --mode raw
+npx @vibetools/dokploy-mcp serve-stdio --mode hybrid --enabled-tags project,application
+```
+
+## HTTP transport
+
+v3 adds Streamable HTTP transport with a JSON health endpoint:
+
+```bash
+npx @vibetools/dokploy-mcp serve-http
+```
+
+Defaults:
+
+- MCP endpoint: `/mcp`
+- health endpoint: `/health`
+
+Example:
+
+```bash
+DOKPLOY_MCP_MODE=hybrid DOKPLOY_ENABLED_TAGS=project,application npx @vibetools/dokploy-mcp serve-http
+```
+
 ## What's in the box
 
-The Code Mode catalog covers the full Dokploy OpenAPI surface -- 463 procedures across every module. Applications, compose stacks, databases (Postgres, MySQL, MariaDB, MongoDB, Redis), domains, certificates, Docker, servers, backups, notifications, and about 30 more categories you'll discover when you need them.
+The generated catalog now covers 524 procedures across 48 tags, including the newer upstream surface for LibSQL, tags, infrastructure reads, and the additional procedures present in the official root OpenAPI document.
 
 Your agent doesn't need to know any of this upfront. That's the point. It searches when it needs something, executes when it knows what to do.
+
+## Compatibility
+
+The generated MCP catalog can be newer than the connected Dokploy backend.
+
+Example: during v3 development, the configured live backend still reported `v0.28.8`, while newer upstream procedures such as `settings.checkInfrastructureHealth` and `tag.all` already existed in the latest official OpenAPI.
+
+When that happens, v3 returns compatibility-aware errors for known newer procedures instead of a generic not-found response.
 
 ## CLI
 
 ```bash
 npx @vibetools/dokploy-mcp              # Start Code Mode server
+npx @vibetools/dokploy-mcp serve-stdio  # Start stdio server explicitly
+npx @vibetools/dokploy-mcp serve-http   # Start Streamable HTTP server
 npx @vibetools/dokploy-mcp setup        # Interactive setup
 npx @vibetools/dokploy-mcp version      # Because you'll be asked
 ```

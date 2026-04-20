@@ -1,3 +1,4 @@
+import type { BackendVersionInfo } from '../../api/client.js'
 import { ApiError, api } from '../../api/client.js'
 import { procedureSchemas } from '../../generated/dokploy-schemas.js'
 import {
@@ -6,13 +7,35 @@ import {
   transformProcedureResponse,
   validateProcedureInput,
 } from '../overrides/procedure-overrides.js'
-import { formatGatewayError } from './error-format.js'
+import { formatCompatibilityNotFoundMessage, formatGatewayError } from './error-format.js'
 import { finishTrace, type GatewayTraceEntry, startTrace } from './trace.js'
 
 type ProcedureName = keyof typeof procedureSchemas
-type RequestApi = typeof api
+
+interface RequestApi {
+  get: typeof api.get
+  post: typeof api.post
+  getBackendVersionInfo?: () => Promise<BackendVersionInfo>
+}
 
 const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504])
+const MINIMUM_BACKEND_VERSION = 'v0.29.0'
+
+const MINIMUM_BACKEND_VERSION_BY_PROCEDURE = {
+  'ai.getEnabledProviders': MINIMUM_BACKEND_VERSION,
+  'gitProvider.allForPermissions': MINIMUM_BACKEND_VERSION,
+  'project.homeStats': MINIMUM_BACKEND_VERSION,
+  'server.allForPermissions': MINIMUM_BACKEND_VERSION,
+  'settings.checkInfrastructureHealth': MINIMUM_BACKEND_VERSION,
+  'settings.getDockerDiskUsage': MINIMUM_BACKEND_VERSION,
+  'sshKey.allForApps': MINIMUM_BACKEND_VERSION,
+  'user.getBookmarkedTemplates': MINIMUM_BACKEND_VERSION,
+} as const
+
+const MINIMUM_BACKEND_VERSION_BY_PREFIX = {
+  'libsql.': MINIMUM_BACKEND_VERSION,
+  'tag.': MINIMUM_BACKEND_VERSION,
+} as const
 
 function resolveGatewayRetryCount() {
   const parsed = Number.parseInt(process.env.DOKPLOY_MCP_GATEWAY_RETRIES ?? '2', 10)
@@ -42,6 +65,99 @@ function shouldRetryGatewayError(
 
 async function delay(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function resolveProcedureMinimumVersion(procedure: string): string | null {
+  if (procedure in MINIMUM_BACKEND_VERSION_BY_PROCEDURE) {
+    return MINIMUM_BACKEND_VERSION_BY_PROCEDURE[
+      procedure as keyof typeof MINIMUM_BACKEND_VERSION_BY_PROCEDURE
+    ]
+  }
+
+  for (const [prefix, version] of Object.entries(MINIMUM_BACKEND_VERSION_BY_PREFIX)) {
+    if (procedure.startsWith(prefix)) {
+      return version
+    }
+  }
+
+  return null
+}
+
+function parseDokployVersion(version: string) {
+  const match = version.trim().match(/^v?(\d+)\.(\d+)\.(\d+)/)
+  if (!match) {
+    return null
+  }
+
+  const numbers = match.slice(1).map((entry) => Number.parseInt(entry, 10))
+  if (!numbers.every((entry) => Number.isFinite(entry))) {
+    return null
+  }
+
+  const [major, minor, patch] = numbers
+  if (major === undefined || minor === undefined || patch === undefined) {
+    return null
+  }
+
+  return [major, minor, patch] as const
+}
+
+function compareDokployVersions(left: string, right: string) {
+  const leftParts = parseDokployVersion(left)
+  const rightParts = parseDokployVersion(right)
+  if (!(leftParts && rightParts)) {
+    return null
+  }
+
+  const versionPairs = [
+    [leftParts[0], rightParts[0]],
+    [leftParts[1], rightParts[1]],
+    [leftParts[2], rightParts[2]],
+  ] as const
+
+  for (const [leftPart, rightPart] of versionPairs) {
+    const delta = leftPart - rightPart
+    if (delta !== 0) {
+      return delta
+    }
+  }
+
+  return 0
+}
+
+async function resolveCompatibilityAwareMessage(
+  procedure: string,
+  error: ApiError,
+  requestApi: RequestApi,
+) {
+  if (error.status !== 404) {
+    return error.message
+  }
+
+  const minimumVersion = resolveProcedureMinimumVersion(procedure)
+  if (!minimumVersion || typeof requestApi.getBackendVersionInfo !== 'function') {
+    return error.message
+  }
+
+  try {
+    const backendVersionInfo = await requestApi.getBackendVersionInfo()
+    if (backendVersionInfo.state !== 'detected' || !backendVersionInfo.version) {
+      return error.message
+    }
+
+    const versionDelta = compareDokployVersions(backendVersionInfo.version, minimumVersion)
+    if (versionDelta === null || versionDelta >= 0) {
+      return error.message
+    }
+
+    return formatCompatibilityNotFoundMessage({
+      procedure,
+      backendVersion: backendVersionInfo.version,
+      minimumVersion,
+    })
+  } catch {
+    return error.message
+  }
 }
 
 function validateAgainstSchema(value: unknown, schema: unknown, path = ''): string[] {
@@ -360,7 +476,7 @@ export async function invokeProcedureWithApi(
         type: 'dokploy_error',
         procedure,
         status: error.status,
-        message: error.message,
+        message: await resolveCompatibilityAwareMessage(procedure, error, requestApi),
       })
     }
 
