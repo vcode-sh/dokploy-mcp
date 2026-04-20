@@ -306,6 +306,13 @@ function sendWorkerMessage(
   }
 }
 
+function rejectUnexpectedWorkerMessageError(
+  settle: ReturnType<typeof createSettlers>,
+  error: unknown,
+) {
+  settle.reject(normalizeError(error))
+}
+
 async function handleExecuteWorkerMessage(
   worker: ReturnType<typeof createWorker>,
   settle: ReturnType<typeof createSettlers>,
@@ -359,15 +366,19 @@ export async function runSearchInSubprocess(options: {
     timeoutId.unref?.()
 
     worker.on('message', (message: unknown) => {
-      if (!isWorkerDoneMessage(message)) {
-        settle.reject(buildInvalidMessageError())
-        return
-      }
+      try {
+        if (!isWorkerDoneMessage(message)) {
+          settle.reject(buildInvalidMessageError())
+          return
+        }
 
-      finishWorker(message, settle)
+        finishWorker(message, settle)
+      } catch (error) {
+        rejectUnexpectedWorkerMessageError(settle, error)
+      }
     })
 
-    worker.on('error', (error) => settle.reject(error))
+    worker.on('error', (error) => settle.reject(normalizeError(error)))
     worker.on('disconnect', () => settle.reject(buildDisconnectError()))
     worker.on('exit', (code, signal) => settle.reject(buildExitError(code, signal), false))
 
@@ -397,10 +408,12 @@ export async function runExecuteInSubprocess(options: {
     timeoutId.unref?.()
 
     worker.on('message', (message: unknown) => {
-      void handleExecuteWorkerMessage(worker, settle, message, options.onCall)
+      void handleExecuteWorkerMessage(worker, settle, message, options.onCall).catch((error) => {
+        rejectUnexpectedWorkerMessageError(settle, error)
+      })
     })
 
-    worker.on('error', (error) => settle.reject(error))
+    worker.on('error', (error) => settle.reject(normalizeError(error)))
     worker.on('disconnect', () => settle.reject(buildDisconnectError()))
     worker.on('exit', (code, signal) => settle.reject(buildExitError(code, signal), false))
 

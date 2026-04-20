@@ -59,3 +59,12 @@ export function writeServerUnavailable(
 ) {
   writeJsonRpcError(req, res, 503, message, -32002)
 }
+
+export function writePayloadTooLarge(
+  req: IncomingMessage,
+  res: ServerResponse,
+  message = 'Request body too large',
+) {
+  res.setHeader('connection', 'close')
+  writeJsonRpcError(req, res, 413, message, -32000)
+}

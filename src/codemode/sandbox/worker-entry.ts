@@ -73,6 +73,14 @@ function buildInvalidLimitsError() {
   return 'Invalid sandbox worker limits payload.'
 }
 
+function normalizeWorkerError(error: unknown) {
+  return error instanceof Error ? error : new Error(String(error))
+}
+
+function formatWorkerError(error: unknown) {
+  return normalizeWorkerError(error).message
+}
+
 function rpcCall(procedure: string, input: Record<string, unknown> = {}) {
   return new Promise((resolve, reject) => {
     requestIdCounter += 1
@@ -140,6 +148,16 @@ async function reportWorkerFailure(error: string) {
   } catch {
     // The worker cannot report the failure if the IPC channel is already broken.
   }
+}
+
+async function handleUnexpectedWorkerMessageError(error: unknown) {
+  if (workerRunState === 'completed') {
+    return
+  }
+
+  workerRunState = 'completed'
+  rejectPendingCalls(normalizeWorkerError(error))
+  await reportWorkerFailure(`Sandbox worker message handling failed: ${formatWorkerError(error)}`)
 }
 
 function resolveRunLimits(payload: Record<string, unknown>) {
@@ -238,7 +256,9 @@ async function handleWorkerMessage(message: unknown) {
 }
 
 process.on('message', (message: unknown) => {
-  void handleWorkerMessage(message)
+  void handleWorkerMessage(message).catch((error) => {
+    void handleUnexpectedWorkerMessageError(error)
+  })
 })
 
 process.on('disconnect', () => {

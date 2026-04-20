@@ -14,8 +14,9 @@ const searchSchema = z
       .describe(
         'JavaScript code. `catalog` is a global -- do NOT wrap in a function. ' +
           'Examples: `catalog.searchText("application deploy")` | ' +
+          '`catalog.recommend("safe database password rotation")` | ' +
           '`catalog.getByTag("compose")` | `catalog.get("application.one")`. ' +
-          'Methods: searchText(query), get(procedure), getByTag(tag), endpoints, byTag.',
+          'Methods: searchText(query), recommend(query), get(procedure), getByTag(tag), endpoints, byTag.',
       ),
   })
   .strict()
@@ -28,14 +29,17 @@ function boundSearchResult(value: unknown): unknown {
     return trimArrayToBytes(value)
   }
 
-  if (value && typeof value === 'object' && 'matches' in value) {
-    const typed = value as { matches?: unknown }
-    if (Array.isArray(typed.matches)) {
-      return {
-        ...typed,
-        matches: trimArrayToBytes(typed.matches),
+  if (value && typeof value === 'object') {
+    const typed = value as Record<string, unknown>
+    const bounded = { ...typed }
+
+    for (const key of ['matches', 'recommended', 'related']) {
+      if (Array.isArray(typed[key])) {
+        bounded[key] = trimArrayToBytes(typed[key])
       }
     }
+
+    return bounded
   }
 
   return value
@@ -63,8 +67,8 @@ export const searchTool: ToolDefinition = createTool({
   description:
     'Search the Dokploy API catalog. ' +
     'IMPORTANT: Do NOT wrap code in a function -- `catalog` is already a global. ' +
-    'Write bare code: `catalog.searchText("deploy")` or `catalog.getByTag("application")` or `catalog.get("application.one")`. ' +
-    'Common patterns: `catalog.get("application.one")` -> application detail fields plus optional shaping params; `catalog.get("application.many")` -> batched application reads; `catalog.get("project.overview")` -> compact project state view; `catalog.get("deployment.all")` -> deployment history entries. ' +
+    'Write bare code: `catalog.searchText("deploy")` or `catalog.recommend("safe database password rotation")` or `catalog.getByTag("application")` or `catalog.get("application.one")`. ' +
+    'Common patterns: `catalog.recommend("tail project logs across environments")` -> helper-first workflow suggestions; `catalog.get("application.one")` -> application detail fields plus optional shaping params; `catalog.get("application.many")` -> batched application reads; `catalog.get("project.overview")` -> compact project state view; `catalog.get("deployment.all")` -> deployment history entries. ' +
     'Returns procedure names, parameters, HTTP methods, schemas, and response hints for key endpoints.',
   schema: searchSchema,
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },

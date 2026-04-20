@@ -302,6 +302,50 @@ async function sendTruncatedContentLengthPost(handle: StartedHttpServer) {
   return await settleWithin(socketSettled, 'truncated content-length request cleanup')
 }
 
+async function sendMalformedParserLevelRequest(handle: StartedHttpServer) {
+  const url = new URL(handle.mcpUrl)
+  const port = Number(url.port)
+  const socket = net.createConnection({
+    host: url.hostname,
+    port,
+  })
+  let rawResponse = ''
+
+  const socketSettled = new Promise<string>((resolve, reject) => {
+    let settled = false
+
+    const finish = () => {
+      if (settled) {
+        return
+      }
+
+      settled = true
+      resolve(rawResponse)
+    }
+
+    socket.on('data', (chunk: Buffer | string) => {
+      rawResponse += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : chunk
+    })
+    socket.once('end', finish)
+    socket.once('close', finish)
+    socket.once('error', reject)
+  })
+
+  await once(socket, 'connect')
+
+  socket.end(
+    [
+      `GET ${url.pathname} HTTP/1.1`,
+      `Host: ${url.hostname}:${port}`,
+      'Bad Header: value',
+      '',
+      '',
+    ].join('\r\n'),
+  )
+
+  return await settleWithin(socketSettled, 'parser-level malformed request cleanup')
+}
+
 async function openSessionEventStream(handle: StartedHttpServer, sessionId: string) {
   const url = new URL(handle.mcpUrl)
   const request = http.request({
@@ -475,6 +519,33 @@ describe('http server transport', () => {
         message: 'Parse error: Invalid JSON',
       },
     })
+  })
+
+  it('returns a controlled 400 for parser-level malformed HTTP traffic and stays healthy', async () => {
+    const handle = await startTestHttpServer({ mode: 'codemode' })
+    const client = await createConnectedHttpClient(handle)
+
+    try {
+      const malformedResponses = await Promise.all(
+        Array.from({ length: 4 }, () => sendMalformedParserLevelRequest(handle)),
+      )
+
+      for (const response of malformedResponses) {
+        expect(response).toContain('HTTP/1.1 400 Bad Request')
+        expect(response).toContain('Connection: close')
+      }
+
+      const result = await client.client.callTool({
+        name: 'search',
+        arguments: {
+          code: 'catalog.getByTag("project").length',
+        },
+      })
+
+      expect(result.isError).not.toBe(true)
+    } finally {
+      await closeHttpClient(client)
+    }
   })
 
   it('rejects structurally invalid JSON-RPC payloads on POST /mcp', async () => {
@@ -1183,6 +1254,71 @@ describe('http server transport', () => {
       )
 
       for (const result of reconnectAfterBurstResults) {
+        expect(result.isError).not.toBe(true)
+      }
+    } finally {
+      await Promise.allSettled([
+        ...primaryClients.map((client) => closeHttpClient(client)),
+        ...reconnectClients.map((client) => closeHttpClient(client)),
+      ])
+    }
+  })
+
+  it('keeps reconnect clients healthy through parser-level malformed HTTP bursts', async () => {
+    const handle = await startTestHttpServer({ mode: 'codemode' })
+    const primaryClients = await Promise.all(
+      Array.from({ length: 4 }, () => createConnectedHttpClient(handle)),
+    )
+    const reconnectClients = await Promise.all(
+      primaryClients.map((client) =>
+        createReconnectHttpClient(handle, client.transport.sessionId!),
+      ),
+    )
+
+    try {
+      await Promise.all(primaryClients.map((client) => closeHttpClient(client)))
+
+      const [validResults, malformedResponses] = await Promise.all([
+        Promise.all(
+          reconnectClients.map(async (client, index) => {
+            const [tools, callResult] = await Promise.all([
+              client.client.listTools(),
+              client.client.callTool({
+                name: 'search',
+                arguments: {
+                  code: `catalog.getByTag("project").length + ${index}`,
+                },
+              }),
+            ])
+
+            return { tools, callResult }
+          }),
+        ),
+        Promise.all(Array.from({ length: 8 }, () => sendMalformedParserLevelRequest(handle))),
+      ])
+
+      for (const response of malformedResponses) {
+        expect(response).toContain('HTTP/1.1 400 Bad Request')
+        expect(response).toContain('Connection: close')
+      }
+
+      for (const result of validResults) {
+        expect(result.tools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(result.callResult.isError).not.toBe(true)
+      }
+
+      const postBurstResults = await Promise.all(
+        reconnectClients.map((client) =>
+          client.client.callTool({
+            name: 'search',
+            arguments: {
+              code: 'catalog.getByTag("project").length',
+            },
+          }),
+        ),
+      )
+
+      for (const result of postBurstResults) {
         expect(result.isError).not.toBe(true)
       }
     } finally {

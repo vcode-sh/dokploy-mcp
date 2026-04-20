@@ -34,6 +34,46 @@ describe('codemode runtime', () => {
     expect(payload.logs).toEqual([])
   })
 
+  it('search ranks preview helpers above raw mutations for safe workflows', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("safe database password rotation").slice(0, 4).map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toBeDefined()
+
+    const procedures = payload.result as string[]
+    expect(procedures[0]).toBe('database.rotatePasswordPreview')
+    expect(procedures).toEqual(
+      expect.arrayContaining(['database.rotatePasswordPreview', 'database.many']),
+    )
+  })
+
+  it('search recommend returns helper-first workflow guidance', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.recommend("latest deployment status")',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toBeDefined()
+
+    const recommendation = payload.result as {
+      intent: string
+      recommended: Array<Record<string, unknown>>
+      related: Array<Record<string, unknown>>
+    }
+
+    expect(recommendation.intent).toBe('overview')
+    expect(recommendation.recommended[0]).toMatchObject({
+      procedure: 'deployment.latestByType',
+      kind: 'helper',
+    })
+    expect(recommendation.recommended[0]?.why).toEqual(
+      expect.arrayContaining([expect.stringContaining('overview')]),
+    )
+    expect(recommendation.related).toEqual(expect.any(Array))
+  })
+
   it('search rejects non-async code', async () => {
     const result = await searchTool.handler({
       code: '() => 1',

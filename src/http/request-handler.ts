@@ -8,6 +8,7 @@ import {
   writeBadRequest,
   writeJson,
   writeJsonRpcError,
+  writePayloadTooLarge,
   writeServerUnavailable,
   writeSessionNotFound,
 } from './responses.js'
@@ -19,9 +20,34 @@ import type {
   SessionRegistry,
 } from './types.js'
 
+const MAX_JSON_BODY_BYTES = 1024 * 1024
+
+class RequestBodyTooLargeError extends Error {
+  constructor(limitBytes: number) {
+    super(`Request body too large: limit is ${limitBytes} bytes`)
+  }
+}
+
+function getDeclaredContentLength(req: IncomingMessage) {
+  const header = req.headers['content-length']
+  if (typeof header !== 'string') {
+    return undefined
+  }
+
+  const parsed = Number.parseInt(header, 10)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
+}
+
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  const declaredContentLength = getDeclaredContentLength(req)
+  if (declaredContentLength !== undefined && declaredContentLength > MAX_JSON_BODY_BYTES) {
+    req.resume()
+    throw new RequestBodyTooLargeError(MAX_JSON_BODY_BYTES)
+  }
+
   return await new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
+    let totalBytes = 0
 
     const cleanup = () => {
       req.off('data', onData)
@@ -32,7 +58,17 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
     }
 
     const onData = (chunk: Buffer | string) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+      totalBytes += buffer.byteLength
+
+      if (totalBytes > MAX_JSON_BODY_BYTES) {
+        cleanup()
+        req.resume()
+        reject(new RequestBodyTooLargeError(MAX_JSON_BODY_BYTES))
+        return
+      }
+
+      chunks.push(buffer)
     }
 
     const onEnd = () => {
@@ -218,7 +254,12 @@ async function handlePostRequest(
 
   try {
     parsedBody = await readJsonBody(req)
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      writePayloadTooLarge(req, res, error.message)
+      return
+    }
+
     writeJsonRpcError(req, res, 400, 'Parse error: Invalid JSON', -32700)
     return
   }
