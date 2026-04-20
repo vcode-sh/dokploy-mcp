@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import {
   createServer as createNodeServer,
@@ -6,7 +7,9 @@ import {
 } from 'node:http'
 import type { AddressInfo } from 'node:net'
 
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
+import { isInitializeRequest, JSONRPCMessageSchema } from '@modelcontextprotocol/sdk/types.js'
 
 import {
   type CreateServerOptions,
@@ -43,6 +46,11 @@ interface ResolvedHttpServerOptions {
   port: number
   mcpPath: string
   healthPath: string
+}
+
+interface SessionRecord {
+  server: McpServer
+  transport: StreamableHTTPServerTransport
 }
 
 function parsePort(value?: string) {
@@ -111,11 +119,12 @@ function writeJsonRpcError(
   res: ServerResponse,
   statusCode: number,
   message: string,
+  code = -32603,
 ) {
   writeJson(req, res, statusCode, {
     jsonrpc: '2.0',
     error: {
-      code: -32603,
+      code,
       message,
     },
     id: null,
@@ -136,45 +145,224 @@ async function closeServer(server: ReturnType<typeof createNodeServer>) {
   await once(server, 'close')
 }
 
-async function handleMcpRequest(
-  req: IncomingMessage,
-  res: ServerResponse,
-  options: ResolvedHttpServerOptions,
-) {
-  if (!(req.method && ['GET', 'POST', 'DELETE'].includes(req.method))) {
-    writeJsonRpcError(req, res, 405, 'Method not allowed')
-    return
+async function closeSessionRecord(record: SessionRecord) {
+  await Promise.allSettled([record.transport.close(), record.server.close()])
+}
+
+async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = []
+
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
   }
 
+  const raw = Buffer.concat(chunks).toString('utf8')
+  return raw.length === 0 ? null : JSON.parse(raw)
+}
+
+function parseJsonRpcMessages(payload: unknown) {
+  if (Array.isArray(payload)) {
+    return payload.map((message) => JSONRPCMessageSchema.parse(message))
+  }
+
+  return [JSONRPCMessageSchema.parse(payload)]
+}
+
+function getSessionIdHeader(req: IncomingMessage) {
+  const sessionId = req.headers['mcp-session-id']
+  return typeof sessionId === 'string' && sessionId.length > 0 ? sessionId : undefined
+}
+
+function isInitializePayload(payload: unknown) {
+  try {
+    return parseJsonRpcMessages(payload).some((message) => isInitializeRequest(message))
+  } catch {
+    return null
+  }
+}
+
+function writeBadRequest(req: IncomingMessage, res: ServerResponse, message: string) {
+  writeJsonRpcError(req, res, 400, message, -32000)
+}
+
+function writeSessionNotFound(req: IncomingMessage, res: ServerResponse) {
+  writeJsonRpcError(req, res, 404, 'Session not found', -32001)
+}
+
+function createSessionRecord(
+  sessions: Map<string, SessionRecord>,
+  options: ResolvedHttpServerOptions,
+): SessionRecord {
   const server = createServer({
     mode: options.mode,
     enabledTags: options.enabledTags,
   })
+
   const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
+    sessionIdGenerator: () => randomUUID(),
+    onsessioninitialized: (sessionId) => {
+      sessions.set(sessionId, record)
+    },
+    onsessionclosed: async (sessionId) => {
+      const session = sessions.get(sessionId)
+      if (!session) {
+        return
+      }
+
+      sessions.delete(sessionId)
+      await session.server.close()
+    },
   })
 
-  let cleanedUp = false
+  const record: SessionRecord = {
+    server,
+    transport,
+  }
 
-  const cleanup = async () => {
-    if (cleanedUp) {
+  transport.onclose = () => {
+    const sessionId = transport.sessionId
+    if (!sessionId) {
       return
     }
 
-    cleanedUp = true
-    await Promise.allSettled([transport.close(), server.close()])
+    sessions.delete(sessionId)
   }
 
-  res.on('close', () => {
-    void cleanup()
-  })
+  return record
+}
+
+function getSessionRecord(
+  req: IncomingMessage,
+  res: ServerResponse,
+  sessions: Map<string, SessionRecord>,
+) {
+  const sessionId = getSessionIdHeader(req)
+  if (!sessionId) {
+    writeBadRequest(req, res, 'Bad Request: Mcp-Session-Id header is required')
+    return null
+  }
+
+  const session = sessions.get(sessionId)
+  if (!session) {
+    writeSessionNotFound(req, res)
+    return null
+  }
+
+  return session
+}
+
+async function handleExistingPostSession(
+  req: IncomingMessage,
+  res: ServerResponse,
+  sessions: Map<string, SessionRecord>,
+  parsedBody: unknown,
+) {
+  const sessionId = getSessionIdHeader(req)
+  if (!sessionId) {
+    return false
+  }
+
+  const session = sessions.get(sessionId)
+  if (!session) {
+    writeSessionNotFound(req, res)
+    return true
+  }
+
+  await session.transport.handleRequest(req, res, parsedBody)
+  return true
+}
+
+async function handleInitializePostSession(
+  req: IncomingMessage,
+  res: ServerResponse,
+  sessions: Map<string, SessionRecord>,
+  options: ResolvedHttpServerOptions,
+  parsedBody: unknown,
+) {
+  const session = createSessionRecord(sessions, options)
 
   try {
-    await server.connect(transport)
-    await transport.handleRequest(req, res)
+    await session.server.connect(session.transport)
+    await session.transport.handleRequest(req, res, parsedBody)
   } catch (error) {
-    await cleanup()
+    await closeSessionRecord(session)
 
+    if (!res.headersSent) {
+      writeJsonRpcError(
+        req,
+        res,
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      )
+    }
+  }
+}
+
+async function handlePostRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  options: ResolvedHttpServerOptions,
+  sessions: Map<string, SessionRecord>,
+) {
+  let parsedBody: unknown
+
+  try {
+    parsedBody = await readJsonBody(req)
+  } catch {
+    writeJsonRpcError(req, res, 400, 'Parse error: Invalid JSON', -32700)
+    return
+  }
+
+  const initializePayload = isInitializePayload(parsedBody)
+  if (initializePayload === null) {
+    writeJsonRpcError(req, res, 400, 'Parse error: Invalid JSON-RPC message', -32700)
+    return
+  }
+
+  if (await handleExistingPostSession(req, res, sessions, parsedBody)) {
+    return
+  }
+
+  if (!initializePayload) {
+    writeBadRequest(req, res, 'Bad Request: Mcp-Session-Id header is required')
+    return
+  }
+
+  await handleInitializePostSession(req, res, sessions, options, parsedBody)
+}
+
+async function handleSessionRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  sessions: Map<string, SessionRecord>,
+) {
+  const session = getSessionRecord(req, res, sessions)
+  if (!session) {
+    return
+  }
+
+  await session.transport.handleRequest(req, res)
+}
+
+async function handleMcpRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  options: ResolvedHttpServerOptions,
+  sessions: Map<string, SessionRecord>,
+) {
+  try {
+    if (!(req.method && ['GET', 'POST', 'DELETE'].includes(req.method))) {
+      writeJsonRpcError(req, res, 405, 'Method not allowed')
+      return
+    }
+
+    if (req.method === 'POST') {
+      await handlePostRequest(req, res, options, sessions)
+      return
+    }
+
+    await handleSessionRequest(req, res, sessions)
+  } catch (error) {
     if (!res.headersSent) {
       writeJsonRpcError(
         req,
@@ -188,6 +376,7 @@ async function handleMcpRequest(
 
 export function createHttpServer(options: HttpServerOptions = {}) {
   const resolved = resolveHttpOptions(options)
+  const sessions = new Map<string, SessionRecord>()
 
   return createNodeServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost')
@@ -203,7 +392,7 @@ export function createHttpServer(options: HttpServerOptions = {}) {
     }
 
     if (url.pathname === resolved.mcpPath) {
-      await handleMcpRequest(req, res, resolved)
+      await handleMcpRequest(req, res, resolved, sessions)
       return
     }
 
@@ -213,7 +402,27 @@ export function createHttpServer(options: HttpServerOptions = {}) {
 
 export async function startHttpServer(options: HttpServerOptions = {}): Promise<StartedHttpServer> {
   const resolved = resolveHttpOptions(options)
-  const server = createHttpServer(resolved)
+  const sessions = new Map<string, SessionRecord>()
+  const server = createNodeServer(async (req, res) => {
+    const url = new URL(req.url ?? '/', 'http://localhost')
+
+    if (url.pathname === resolved.healthPath) {
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        writeJson(req, res, 200, getHealthPayload(resolved))
+        return
+      }
+
+      writeJson(req, res, 405, { ok: false, error: 'Method not allowed' })
+      return
+    }
+
+    if (url.pathname === resolved.mcpPath) {
+      await handleMcpRequest(req, res, resolved, sessions)
+      return
+    }
+
+    writeJson(req, res, 404, { ok: false, error: 'Not found' })
+  })
 
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject)
@@ -232,7 +441,11 @@ export async function startHttpServer(options: HttpServerOptions = {}): Promise<
     url: baseUrl,
     mcpUrl: `${baseUrl}${resolved.mcpPath}`,
     healthUrl: `${baseUrl}${resolved.healthPath}`,
-    close: () => closeServer(server),
+    close: async () => {
+      await Promise.allSettled([...sessions.values()].map((record) => closeSessionRecord(record)))
+      sessions.clear()
+      await closeServer(server)
+    },
   }
 }
 
