@@ -91,7 +91,7 @@ describe('protocol surfaces', () => {
     })
   })
 
-  it('keeps explicit capability flags backward compatible with the current codemode surface', async () => {
+  it('adds resource capability registration without changing the default codemode tools', async () => {
     const surface = await inspectSurface(
       createServer({
         mode: 'codemode',
@@ -108,7 +108,7 @@ describe('protocol surfaces', () => {
 
     expect(surface).toEqual({
       tools: ['search', 'execute'],
-      capabilityKeys: ['tools'],
+      capabilityKeys: ['resources', 'tools'],
     })
   })
 })

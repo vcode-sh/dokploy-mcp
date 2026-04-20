@@ -418,7 +418,7 @@ describe('http server transport', () => {
     })
   })
 
-  it('threads future capability flags through HTTP options without advertising unsupported families yet', async () => {
+  it('threads resource capability flags through HTTP options without changing the codemode tools', async () => {
     const handle = await startTestHttpServer({
       mode: 'codemode',
       capabilityFlags: {
@@ -441,13 +441,20 @@ describe('http server transport', () => {
 
     await withHttpClient(handle, async (client) => {
       const { tools } = await client.listTools()
+      const { resourceTemplates } = await client.listResourceTemplates()
 
       expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
       expect(
         Object.keys((client.getServerCapabilities() ?? {}) as Record<string, unknown>).sort(),
-      ).toEqual(['tools'])
-      await expect(client.listResources()).rejects.toThrow()
-      await expect(client.listResourceTemplates()).rejects.toThrow()
+      ).toEqual(['resources', 'tools'])
+      expect(resourceTemplates.map((entry) => entry.uriTemplate).sort()).toEqual([
+        'dokploy://application/{applicationId}/summary',
+        'dokploy://deployment/{deploymentId}/summary',
+        'dokploy://project/{projectId}/infrastructure',
+        'dokploy://project/{projectId}/logs-overview',
+        'dokploy://project/{projectId}/overview',
+        'dokploy://server/{serverId}/summary',
+      ])
       await expect(client.listPrompts()).rejects.toThrow()
     })
   })

@@ -8,12 +8,16 @@ import { codeModeSamplingCapability } from './sampling.js'
 import { codeModeTasksCapability } from './tasks.js'
 import { codeModeToolsCapability } from './tools.js'
 
-export const codeModeCapabilities: readonly McpCapabilityRegistration[] = [
-  codeModeToolsCapability,
+export const codeModeSharedCapabilities: readonly McpCapabilityRegistration[] = [
   codeModeResourcesCapability,
   codeModePromptsCapability,
   codeModeCompletionsCapability,
   codeModeSamplingCapability,
   codeModeElicitationCapability,
   codeModeTasksCapability,
+]
+
+export const codeModeCapabilities: readonly McpCapabilityRegistration[] = [
+  codeModeToolsCapability,
+  ...codeModeSharedCapabilities,
 ]

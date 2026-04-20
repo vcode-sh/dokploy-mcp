@@ -1,15 +1,21 @@
 #!/usr/bin/env node
 
+import {
+  parseCapabilityFlags,
+  parseEnabledTags,
+  parseServerMode,
+  type ServerCapabilityFlags,
+  type ServerMode,
+} from './server.js'
+
 const args = process.argv.slice(2)
 
 type ServerTransportMode = 'stdio' | 'http'
-type CapabilityFlag = 'resources' | 'prompts' | 'completions' | 'sampling' | 'elicitation' | 'tasks'
-type CapabilityFlags = Partial<Record<CapabilityFlag, boolean>>
 
 interface StartServerOptions {
-  mode?: 'codemode' | 'raw' | 'hybrid'
+  mode?: ServerMode
   enabledTags?: string[]
-  capabilityFlags?: CapabilityFlags
+  capabilityFlags?: ServerCapabilityFlags
   transport: ServerTransportMode
   host?: string
   port?: number
@@ -35,40 +41,6 @@ function parseNumberFlag(value?: string) {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-function parseEnabledTags(value?: string) {
-  if (!value) {
-    return undefined
-  }
-
-  const tags = value
-    .split(',')
-    .map((tag) => tag.trim().toLowerCase())
-    .filter((tag) => tag.length > 0)
-
-  return tags.length > 0 ? [...new Set(tags)] : undefined
-}
-
-function isCapabilityFlag(value: string): value is CapabilityFlag {
-  return ['resources', 'prompts', 'completions', 'sampling', 'elicitation', 'tasks'].includes(value)
-}
-
-function parseCapabilityFlags(value?: string) {
-  if (!value) {
-    return undefined
-  }
-
-  const flags = value
-    .split(',')
-    .map((flag) => flag.trim().toLowerCase())
-    .filter((flag) => isCapabilityFlag(flag))
-
-  if (flags.length === 0) {
-    return undefined
-  }
-
-  return Object.fromEntries([...new Set(flags)].map((flag) => [flag, true])) as CapabilityFlags
-}
-
 function resolveTransportFromEnv() {
   return process.env.DOKPLOY_MCP_TRANSPORT === 'http' ? 'http' : 'stdio'
 }
@@ -81,7 +53,7 @@ function resolveServerOptions(argumentsList: string[]): StartServerOptions | nul
   if (argumentsList.length === 0) {
     const options: StartServerOptions = {
       transport: resolveTransportFromEnv(),
-      mode: process.env.DOKPLOY_MCP_MODE as StartServerOptions['mode'] | undefined,
+      mode: parseServerMode(process.env.DOKPLOY_MCP_MODE),
       enabledTags: parseEnabledTags(process.env.DOKPLOY_ENABLED_TAGS),
       host: process.env.DOKPLOY_MCP_HTTP_HOST,
       port: parseNumberFlag(process.env.DOKPLOY_MCP_HTTP_PORT),
@@ -113,7 +85,7 @@ function resolveServerOptions(argumentsList: string[]): StartServerOptions | nul
 
   const options: StartServerOptions = {
     transport,
-    mode: parseFlagValue(argumentsList, '--mode') as StartServerOptions['mode'] | undefined,
+    mode: parseServerMode(parseFlagValue(argumentsList, '--mode')),
     enabledTags: parseEnabledTags(parseFlagValue(argumentsList, '--enabled-tags')),
     host: parseFlagValue(argumentsList, '--host'),
     port: parseNumberFlag(parseFlagValue(argumentsList, '--port')),

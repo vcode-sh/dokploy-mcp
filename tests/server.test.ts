@@ -110,7 +110,7 @@ describe('createServer', () => {
     )
   })
 
-  it('keeps explicit future codemode capability flags inert until the families are implemented', async () => {
+  it('enables resource templates while keeping the default codemode tools unchanged', async () => {
     await withClient(
       createServer({
         mode: 'codemode',
@@ -125,11 +125,18 @@ describe('createServer', () => {
       }),
       async (client) => {
         const { tools } = await client.listTools()
+        const { resourceTemplates } = await client.listResourceTemplates()
 
         expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
-        expect(getCapabilityKeys(client)).toEqual(['tools'])
-        await expect(client.listResources()).rejects.toThrow()
-        await expect(client.listResourceTemplates()).rejects.toThrow()
+        expect(getCapabilityKeys(client)).toEqual(['resources', 'tools'])
+        expect(resourceTemplates.map((entry) => entry.uriTemplate).sort()).toEqual([
+          'dokploy://application/{applicationId}/summary',
+          'dokploy://deployment/{deploymentId}/summary',
+          'dokploy://project/{projectId}/infrastructure',
+          'dokploy://project/{projectId}/logs-overview',
+          'dokploy://project/{projectId}/overview',
+          'dokploy://server/{serverId}/summary',
+        ])
         await expect(client.listPrompts()).rejects.toThrow()
       },
     )

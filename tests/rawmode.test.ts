@@ -140,7 +140,7 @@ describe('raw and hybrid server modes', () => {
     }
   })
 
-  it('keeps raw and hybrid plumbing tool-only even when future capability flags are set', async () => {
+  it('enables shared resource templates in raw and hybrid modes without changing tool registration', async () => {
     for (const options of [
       {
         mode: 'raw' as const,
@@ -154,9 +154,17 @@ describe('raw and hybrid server modes', () => {
       },
     ]) {
       await withClient(createServer(options), async (client) => {
-        expect(getCapabilityKeys(client)).toEqual(['tools'])
-        await expect(client.listResources()).rejects.toThrow()
-        await expect(client.listResourceTemplates()).rejects.toThrow()
+        const { resourceTemplates } = await client.listResourceTemplates()
+
+        expect(getCapabilityKeys(client)).toEqual(['resources', 'tools'])
+        expect(resourceTemplates.map((entry) => entry.uriTemplate).sort()).toEqual([
+          'dokploy://application/{applicationId}/summary',
+          'dokploy://deployment/{deploymentId}/summary',
+          'dokploy://project/{projectId}/infrastructure',
+          'dokploy://project/{projectId}/logs-overview',
+          'dokploy://project/{projectId}/overview',
+          'dokploy://server/{serverId}/summary',
+        ])
         await expect(client.listPrompts()).rejects.toThrow()
       })
     }

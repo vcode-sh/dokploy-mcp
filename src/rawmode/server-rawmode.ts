@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { registerCodeModeServerCapabilities } from '../codemode/server-codemode.js'
+import { registerCodeModeSharedCapabilities } from '../mcp/registration/register-codemode-capabilities.js'
 import type { ServerCapabilityFlags } from '../server.js'
 import { type RawModeOptions, registerRawModeTools } from './tools.js'
 
@@ -19,6 +20,9 @@ function createModeServer(name: string) {
 
 export function createRawModeServer(options: ModeServerOptions = {}) {
   const server = createModeServer('dokploy-mcp-server-rawmode')
+  registerCodeModeSharedCapabilities(server, {
+    capabilityFlags: options.capabilityFlags,
+  })
   registerRawModeTools(server, options)
   return server
 }
