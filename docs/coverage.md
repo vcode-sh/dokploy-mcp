@@ -1,18 +1,20 @@
 # API Model Coverage
 
-Last verified: 2026-04-20 against the pinned official Dokploy root OpenAPI snapshot used by `scripts/v2/official-openapi-root.json`
+Managed factual sections in this file are synced from `src/generated/openapi-index.json` and `scripts/v2/check-budgets.mjs`.
 
+Run `npm run docs:sync:facts` after changing generated artifacts or budget-sensitive code. Use `npm run docs:check:facts` to verify the committed docs are still current.
+
+<!-- docs-facts:coverage-summary:start -->
 ## Summary
 
-- OpenAPI procedures in pinned upstream spec: `524`
-- Procedures in generated Code Mode catalog: `524`
-- Procedures in generated runtime schema map: `524`
+- Generated procedures in the pinned snapshot-backed catalog: `524`
 - Generated tags: `48`
-- Public MCP tools: `2`
+- Default public MCP tools: `2`
 - Public tool surface: `search`, `execute`
-- Public `tools/list` footprint: about `218` tokens
+- Default `tools/list` footprint from the current budget check: about `595` tokens (`2,381` bytes)
 - Optional server modes: `raw`, `hybrid`
 - Optional HTTP transport: `Streamable HTTP`
+<!-- docs-facts:coverage-summary:end -->
 
 This report describes the public v3 package surface.
 
@@ -32,13 +34,15 @@ The public server does not expose one MCP tool per Dokploy endpoint anymore. Ins
 - raw and hybrid mode expose the generated catalog only when explicitly requested
 - newer generated procedures can fail with compatibility-aware errors on older Dokploy backends
 
-## Current Benchmark Snapshot
+<!-- docs-facts:coverage-budget:start -->
+## Current Budget Snapshot
 
-- classic comparison baseline: about `92,354` tokens for endpoint-per-tool discovery
-- current public v3 default `tools/list`: about `595` tokens
-- `search` p95 in the current budget run: about `1.79ms`
-- `execute` p95 in the current budget run: about `0.65ms`
-- sandbox startup p95 in the current budget run: about `0.42ms`
+- Current default `tools/list`: `2,381` bytes, about `595` tokens
+- Classic comparison baseline: about `92,354` tokens for endpoint-per-tool discovery
+- Current reduction versus that baseline: `99.4%`
+- Current `ci:budgets` status from the managed budget check: `pass`
+- Runtime latency budgets remain enforced by `scripts/v2/check-budgets.mjs` in CI.
+<!-- docs-facts:coverage-budget:end -->
 
 ## Notes
 

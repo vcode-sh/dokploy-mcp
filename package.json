@@ -23,9 +23,10 @@
     "bench:execute": "node scripts/v2/bench-execute.mjs",
     "bench:sandbox-startup": "node scripts/v2/bench-sandbox-startup.mjs",
     "ci:budgets": "node scripts/v2/check-budgets.mjs",
-    "ci:full": "npm test && npm run lint && npm run build && npm run ci:budgets && npm run smoke:mcp && npm run smoke:search && npm run smoke:execute",
+    "ci:full": "npm test && npm run lint && npm run build && npm run ci:budgets && npm run docs:check:facts && npm run smoke:mcp && npm run smoke:search && npm run smoke:execute",
     "clean:dist": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "tsc --watch",
+    "docs:check:facts": "node scripts/sync-doc-facts.mjs --check",
     "smoke:mcp": "npx -y @modelcontextprotocol/inspector --cli node dist/index.js --method tools/list",
     "smoke:search": "node scripts/v2/smoke-search-live.mjs",
     "smoke:execute": "node scripts/v2/smoke-execute-live.mjs",
@@ -38,6 +39,7 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "docs:api": "node scripts/openapi-to-markdown.mjs",
+    "docs:sync:facts": "node scripts/sync-doc-facts.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

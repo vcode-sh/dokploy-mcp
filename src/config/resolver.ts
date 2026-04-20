@@ -30,6 +30,16 @@ const userSchema = z
   .passthrough()
 
 const versionSchema = z.union([z.string(), z.object({ version: z.string() }).passthrough()])
+const defaultTimeoutMs = 30_000
+
+function resolveTimeout(rawTimeout: string | undefined): number {
+  if (!rawTimeout) {
+    return defaultTimeoutMs
+  }
+
+  const parsed = Number.parseInt(rawTimeout, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultTimeoutMs
+}
 
 /**
  * Normalizes a Dokploy URL to the tRPC API base.
@@ -56,7 +66,7 @@ export function normalizeUrl(url: string): string {
  * Returns null if no configuration is found.
  */
 export function resolveConfig(): ResolvedConfig | null {
-  const timeout = Number.parseInt(process.env.DOKPLOY_TIMEOUT || '30000', 10)
+  const timeout = resolveTimeout(process.env.DOKPLOY_TIMEOUT)
 
   // 1. Environment variables (highest priority)
   const envUrl = process.env.DOKPLOY_URL

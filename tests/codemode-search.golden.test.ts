@@ -70,6 +70,35 @@ describe('codemode search golden', () => {
     expect(payload.result).toEqual(expect.arrayContaining(['project.allForPermissions']))
   })
 
+  it('finds log read procedures by tail log workflow hints', async () => {
+    const result = await searchTool.handler({
+      code: 'catalog.searchText("tail application logs").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(
+      expect.arrayContaining(['application.readLogs', 'compose.readLogs']),
+    )
+  })
+
+  it('finds database log procedures by log workflow hints', async () => {
+    const result = await searchTool.handler({
+      code: 'catalog.searchText("database logs").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(
+      expect.arrayContaining([
+        'libsql.readLogs',
+        'mariadb.readLogs',
+        'mongo.readLogs',
+        'mysql.readLogs',
+        'postgres.readLogs',
+        'redis.readLogs',
+      ]),
+    )
+  })
+
   it('finds compose read procedures', async () => {
     const result = await searchTool.handler({
       code: readFixture('find-compose-read-paths.js'),

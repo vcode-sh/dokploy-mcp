@@ -222,6 +222,7 @@ const catalogResponseHints: Record<string, CatalogResponseHints> = {
     [
       'application.readLogs',
       'compose.readLogs',
+      'libsql.readLogs',
       'mariadb.readLogs',
       'mongo.readLogs',
       'mysql.readLogs',
@@ -233,8 +234,12 @@ const catalogResponseHints: Record<string, CatalogResponseHints> = {
       responseHints: [
         'Read-only log endpoints return recent stdout, stderr, or service log lines for one workload.',
         'Log payloads are token-heavy and can be large, so prefer narrow targets and recent windows when available.',
+        'Use these endpoints for workflows like tail application logs, inspect recent compose container logs, or search database logs for errors.',
       ],
-      notes: ['Treat logs as volatile text output rather than stable structured state.'],
+      notes: [
+        'Treat logs as volatile text output rather than stable structured state.',
+        'MCP clamps oversized tail requests and bounds returned log output to recent lines and bytes after redacting common secret patterns.',
+      ],
     },
   ),
   'swarm.getContainerStats': {

@@ -235,4 +235,101 @@ describe('codemode procedure overrides', () => {
       transformProcedureResponse('server.withSSHKey', { includeSecrets: true }, serverWithKey),
     ).toEqual(serverWithKey)
   })
+
+  it('clamps oversized log tail requests before calling readLogs procedures', () => {
+    expect(
+      mapProcedureInput('application.readLogs', {
+        applicationId: 'app-1',
+        tail: 5000,
+        since: '1h',
+      }),
+    ).toEqual({
+      applicationId: 'app-1',
+      tail: 200,
+      since: '1h',
+    })
+
+    expect(
+      mapProcedureInput('compose.readLogs', {
+        composeId: 'compose-1',
+        containerId: 'container-1',
+        tail: 20,
+      }),
+    ).toEqual({
+      composeId: 'compose-1',
+      containerId: 'container-1',
+      tail: 20,
+    })
+  })
+
+  it('bounds multiline log text and redacts common secret patterns', () => {
+    const logText = [
+      'AUTHORIZATION=Bearer top-secret-token',
+      'DATABASE_URL=postgres://dokploy:super-secret@db.example.com:5432/app',
+      '-----BEGIN PRIVATE KEY-----',
+      'key-material',
+      '-----END PRIVATE KEY-----',
+      ...Array.from({ length: 240 }, (_value, index) => `line ${index + 1}`),
+    ].join('\n')
+
+    const shaped = transformProcedureResponse(
+      'application.readLogs',
+      {},
+      {
+        logs: logText,
+      },
+    ) as { logs: string }
+
+    expect(shaped.logs).toContain('[TRUNCATED TO LAST 200 LINES]')
+    expect(shaped.logs).toContain('line 41')
+    expect(shaped.logs).toContain('line 240')
+    expect(shaped.logs).not.toContain('\nline 40\n')
+    expect(shaped.logs).not.toContain('Bearer top-secret-token')
+    expect(shaped.logs).not.toContain('super-secret@')
+    expect(shaped.logs).not.toContain('key-material')
+  })
+
+  it('redacts secret patterns that remain inside bounded log output', () => {
+    const logText = [
+      'AUTHORIZATION=Bearer top-secret-token',
+      'DATABASE_URL=postgres://dokploy:super-secret@db.example.com:5432/app',
+      '-----BEGIN PRIVATE KEY-----',
+      'key-material',
+      '-----END PRIVATE KEY-----',
+    ].join('\n')
+
+    const shaped = transformProcedureResponse(
+      'application.readLogs',
+      {},
+      {
+        logs: logText,
+      },
+    ) as { logs: string }
+
+    expect(shaped.logs).toContain('AUTHORIZATION=[REDACTED]')
+    expect(shaped.logs).toContain('postgres://dokploy:[REDACTED]@db.example.com:5432/app')
+    expect(shaped.logs).toContain('[REDACTED PRIVATE KEY]')
+    expect(shaped.logs).not.toContain('top-secret-token')
+    expect(shaped.logs).not.toContain('super-secret@')
+    expect(shaped.logs).not.toContain('key-material')
+  })
+
+  it('caps structured log arrays and redacts secrets inside log messages', () => {
+    const entries = Array.from({ length: 220 }, (_value, index) => ({
+      timestamp: `2026-04-20T10:${String(index).padStart(2, '0')}:00Z`,
+      message: `password=secret-${index}`,
+      stream: index % 2 === 0 ? 'stdout' : 'stderr',
+    }))
+
+    const shaped = transformProcedureResponse('postgres.readLogs', {}, entries) as Array<{
+      timestamp: string
+      message: string
+      stream: string
+    }>
+
+    expect(shaped.length).toBeLessThanOrEqual(200)
+    expect(shaped[0]?.timestamp).not.toBe('2026-04-20T10:00:00Z')
+    expect(shaped.at(-1)?.message).toBe('password=[REDACTED]')
+    expect(shaped.some((entry) => entry.message.includes('secret-'))).toBe(false)
+  })
 })

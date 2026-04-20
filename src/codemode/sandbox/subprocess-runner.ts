@@ -16,6 +16,15 @@ interface WorkerDoneMessage {
   error?: string
 }
 
+interface WorkerCallMessage {
+  type: 'call'
+  requestId: number
+  procedure: string
+  input?: Record<string, unknown>
+}
+
+const SUBPROCESS_TIMEOUT_GRACE_MS = 100
+
 function createWorker() {
   return fork(workerPath, {
     stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
@@ -28,54 +37,256 @@ function resolveLimits(limits?: SandboxLimits) {
   return limits ?? resolveSandboxLimits()
 }
 
-function handleWorkerExit(rejectPromise: (reason?: unknown) => void, code: number | null) {
-  if (code && code !== 0) {
-    rejectPromise(new Error(`Sandbox worker exited with code ${code}`))
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+}
+
+function isWorkerDoneMessage(message: unknown): message is WorkerDoneMessage {
+  if (!isRecord(message) || message.type !== 'done' || typeof message.ok !== 'boolean') {
+    return false
+  }
+
+  if ('logs' in message && message.logs !== undefined && !isStringArray(message.logs)) {
+    return false
+  }
+
+  if ('error' in message && message.error !== undefined && typeof message.error !== 'string') {
+    return false
+  }
+
+  return true
+}
+
+function isWorkerCallMessage(message: unknown): message is WorkerCallMessage {
+  if (!isRecord(message) || message.type !== 'call') {
+    return false
+  }
+
+  if (!Number.isInteger(message.requestId) || typeof message.procedure !== 'string') {
+    return false
+  }
+
+  if (
+    'input' in message &&
+    message.input !== undefined &&
+    (!isRecord(message.input) || Array.isArray(message.input))
+  ) {
+    return false
+  }
+
+  return true
+}
+
+function terminateWorker(worker: ReturnType<typeof createWorker>) {
+  try {
+    if (worker.connected) {
+      worker.disconnect()
+    }
+  } catch {
+    // Best-effort cleanup only.
+  }
+
+  try {
+    worker.kill()
+  } catch {
+    // Best-effort cleanup only.
   }
 }
 
-function finishWorker(
+function buildInvalidMessageError() {
+  return new Error('Sandbox worker sent an invalid message.')
+}
+
+function buildExitError(code: number | null, signal: NodeJS.Signals | null) {
+  if (typeof code === 'number' && code !== 0) {
+    return new Error(`Sandbox worker exited with code ${code}.`)
+  }
+
+  if (signal) {
+    return new Error(`Sandbox worker exited before completing (signal ${signal}).`)
+  }
+
+  return new Error('Sandbox worker exited before completing.')
+}
+
+function buildTimeoutError(timeoutMs: number) {
+  return new Error(`Sandbox subprocess timed out after ${timeoutMs}ms.`)
+}
+
+function buildCallResultSerializationError() {
+  return 'Sandbox call result could not be serialized for IPC.'
+}
+
+function cleanupWorker(
   worker: ReturnType<typeof createWorker>,
-  payload: WorkerDoneMessage,
+  timeoutId: NodeJS.Timeout | undefined,
+  terminate = false,
+) {
+  if (timeoutId) {
+    clearTimeout(timeoutId)
+  }
+
+  worker.removeAllListeners()
+
+  if (terminate) {
+    terminateWorker(worker)
+  }
+}
+
+function createSettlers(
+  worker: ReturnType<typeof createWorker>,
   resolvePromise: (value: SandboxExecutionResult) => void,
   rejectPromise: (reason?: unknown) => void,
+  timeoutId: NodeJS.Timeout | undefined,
 ) {
-  worker.disconnect()
-  worker.kill()
+  let settled = false
 
-  if (payload.ok) {
-    resolvePromise({
-      result: payload.result,
-      logs: payload.logs ?? [],
-    })
-  } else {
-    rejectPromise(new Error(payload.error ?? 'Unknown sandbox subprocess error'))
+  return {
+    resolve(payload: WorkerDoneMessage) {
+      if (settled) {
+        return
+      }
+
+      settled = true
+      cleanupWorker(worker, timeoutId, true)
+      resolvePromise({
+        result: payload.result,
+        logs: payload.logs ?? [],
+      })
+    },
+    reject(reason: unknown, terminate = true) {
+      if (settled) {
+        return
+      }
+
+      settled = true
+      cleanupWorker(worker, timeoutId, terminate)
+      rejectPromise(reason)
+    },
   }
+}
+
+function finishWorker(payload: WorkerDoneMessage, settle: ReturnType<typeof createSettlers>) {
+  if (payload.ok) {
+    settle.resolve(payload)
+  } else {
+    settle.reject(new Error(payload.error ?? 'Unknown sandbox subprocess error'))
+  }
+}
+
+function sendInitialRunMessage(
+  worker: ReturnType<typeof createWorker>,
+  settle: ReturnType<typeof createSettlers>,
+  payload: {
+    type: 'run'
+    mode: 'search' | 'execute'
+    code: string
+    limits: SandboxLimits
+  },
+) {
+  try {
+    worker.send(payload)
+  } catch (error) {
+    settle.reject(error)
+  }
+}
+
+function sendExecuteCallError(
+  worker: ReturnType<typeof createWorker>,
+  settle: ReturnType<typeof createSettlers>,
+  requestId: number,
+  error: string,
+) {
+  try {
+    worker.send({
+      type: 'callResult',
+      requestId,
+      ok: false,
+      error,
+    })
+  } catch (fallbackError) {
+    settle.reject(fallbackError)
+  }
+}
+
+function sendExecuteCallResult(
+  worker: ReturnType<typeof createWorker>,
+  settle: ReturnType<typeof createSettlers>,
+  requestId: number,
+  data: unknown,
+) {
+  try {
+    worker.send({ type: 'callResult', requestId, ok: true, data })
+  } catch {
+    sendExecuteCallError(worker, settle, requestId, buildCallResultSerializationError())
+  }
+}
+
+async function handleExecuteWorkerMessage(
+  worker: ReturnType<typeof createWorker>,
+  settle: ReturnType<typeof createSettlers>,
+  message: unknown,
+  onCall: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>,
+) {
+  if (isWorkerCallMessage(message)) {
+    try {
+      const data = await onCall(message.procedure, message.input ?? {})
+      sendExecuteCallResult(worker, settle, message.requestId, data)
+    } catch (error) {
+      sendExecuteCallError(
+        worker,
+        settle,
+        message.requestId,
+        error instanceof Error ? error.message : String(error ?? 'Unknown gateway error'),
+      )
+    }
+    return
+  }
+
+  if (!isWorkerDoneMessage(message)) {
+    settle.reject(buildInvalidMessageError())
+    return
+  }
+
+  finishWorker(message, settle)
 }
 
 export async function runSearchInSubprocess(options: {
   code: string
   limits?: SandboxLimits
 }): Promise<SandboxExecutionResult> {
+  const limits = resolveLimits(options.limits)
+
   return new Promise((resolvePromise, rejectPromise) => {
     const worker = createWorker()
+    const timeoutId = setTimeout(() => {
+      settle.reject(buildTimeoutError(limits.timeoutMs))
+    }, limits.timeoutMs + SUBPROCESS_TIMEOUT_GRACE_MS)
+    const settle = createSettlers(worker, resolvePromise, rejectPromise, timeoutId)
+
+    timeoutId.unref?.()
 
     worker.on('message', (message: unknown) => {
-      const payload = message as WorkerDoneMessage
-      if (payload.type !== 'done') {
+      if (!isWorkerDoneMessage(message)) {
+        settle.reject(buildInvalidMessageError())
         return
       }
-      finishWorker(worker, payload, resolvePromise, rejectPromise)
+
+      finishWorker(message, settle)
     })
 
-    worker.on('error', rejectPromise)
-    worker.on('exit', (code) => handleWorkerExit(rejectPromise, code))
+    worker.on('error', (error) => settle.reject(error))
+    worker.on('exit', (code, signal) => settle.reject(buildExitError(code, signal), false))
 
-    worker.send({
+    sendInitialRunMessage(worker, settle, {
       type: 'run',
       mode: 'search',
       code: options.code,
-      limits: resolveLimits(options.limits),
+      limits,
     })
   })
 }
@@ -85,46 +296,29 @@ export async function runExecuteInSubprocess(options: {
   limits?: SandboxLimits
   onCall: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>
 }): Promise<SandboxExecutionResult> {
+  const limits = resolveLimits(options.limits)
+
   return new Promise((resolvePromise, rejectPromise) => {
     const worker = createWorker()
+    const timeoutId = setTimeout(() => {
+      settle.reject(buildTimeoutError(limits.timeoutMs))
+    }, limits.timeoutMs + SUBPROCESS_TIMEOUT_GRACE_MS)
+    const settle = createSettlers(worker, resolvePromise, rejectPromise, timeoutId)
 
-    worker.on('message', async (message: unknown) => {
-      const payload = message as Record<string, unknown>
+    timeoutId.unref?.()
 
-      if (payload.type === 'call') {
-        const requestId = payload.requestId
-        try {
-          const data = await options.onCall(
-            String(payload.procedure),
-            (payload.input as Record<string, unknown> | undefined) ?? {},
-          )
-          worker.send({ type: 'callResult', requestId, ok: true, data })
-        } catch (error) {
-          worker.send({
-            type: 'callResult',
-            requestId,
-            ok: false,
-            error: error instanceof Error ? error.message : String(error),
-          })
-        }
-        return
-      }
-
-      const done = payload as unknown as WorkerDoneMessage
-      if (done.type !== 'done') {
-        return
-      }
-      finishWorker(worker, done, resolvePromise, rejectPromise)
+    worker.on('message', (message: unknown) => {
+      void handleExecuteWorkerMessage(worker, settle, message, options.onCall)
     })
 
-    worker.on('error', rejectPromise)
-    worker.on('exit', (code) => handleWorkerExit(rejectPromise, code))
+    worker.on('error', (error) => settle.reject(error))
+    worker.on('exit', (code, signal) => settle.reject(buildExitError(code, signal), false))
 
-    worker.send({
+    sendInitialRunMessage(worker, settle, {
       type: 'run',
       mode: 'execute',
       code: options.code,
-      limits: resolveLimits(options.limits),
+      limits,
     })
   })
 }

@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org/)
 
-MCP server for [Dokploy](https://dokploy.com). Two tools by default. 524 generated API procedures behind Code Mode, plus optional raw and hybrid server modes when you explicitly want endpoint-per-tool MCP.
+MCP server for [Dokploy](https://dokploy.com). Two tools by default. Generated API coverage and current protocol budgets are kept in sync from the generated catalog and budget checks.
 
 Most MCP servers dump hundreds of tool schemas into your context window and call it a day. This one doesn't. **Code Mode** gives your agent `search` and `execute` -- it finds what it needs from a compact API catalog, writes a workflow, and the sandbox runs the whole thing in one call. Create an app, set env vars, mount volumes, configure domains, deploy -- all in a single round-trip.
 
@@ -15,9 +15,23 @@ v3 also adds:
 - Streamable HTTP transport with a health endpoint
 - compatibility-aware errors when the MCP catalog is newer than the connected Dokploy server
 
-The result: **99.4% fewer tokens** on tool definitions. Your context window can go back to doing its actual job.
+The result is a dramatically smaller default MCP footprint.
 
-> Previously: 377 tools = ~92,354 tokens just to list them. Now: 2 tools = ~595 tokens. The math is still embarrassing for everyone else.
+<!-- docs-facts:readme:start -->
+## Current Fact Snapshot
+
+- Generated API procedures in the pinned catalog: `524`
+- Generated tags: `48`
+- Default public MCP tools: `2` (`search`, `execute`)
+- Default `tools/list` footprint from the current budget check: about `595` tokens (`2,381` bytes)
+- Reduction versus the classic endpoint-per-tool baseline (`92,354` tokens): `99.4%`
+
+| | Classic endpoint-per-tool baseline | Current Code Mode default |
+|---|---|---|
+| Tool definitions sent | about `92,354` tokens | about `595` tokens |
+| Public MCP tools | hundreds of endpoint schemas | `2` |
+| Context window tax | wide schema dump | compact fixed surface |
+<!-- docs-facts:readme:end -->
 
 ## Quick start
 
@@ -72,15 +86,7 @@ One `execute` call can spin up an app, configure resource limits, set env vars, 
 
 That remains the default public surface in v3. Raw MCP tools are now opt-in, not the baseline.
 
-**Token comparison:**
-
-| | Old way (endpoint-per-tool) | Code Mode |
-|---|---|---|
-| Tool definitions sent | ~92,354 tokens (377 tools) | ~595 tokens (2 tools) |
-| Deploy workflow (8 API calls) | 8 round-trips through the model | 1 execute call, done |
-| Context window tax | ~738k tokens on tool schemas alone | ~595 tokens total |
-
-Every token spent on tool definitions is a token your agent can't use for reasoning. We just gave you 738k of them back.
+The managed fact snapshot above carries the current public footprint numbers, so the README stays aligned with the generated catalog and budget checks.
 
 ## Response shaping
 
@@ -234,7 +240,7 @@ DOKPLOY_MCP_MODE=hybrid DOKPLOY_ENABLED_TAGS=project,application npx @vibetools/
 
 ## What's in the box
 
-The generated catalog now covers 524 procedures across 48 tags, including the newer upstream surface for LibSQL, tags, infrastructure reads, and the additional procedures present in the official root OpenAPI document.
+The generated catalog tracks the pinned official Dokploy root OpenAPI snapshot, including the newer upstream surface for LibSQL, tags, infrastructure reads, and the additional procedures present in the official root OpenAPI document.
 
 Your agent doesn't need to know any of this upfront. That's the point. It searches when it needs something, executes when it knows what to do.
 
@@ -265,6 +271,7 @@ npm run typecheck   # TypeScript 6
 npm run lint        # Biome
 npm test            # Vitest
 npm run ci:budgets  # Protocol and runtime budget checks
+npm run docs:sync:facts  # Refresh script-managed factual sections
 ```
 
 ```bash

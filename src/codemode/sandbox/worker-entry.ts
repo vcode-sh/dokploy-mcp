@@ -15,6 +15,46 @@ const pendingCalls = new Map<
 
 let requestIdCounter = 0
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function sendProcessMessage(message: Record<string, unknown>) {
+  return new Promise<void>((resolve, reject) => {
+    if (!process.send) {
+      reject(new Error('Sandbox worker IPC channel is unavailable.'))
+      return
+    }
+
+    process.send(message, (error) => {
+      if (error) {
+        reject(error)
+        return
+      }
+
+      resolve()
+    })
+  })
+}
+
+function sendDoneMessage(ok: boolean, payload: Record<string, unknown>) {
+  return sendProcessMessage({
+    type: 'done',
+    ok,
+    ...payload,
+  })
+}
+
+function isValidRunPayload(
+  payload: Record<string, unknown>,
+): payload is Record<string, unknown> & { type: 'run'; mode: 'search' | 'execute'; code: string } {
+  return (
+    payload.type === 'run' &&
+    (payload.mode === 'search' || payload.mode === 'execute') &&
+    typeof payload.code === 'string'
+  )
+}
+
 function rpcCall(procedure: string, input: Record<string, unknown> = {}) {
   return new Promise((resolve, reject) => {
     requestIdCounter += 1
@@ -24,19 +64,36 @@ function rpcCall(procedure: string, input: Record<string, unknown> = {}) {
       reject,
     })
 
-    process.send?.({
+    void sendProcessMessage({
       type: 'call',
       requestId,
       procedure,
       input,
+    }).catch((error) => {
+      pendingCalls.delete(requestId)
+      reject(
+        new Error(
+          `Sandbox worker failed to send procedure call: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        ),
+      )
     })
   })
 }
 
 process.on('message', async (message: unknown) => {
-  const payload = message as Record<string, unknown>
+  if (!isRecord(message)) {
+    return
+  }
+
+  const payload = message
 
   if (payload.type === 'callResult') {
+    if (!Number.isInteger(payload.requestId) || typeof payload.ok !== 'boolean') {
+      return
+    }
+
     const requestId = Number(payload.requestId)
     const pending = pendingCalls.get(requestId)
     if (!pending) {
@@ -53,6 +110,13 @@ process.on('message', async (message: unknown) => {
   }
 
   if (payload.type !== 'run') {
+    return
+  }
+
+  if (!isValidRunPayload(payload)) {
+    await sendDoneMessage(false, {
+      error: 'Invalid sandbox worker run payload.',
+    })
     return
   }
 
@@ -87,22 +151,22 @@ process.on('message', async (message: unknown) => {
           })()
 
     const execution = await runSandboxedFunction({
-      code: String(payload.code),
+      code: payload.code,
       context,
       limits,
     })
 
-    process.send?.({
-      type: 'done',
-      ok: true,
+    await sendDoneMessage(true, {
       result: execution.result,
       logs: execution.logs,
     })
   } catch (error) {
-    process.send?.({
-      type: 'done',
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    })
+    try {
+      await sendDoneMessage(false, {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    } catch {
+      // The worker cannot report the failure if the IPC channel is already broken.
+    }
   }
 })
