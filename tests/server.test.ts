@@ -75,6 +75,7 @@ describe('createServer', () => {
       completions: true,
       sampling: true,
       elicitation: true,
+      tasks: true,
     })
     expect(parseCapabilityFlags('')).toBeUndefined()
     expect(parseCapabilityFlags(' , invalid , ')).toBeUndefined()
@@ -97,6 +98,7 @@ describe('createServer', () => {
         completions: true,
         sampling: true,
         elicitation: true,
+        tasks: true,
       },
     })
   })
@@ -182,6 +184,23 @@ describe('createServer', () => {
 
         expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
         expect(getCapabilityKeys(client)).toEqual(['tools'])
+      },
+    )
+  })
+
+  it('advertises the tasks capability only when the phase 4 flag is enabled', async () => {
+    await withClient(
+      createServer({
+        mode: 'codemode',
+        capabilityFlags: {
+          tasks: true,
+        },
+      }),
+      async (client) => {
+        const { tools } = await client.listTools()
+
+        expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(getCapabilityKeys(client)).toEqual(['tasks', 'tools'])
       },
     )
   })

@@ -36,6 +36,8 @@
     "test:phase2:coverage": "vitest run --config vitest.phase2.config.ts --coverage",
     "test:phase3": "vitest run --config vitest.phase3.config.ts",
     "test:phase3:coverage": "vitest run --config vitest.phase3.config.ts --coverage",
+    "test:phase4": "vitest run --config vitest.phase4.config.ts",
+    "test:phase4:coverage": "vitest run --config vitest.phase4.config.ts --coverage",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",

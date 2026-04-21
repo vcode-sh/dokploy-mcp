@@ -186,6 +186,7 @@ describe('raw and hybrid server modes', () => {
         completions: true,
         sampling: true,
         elicitation: true,
+        tasks: true,
       },
     })
   })
@@ -216,5 +217,29 @@ describe('raw and hybrid server modes', () => {
         ])
       })
     }
+  })
+
+  it('advertises tasks in hybrid mode while raw mode remains tool-only', async () => {
+    await withClient(
+      createServer({
+        mode: 'hybrid',
+        enabledTags: ['project'],
+        capabilityFlags: { tasks: true },
+      }),
+      async (client) => {
+        expect(getCapabilityKeys(client)).toEqual(['tasks', 'tools'])
+      },
+    )
+
+    await withClient(
+      createServer({
+        mode: 'raw',
+        enabledTags: ['project'],
+        capabilityFlags: { tasks: true },
+      }),
+      async (client) => {
+        expect(getCapabilityKeys(client)).toEqual(['tools'])
+      },
+    )
   })
 })

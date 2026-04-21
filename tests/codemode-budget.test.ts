@@ -11,6 +11,7 @@ describe('codemode protocol budget', () => {
         description: tool.description,
         inputSchema: tool.schema,
         annotations: tool.annotations,
+        execution: tool.execution,
       })),
     }
 

@@ -123,4 +123,20 @@ describe('protocol surfaces', () => {
       capabilityKeys: ['completions', 'prompts', 'tools'],
     })
   })
+
+  it('adds the tasks capability without changing the default codemode tools', async () => {
+    const surface = await inspectSurface(
+      createServer({
+        mode: 'codemode',
+        capabilityFlags: {
+          tasks: true,
+        },
+      }),
+    )
+
+    expect(surface).toEqual({
+      tools: ['search', 'execute'],
+      capabilityKeys: ['tasks', 'tools'],
+    })
+  })
 })

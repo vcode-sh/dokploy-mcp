@@ -5,11 +5,19 @@ import { resolveSandboxLimits } from './limits.js'
 interface SandboxHostOptions {
   maxCalls?: number
   executor?: (procedure: string, input?: Record<string, unknown>) => Promise<GatewayCallResult>
+  signal?: AbortSignal
+  onCallStart?: (procedure: string, input?: Record<string, unknown>) => Promise<void> | void
 }
 
 export interface SandboxHost {
   call(procedure: string, input?: Record<string, unknown>): Promise<GatewayCallResult>
   getCalls(): GatewayCallResult['trace'][]
+}
+
+function createAbortError() {
+  const error = new Error('Sandbox execution was aborted.')
+  error.name = 'AbortError'
+  return error
 }
 
 export function createSandboxHost(options: SandboxHostOptions = {}): SandboxHost {
@@ -22,9 +30,19 @@ export function createSandboxHost(options: SandboxHostOptions = {}): SandboxHost
 
   return {
     async call(procedure: string, input: Record<string, unknown> = {}) {
+      if (options.signal?.aborted) {
+        throw createAbortError()
+      }
+
       callCount += 1
       if (callCount > maxCalls) {
         throw new Error(`Code Mode execute exceeded ${maxCalls} API calls.`)
+      }
+
+      await options.onCallStart?.(procedure, input)
+
+      if (options.signal?.aborted) {
+        throw createAbortError()
       }
 
       const result = await executor(procedure, input)

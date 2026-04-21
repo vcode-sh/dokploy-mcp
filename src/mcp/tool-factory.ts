@@ -12,6 +12,10 @@ export interface ToolAnnotations {
   openWorldHint?: boolean
 }
 
+export interface ToolExecutionOptions {
+  taskSupport?: 'optional' | 'required' | 'forbidden'
+}
+
 export interface ToolDefinition {
   name: string
   title: string
@@ -20,11 +24,13 @@ export interface ToolDefinition {
   method?: 'GET' | 'POST'
   schema: AnyZodObject
   annotations: ToolAnnotations
+  execution?: ToolExecutionOptions
   handler: (input: Record<string, unknown>) => Promise<{
     content: { type: 'text'; text: string }[]
     structuredContent?: Record<string, unknown>
     isError?: boolean
   }>
+  taskHandler?: unknown
 }
 
 function wrapStructured(data: unknown): Record<string, unknown> {

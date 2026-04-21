@@ -57,6 +57,7 @@ describe('http options', () => {
       mode: 'hybrid',
       enabledTags: ['project'],
       capabilityFlags: {
+        tasks: true,
         resources: true,
         prompts: true,
         completions: true,
@@ -103,6 +104,7 @@ describe('http options', () => {
           mode: 'raw',
           enabledTags: ['server', 'project'],
           capabilityFlags: {
+            tasks: true,
             resources: true,
             prompts: true,
             completions: true,
@@ -118,7 +120,7 @@ describe('http options', () => {
       transport: 'http',
       mode: 'raw',
       enabledTags: ['server', 'project'],
-      capabilityFlags: ['completions', 'elicitation', 'prompts', 'resources', 'sampling'],
+      capabilityFlags: ['completions', 'elicitation', 'prompts', 'resources', 'sampling', 'tasks'],
       mcpPath: '/rpc',
       healthPath: '/livez',
     })

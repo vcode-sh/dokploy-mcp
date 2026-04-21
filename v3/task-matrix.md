@@ -20,13 +20,13 @@ work that can wait.
 | `phase 1` resources and templates | Done | reusable `dokploy://...` resources, template reads/lists, bounded payloads, and execute resource links are shipped |
 | `phase 2` prompts and completions | Done | guided workflow prompts, bounded prompt rendering, and ID/enum completions are shipped behind staged capability flags |
 | `phase 3` sampling and elicitation | Done | guided `execute.workflow` deploy orchestration, bounded planning, and interactive input collection are shipped behind staged capability flags |
+| `phase 4` tasks | Done | long-running `execute` runs now expose task lifecycle, polling, cancellation, and shutdown-safe cleanup behind the staged `tasks` capability |
 | Verification and release hygiene | Done | build, test, lint, typecheck, budgets, docs automation, and release metadata work are in place |
 
 ## Next
 
 | Track | Status | Why it matters now |
 | --- | --- | --- |
-| `tasks` | Next | enables long-running deploy, rollback, and wait flows |
 | Registry-native remote metadata | Next | improves discovery and remote consumption |
 | Modern auth discovery | Next | required for a serious remote MCP product posture |
 
@@ -40,5 +40,4 @@ work that can wait.
 
 ## Priority Order
 
-1. `tasks`
-2. registry-native remote packaging and auth
+1. registry-native remote packaging and auth

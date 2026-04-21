@@ -4,7 +4,8 @@ Last updated: 2026-04-21
 
 This audit answers one question:
 
-After closing Dokploy endpoint parity, `phase 0`, `phase 1`, and `phase 2`, what is the
+After closing Dokploy endpoint parity, `phase 0`, `phase 1`, `phase 2`, `phase 3`, and `phase 4`,
+what is the
 highest-value next move for this repository?
 
 ## Executive Summary
@@ -22,12 +23,13 @@ The repository now also ships the first modern MCP expansion:
 - guided `execute.workflow` deploy orchestration
 - `sampling`-backed bounded planning
 - form and URL `elicitation` with safe fallbacks
+- staged `tasks` capability wiring with polling, cancellation, and shutdown-safe cleanup
+- task-aware `execute` runs for long-running code and guided deploy workflows
 
 The next strategic gap is no longer "more Dokploy tools" and no longer "basic resources".
 
 The next strategic gap is now the remaining modern MCP breadth:
 
-- `tasks`
 - registry-native remote metadata and auth discovery
 
 ## Verified Strengths In This Repository
@@ -73,16 +75,7 @@ Compared to a basic endpoint-per-tool server, this repo already has:
 
 ## Verified Strategic Gaps
 
-### 1. The long-running workflow layer is still not shipped
-
-There is still no shipped layer for:
-
-- `tasks`
-
-That means the server can now guide deploy workflows in an MCP-native way, but it still cannot
-sustain long-running operations with first-class progress, polling, and cancellation semantics.
-
-### 2. The runtime is not yet registry-native
+### 1. The runtime is not yet registry-native
 
 The CLI and runtime in [`src/index.ts`](../src/index.ts) expose `stdio` and `http`, which is fine,
 but the repository still does not present itself as a modern remote MCP product with:
@@ -100,8 +93,8 @@ distribution details.
 
 ### Better agent workflows
 
-The shipped `sampling`/`elicitation` layer plus the remaining `tasks` phase make the server better
-at multi-step work:
+The shipped `sampling`/`elicitation` plus `tasks` layers now make the server better at multi-step
+work:
 
 - asking for missing values
 - handling long-running operations
@@ -118,11 +111,9 @@ easy to consume in the broader MCP ecosystem.
 The next cycle should not be framed as another endpoint project and should not reopen the resource
 phase.
 
-It should be framed as the remaining modern MCP capability expansion project, executed in this
-order:
+It should now be framed as the remaining remote MCP productization project:
 
-1. `tasks`
-2. registry-native remote packaging and auth discovery
+1. registry-native remote packaging and auth discovery
 
 ## Research Inputs
 

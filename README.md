@@ -23,12 +23,12 @@ The result is a dramatically smaller default MCP footprint.
 - Generated API procedures in the pinned catalog: `524`
 - Generated tags: `48`
 - Default public MCP tools: `2` (`search`, `execute`)
-- Default `tools/list` footprint from the current budget check: about `1,337` tokens (`5,349` bytes)
-- Reduction versus the classic endpoint-per-tool baseline (`92,354` tokens): `98.6%`
+- Default `tools/list` footprint from the current budget check: about `1,457` tokens (`5,829` bytes)
+- Reduction versus the classic endpoint-per-tool baseline (`92,354` tokens): `98.4%`
 
 | | Classic endpoint-per-tool baseline | Current Code Mode default |
 |---|---|---|
-| Tool definitions sent | about `92,354` tokens | about `1,337` tokens |
+| Tool definitions sent | about `92,354` tokens | about `1,457` tokens |
 | Public MCP tools | hundreds of endpoint schemas | `2` |
 | Context window tax | wide schema dump | compact fixed surface |
 <!-- docs-facts:readme:end -->

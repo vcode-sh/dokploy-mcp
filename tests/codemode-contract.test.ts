@@ -13,6 +13,7 @@ describe('codemode contract', () => {
       readOnlyHint: tool.annotations.readOnlyHint ?? null,
       idempotentHint: tool.annotations.idempotentHint ?? null,
       openWorldHint: tool.annotations.openWorldHint ?? null,
+      taskSupport: tool.execution?.taskSupport ?? null,
     }))
 
     expect(publicTools).toEqual([
@@ -25,6 +26,7 @@ describe('codemode contract', () => {
         readOnlyHint: true,
         idempotentHint: true,
         openWorldHint: true,
+        taskSupport: null,
       },
       {
         name: 'execute',
@@ -35,6 +37,7 @@ describe('codemode contract', () => {
         readOnlyHint: null,
         idempotentHint: null,
         openWorldHint: true,
+        taskSupport: 'optional',
       },
     ])
   })

@@ -10,7 +10,8 @@ Status update:
 - `phase 1` is complete in code
 - `phase 2` is complete in code
 - `phase 3` is complete in code
-- the remaining execution plan starts at `phase 4`
+- `phase 4` is complete in code
+- the remaining execution plan starts at `phase 5`
 
 ## Target Outcome
 
@@ -48,7 +49,7 @@ By the end of this plan, the repository should:
 | B. Resources and templates | P0 | Complete | reusable, token-bounded Dokploy context objects |
 | C. Prompts and completions | P0 | Complete | guided workflows, bounded prompt rendering, and low-friction identifier discovery |
 | D. Sampling and elicitation | P1 | Complete | interactive, MCP-native workflow composition |
-| E. Tasks | P1 | Next | progress, polling, and cancellation for long-running work |
+| E. Tasks | P1 | Complete | progress, polling, cancellation, and shutdown-safe cleanup for long-running work |
 | F. Remote distribution and auth | P2 | Next | registry-ready metadata and modern remote server behavior |
 
 ## Phase 0: Capability Foundation
@@ -280,6 +281,8 @@ Add MCP-native interactive workflow composition for clients that support it.
 
 ## Phase 4: Tasks
 
+Status: Complete
+
 ### Goal
 
 Support long-running or multi-step workflows with progress, polling, and cancellation.
@@ -316,6 +319,19 @@ Support long-running or multi-step workflows with progress, polling, and cancell
 - `tasks/cancel`
 - task-augmented `sampling` and `elicitation` coverage where supported
 - shutdown and cleanup coverage for in-flight tasks
+
+### Implementation Closeout
+
+- `tasks` is now a shipped staged capability family with `tasks/list`, `tasks/get`,
+  `tasks/result`, and `tasks/cancel` provided through the SDK task store wiring
+- `execute` keeps the default two-tool contract and now also advertises optional task support for
+  long-running code runs and guided deploy workflows
+- the initial implementation is in-process with bounded TTLs, explicit poll intervals, cancel-safe
+  abort controllers, and shutdown cleanup
+- guided deploy workflows can now run as task-backed executions while preserving the earlier
+  sampling / elicitation behavior for preflight planning
+- task-backed raw `execute` runs now cover bounded deploy, redeploy, rollback, log-follow, wait,
+  and batch recipes through the existing `dokploy` runtime plus virtual helpers
 
 ### Done When
 
@@ -427,7 +443,7 @@ The remaining plan can be implemented in parallel without overlapping write scop
 
 ### Worker E
 
-- tasks
+- closed: tasks
 
 ### Worker F
 

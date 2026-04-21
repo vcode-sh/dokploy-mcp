@@ -63,11 +63,12 @@ export function createSubprocessIntegrationLimits(
 }
 
 export async function loadSubprocessRunner(options?: { useRealChildProcess?: boolean }) {
-  vi.resetModules()
-
   if (options?.useRealChildProcess) {
     vi.doUnmock('node:child_process')
+    vi.doUnmock('child_process')
   }
+
+  vi.resetModules()
 
   return import('../../src/codemode/sandbox/subprocess-runner.js')
 }
@@ -77,15 +78,41 @@ export async function loadRealSubprocessRunner() {
 }
 
 export async function loadRealSubprocessRunnerWithTestWorker(mode: SubprocessTestWorkerMode) {
-  useConfiguredSubprocessTestWorker(mode)
-  return loadRealSubprocessRunner()
+  const runner = await loadRealSubprocessRunner()
+  const workerOptions = {
+    workerPath: subprocessTestWorkerPath,
+    workerEnv: {
+      [subprocessWorkerModeEnvName]: mode,
+    },
+  }
+
+  return {
+    ...runner,
+    runSearchInSubprocess: (options: Parameters<typeof runner.runSearchInSubprocess>[0]) =>
+      runner.runSearchInSubprocess({ ...options, ...workerOptions }),
+    runExecuteInSubprocess: (options: Parameters<typeof runner.runExecuteInSubprocess>[0]) =>
+      runner.runExecuteInSubprocess({ ...options, ...workerOptions }),
+  }
 }
 
 export async function loadRealSubprocessRunnerWithInvalidTestWorker(
   mode = unsupportedSubprocessTestWorkerMode,
 ) {
-  useConfiguredSubprocessTestWorker(mode)
-  return loadRealSubprocessRunner()
+  const runner = await loadRealSubprocessRunner()
+  const workerOptions = {
+    workerPath: subprocessTestWorkerPath,
+    workerEnv: {
+      [subprocessWorkerModeEnvName]: mode,
+    },
+  }
+
+  return {
+    ...runner,
+    runSearchInSubprocess: (options: Parameters<typeof runner.runSearchInSubprocess>[0]) =>
+      runner.runSearchInSubprocess({ ...options, ...workerOptions }),
+    runExecuteInSubprocess: (options: Parameters<typeof runner.runExecuteInSubprocess>[0]) =>
+      runner.runExecuteInSubprocess({ ...options, ...workerOptions }),
+  }
 }
 
 export function useSubprocessTestWorker(mode: SubprocessTestWorkerMode) {

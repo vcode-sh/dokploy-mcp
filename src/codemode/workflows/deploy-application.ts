@@ -35,6 +35,9 @@ export interface DeployApplicationWorkflowInput {
   rollout?: {
     includeProjectLogs?: boolean
     tailLines?: number
+    waitForRollout?: boolean
+    pollIntervalMs?: number
+    maxPolls?: number
   }
   title?: string
   description?: string
@@ -44,6 +47,7 @@ export interface DeployApplicationWorkflowInput {
 interface WorkflowRunnerOptions {
   server: McpServer
   capabilityFlags?: McpCapabilityFlags
+  signal?: AbortSignal
 }
 
 interface ApplicationCandidate {
@@ -65,6 +69,9 @@ interface ApplicationPreview {
 interface RolloutOptions {
   includeProjectLogs: boolean
   tailLines: number
+  waitForRollout: boolean
+  pollIntervalMs: number
+  maxPolls: number
 }
 
 type WorkflowActionResolution =
@@ -77,6 +84,31 @@ type WorkflowActionResolution =
       message: string
     }
 
+interface PreparedDeployApplicationTask {
+  input: DeployApplicationWorkflowInput
+  executor: ResourceExecutor
+  application: ApplicationPreview
+  resolved: ReturnType<typeof buildResolvedInput>
+  rollout: RolloutOptions
+  planResult: Awaited<ReturnType<typeof createBoundedWorkflowPlan>>
+}
+
+type DeployApplicationPreparation =
+  | {
+      status: 'completed'
+      getCalls: () => unknown[]
+      result: Record<string, unknown>
+    }
+  | ({
+      status: 'ready-to-apply'
+      getCalls: () => unknown[]
+    } & PreparedDeployApplicationTask)
+
+const DEFAULT_ROLLOUT_POLL_INTERVAL_MS = 1_500
+const MAX_ROLLOUT_POLL_INTERVAL_MS = 10_000
+const DEFAULT_ROLLOUT_MAX_POLLS = 20
+const MAX_ROLLOUT_MAX_POLLS = 120
+
 function truncateText(value: string, maxLength: number) {
   return value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value
 }
@@ -84,6 +116,57 @@ function truncateText(value: string, maxLength: number) {
 function normalizeString(value: string | undefined) {
   const trimmed = value?.trim()
   return trimmed && trimmed.length > 0 ? trimmed : undefined
+}
+
+function clampPollIntervalMs(value: number | undefined, fallback: number) {
+  if (!(typeof value === 'number' && Number.isInteger(value) && value > 0)) {
+    return fallback
+  }
+
+  return Math.min(value, MAX_ROLLOUT_POLL_INTERVAL_MS)
+}
+
+function clampMaxPolls(value: number | undefined, fallback: number) {
+  if (!(typeof value === 'number' && Number.isInteger(value) && value > 0)) {
+    return fallback
+  }
+
+  return Math.min(value, MAX_ROLLOUT_MAX_POLLS)
+}
+
+function createAbortError() {
+  const error = new Error('Workflow execution was aborted.')
+  error.name = 'AbortError'
+  return error
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw createAbortError()
+  }
+}
+
+async function sleepWithSignal(milliseconds: number, signal?: AbortSignal) {
+  throwIfAborted(signal)
+
+  await new Promise<void>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      cleanup()
+      resolve()
+    }, milliseconds)
+
+    const onAbort = () => {
+      cleanup()
+      reject(createAbortError())
+    }
+
+    const cleanup = () => {
+      clearTimeout(timeoutId)
+      signal?.removeEventListener('abort', onAbort)
+    }
+
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
 }
 
 function createWorkflowExecutor() {
@@ -178,6 +261,9 @@ function defaultRolloutOptions(
   return {
     includeProjectLogs: input?.includeProjectLogs ?? action === 'apply',
     tailLines: input?.tailLines ?? 40,
+    waitForRollout: input?.waitForRollout ?? false,
+    pollIntervalMs: clampPollIntervalMs(input?.pollIntervalMs, DEFAULT_ROLLOUT_POLL_INTERVAL_MS),
+    maxPolls: clampMaxPolls(input?.maxPolls, DEFAULT_ROLLOUT_MAX_POLLS),
   }
 }
 
@@ -197,6 +283,16 @@ function normalizeRolloutOptions(
       value.tailLines <= 120
         ? value.tailLines
         : fallback.tailLines,
+    waitForRollout:
+      typeof value.waitForRollout === 'boolean' ? value.waitForRollout : fallback.waitForRollout,
+    pollIntervalMs: clampPollIntervalMs(
+      typeof value.pollIntervalMs === 'number' ? value.pollIntervalMs : undefined,
+      fallback.pollIntervalMs,
+    ),
+    maxPolls: clampMaxPolls(
+      typeof value.maxPolls === 'number' ? value.maxPolls : undefined,
+      fallback.maxPolls,
+    ),
   }
 }
 
@@ -438,6 +534,88 @@ async function loadProjectLogsPreview(
   }
 }
 
+function getDeploymentId(value: unknown) {
+  return isRecord(value) ? getStringOrNull(value.deploymentId) : null
+}
+
+function getDeploymentStatus(value: unknown) {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  return (
+    getStringOrNull(value.status) ??
+    getStringOrNull(value.deploymentStatus) ??
+    getStringOrNull(value.applicationStatus)
+  )
+}
+
+function isTerminalDeploymentStatus(status: string | null) {
+  if (!status) {
+    return false
+  }
+
+  const normalized = status.trim().toLowerCase()
+  return [
+    'cancelled',
+    'canceled',
+    'completed',
+    'done',
+    'error',
+    'failed',
+    'killed',
+    'success',
+  ].some((terminal) => normalized.includes(terminal))
+}
+
+async function waitForDeploymentRollout(options: {
+  executor: ResourceExecutor
+  applicationId: string
+  deploymentId?: string | null
+  rollout: RolloutOptions
+  signal?: AbortSignal
+}) {
+  let latestDeployment: unknown = null
+
+  for (let attempt = 1; attempt <= options.rollout.maxPolls; attempt += 1) {
+    throwIfAborted(options.signal)
+
+    const latestByType = await options.executor('deployment.latestByType', {
+      id: options.applicationId,
+      type: 'application',
+    })
+    const latest =
+      isRecord(latestByType) && 'latestDeployment' in latestByType
+        ? latestByType.latestDeployment
+        : null
+    latestDeployment = latest
+
+    const observedDeploymentId = getDeploymentId(latest)
+    const observedStatus = getDeploymentStatus(latest)
+    const targetSeen = options.deploymentId
+      ? observedDeploymentId === options.deploymentId
+      : latest !== null
+
+    if (targetSeen && isTerminalDeploymentStatus(observedStatus)) {
+      return {
+        status: 'completed' as const,
+        attempts: attempt,
+        latestDeployment,
+      }
+    }
+
+    if (attempt < options.rollout.maxPolls) {
+      await sleepWithSignal(options.rollout.pollIntervalMs, options.signal)
+    }
+  }
+
+  return {
+    status: 'timeout' as const,
+    attempts: options.rollout.maxPolls,
+    latestDeployment,
+  }
+}
+
 function buildNeedsInputResult(message: string, candidates: ApplicationCandidate[]) {
   return {
     mode: 'workflow' as const,
@@ -553,7 +731,10 @@ async function runAppliedDeployment(options: {
   resolved: ReturnType<typeof buildResolvedInput>
   rollout: RolloutOptions
   planResult: Awaited<ReturnType<typeof createBoundedWorkflowPlan>>
+  signal?: AbortSignal
 }) {
+  throwIfAborted(options.signal)
+
   const deployment = await options.executor('application.deploy', {
     applicationId: options.application.applicationId,
     ...(normalizeString(options.input.title)
@@ -563,6 +744,15 @@ async function runAppliedDeployment(options: {
       ? { description: normalizeString(options.input.description) }
       : {}),
   })
+  const rolloutStatus = options.rollout.waitForRollout
+    ? await waitForDeploymentRollout({
+        executor: options.executor,
+        applicationId: options.application.applicationId,
+        deploymentId: getDeploymentId(deployment),
+        rollout: options.rollout,
+        signal: options.signal,
+      })
+    : undefined
   const logsPreview =
     options.rollout.includeProjectLogs && options.application.projectId
       ? await loadProjectLogsPreview(
@@ -581,46 +771,59 @@ async function runAppliedDeployment(options: {
     plan: options.planResult.plan,
     application: options.application,
     deployment,
+    ...(rolloutStatus ? { rolloutStatus } : {}),
     ...(logsPreview ? { logsPreview } : {}),
     guidance:
       'Inspect the returned deployment data and reusable Dokploy resource links for follow-up checks.',
   }
 }
 
-export async function runDeployApplicationWorkflow(
+export async function prepareDeployApplicationWorkflow(
   input: DeployApplicationWorkflowInput,
   options: WorkflowRunnerOptions,
-) {
+): Promise<DeployApplicationPreparation> {
   const { executor, getCalls } = createWorkflowExecutor()
+  throwIfAborted(options.signal)
+
   const applicationResolution = await resolveApplicationId(input, executor, options)
   if (applicationResolution.status === 'needs-input') {
-    const result = buildNeedsInputResult(
-      applicationResolution.message,
-      applicationResolution.candidates,
-    )
-    return finalizeWorkflowResponse(getCalls, result)
+    return {
+      status: 'completed',
+      getCalls,
+      result: buildNeedsInputResult(
+        applicationResolution.message,
+        applicationResolution.candidates,
+      ),
+    }
   }
 
   let application: ApplicationPreview
   try {
     application = await loadApplicationPreview(executor, applicationResolution.applicationId)
   } catch (error) {
-    const result = buildNeedsInputResult(
-      `The applicationId ${JSON.stringify(
-        applicationResolution.applicationId,
-      )} could not be resolved into bounded deploy context: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-      applicationResolution.candidates,
-    )
-    return finalizeWorkflowResponse(getCalls, result)
+    return {
+      status: 'completed',
+      getCalls,
+      result: buildNeedsInputResult(
+        `The applicationId ${JSON.stringify(
+          applicationResolution.applicationId,
+        )} could not be resolved into bounded deploy context: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        applicationResolution.candidates,
+      ),
+    }
   }
 
+  throwIfAborted(options.signal)
   const intent = await resolveDeploymentIntent(input, options, application)
   const actionResolution = await resolveWorkflowAction(input, options)
   if (actionResolution.status === 'cancelled') {
-    const result = buildCancelledResult(actionResolution.message)
-    return finalizeWorkflowResponse(getCalls, result)
+    return {
+      status: 'completed',
+      getCalls,
+      result: buildCancelledResult(actionResolution.message),
+    }
   }
 
   const rollout = await resolveRollout(input, actionResolution.action, options)
@@ -637,14 +840,15 @@ export async function runDeployApplicationWorkflow(
   })
 
   if (actionResolution.action === 'preview') {
-    return finalizeWorkflowResponse(
+    return {
+      status: 'completed',
       getCalls,
-      buildPreviewResult({
+      result: buildPreviewResult({
         resolved,
         planResult,
         application,
       }),
-    )
+    }
   }
 
   const approvalUrl = normalizeString(input.approvalUrl)
@@ -657,9 +861,10 @@ export async function runDeployApplicationWorkflow(
       url: approvalUrl,
     })
 
-    return finalizeWorkflowResponse(
+    return {
+      status: 'completed',
       getCalls,
-      buildApprovalRequiredResult({
+      result: buildApprovalRequiredResult({
         resolved,
         planResult,
         application,
@@ -667,18 +872,42 @@ export async function runDeployApplicationWorkflow(
         elicitationId,
         approvalResult,
       }),
-    )
+    }
+  }
+
+  return {
+    status: 'ready-to-apply',
+    getCalls,
+    input,
+    executor,
+    application,
+    resolved,
+    rollout,
+    planResult,
+  }
+}
+
+export async function runPreparedDeployApplicationTask(
+  prepared: PreparedDeployApplicationTask,
+  signal?: AbortSignal,
+) {
+  return await runAppliedDeployment({
+    ...prepared,
+    signal,
+  })
+}
+
+export async function runDeployApplicationWorkflow(
+  input: DeployApplicationWorkflowInput,
+  options: WorkflowRunnerOptions,
+) {
+  const prepared = await prepareDeployApplicationWorkflow(input, options)
+  if (prepared.status === 'completed') {
+    return finalizeWorkflowResponse(prepared.getCalls, prepared.result)
   }
 
   return finalizeWorkflowResponse(
-    getCalls,
-    await runAppliedDeployment({
-      input,
-      executor,
-      application,
-      resolved,
-      rollout,
-      planResult,
-    }),
+    prepared.getCalls,
+    await runPreparedDeployApplicationTask(prepared, options.signal),
   )
 }

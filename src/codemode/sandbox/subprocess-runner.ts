@@ -24,10 +24,15 @@ interface WorkerCallMessage {
   input?: Record<string, unknown>
 }
 
+interface WorkerLaunchOptions {
+  workerPath?: string
+  workerEnv?: NodeJS.ProcessEnv
+}
+
 const SUBPROCESS_TIMEOUT_GRACE_MS = 100
 
-function resolveWorkerPath() {
-  const overridePath = process.env.DOKPLOY_MCP_SANDBOX_WORKER_PATH?.trim()
+function resolveWorkerPath(workerPath?: string) {
+  const overridePath = workerPath?.trim() || process.env.DOKPLOY_MCP_SANDBOX_WORKER_PATH?.trim()
   if (!overridePath) {
     return defaultWorkerPath
   }
@@ -35,15 +40,19 @@ function resolveWorkerPath() {
   return resolve(overridePath)
 }
 
-function createWorker() {
-  return fork(resolveWorkerPath(), {
+function createWorker(options: WorkerLaunchOptions = {}) {
+  return fork(resolveWorkerPath(options.workerPath), {
     stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
-    env: resolveWorkerEnv(),
+    env: resolveWorkerEnv(options.workerEnv),
     execArgv: [],
   })
 }
 
-function resolveWorkerEnv() {
+function resolveWorkerEnv(workerEnv?: NodeJS.ProcessEnv) {
+  if (workerEnv) {
+    return workerEnv
+  }
+
   const testWorkerMode = process.env[testWorkerModeEnvName]?.trim()
 
   if (!testWorkerMode) {
@@ -148,6 +157,12 @@ function buildTimeoutError(timeoutMs: number) {
 
 function buildDisconnectError() {
   return new Error('Sandbox worker IPC channel disconnected before completing.')
+}
+
+function buildAbortError() {
+  const error = new Error('Sandbox subprocess was aborted.')
+  error.name = 'AbortError'
+  return error
 }
 
 function buildCallResultSerializationError() {
@@ -353,11 +368,16 @@ async function handleExecuteWorkerMessage(
 export async function runSearchInSubprocess(options: {
   code: string
   limits?: SandboxLimits
+  workerPath?: string
+  workerEnv?: NodeJS.ProcessEnv
 }): Promise<SandboxExecutionResult> {
   const limits = resolveLimits(options.limits)
 
   return new Promise((resolvePromise, rejectPromise) => {
-    const worker = createWorker()
+    const worker = createWorker({
+      workerPath: options.workerPath,
+      workerEnv: options.workerEnv,
+    })
     const timeoutId = setTimeout(() => {
       settle.reject(buildTimeoutError(limits.timeoutMs))
     }, limits.timeoutMs + SUBPROCESS_TIMEOUT_GRACE_MS)
@@ -395,15 +415,45 @@ export async function runExecuteInSubprocess(options: {
   code: string
   limits?: SandboxLimits
   onCall: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>
+  signal?: AbortSignal
+  workerPath?: string
+  workerEnv?: NodeJS.ProcessEnv
 }): Promise<SandboxExecutionResult> {
   const limits = resolveLimits(options.limits)
 
   return new Promise((resolvePromise, rejectPromise) => {
-    const worker = createWorker()
+    const worker = createWorker({
+      workerPath: options.workerPath,
+      workerEnv: options.workerEnv,
+    })
+    let cleanupAbortListener: (() => void) | undefined
+    const resolveWithCleanup = (value: SandboxExecutionResult) => {
+      cleanupAbortListener?.()
+      resolvePromise(value)
+    }
+    const rejectWithCleanup = (reason?: unknown) => {
+      cleanupAbortListener?.()
+      rejectPromise(reason)
+    }
     const timeoutId = setTimeout(() => {
       settle.reject(buildTimeoutError(limits.timeoutMs))
     }, limits.timeoutMs + SUBPROCESS_TIMEOUT_GRACE_MS)
-    const settle = createSettlers(worker, resolvePromise, rejectPromise, timeoutId)
+    const settle = createSettlers(worker, resolveWithCleanup, rejectWithCleanup, timeoutId)
+
+    if (options.signal) {
+      const onAbort = () => {
+        settle.reject(buildAbortError())
+      }
+
+      if (options.signal.aborted) {
+        onAbort()
+      } else {
+        options.signal.addEventListener('abort', onAbort, { once: true })
+        cleanupAbortListener = () => {
+          options.signal?.removeEventListener('abort', onAbort)
+        }
+      }
+    }
 
     timeoutId.unref?.()
 

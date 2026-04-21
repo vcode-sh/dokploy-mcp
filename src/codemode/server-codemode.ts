@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { registerCodeModeToolCapabilities } from '../mcp/capabilities/tools.js'
 import { registerCodeModeCapabilities } from '../mcp/registration/register-codemode-capabilities.js'
+import { attachTaskRuntime, createTaskRuntime } from '../mcp/tasks/runtime.js'
 import type { ServerCapabilityFlags } from '../server.js'
 
 interface CodeModeServerOptions {
@@ -22,10 +23,18 @@ export function registerCodeModeServerCapabilities(
 }
 
 export function createCodeModeServer(options: CodeModeServerOptions = {}): McpServer {
-  const server = new McpServer({
-    name: 'dokploy-mcp-server-codemode',
-    version: '3.0.0',
-  })
+  const taskRuntime = createTaskRuntime()
+  const server = new McpServer(
+    {
+      name: 'dokploy-mcp-server-codemode',
+      version: '3.0.0',
+    },
+    {
+      taskStore: taskRuntime.store,
+      taskMessageQueue: taskRuntime.messageQueue,
+    },
+  )
+  attachTaskRuntime(server, taskRuntime)
 
   registerCodeModeServerCapabilities(server, options)
 

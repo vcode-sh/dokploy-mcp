@@ -1,8 +1,14 @@
+import type {
+  CreateTaskRequestHandlerExtra,
+  TaskRequestHandlerExtra,
+} from '@modelcontextprotocol/sdk/experimental/tasks'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 
 import type { McpCapabilityFlags } from '../../mcp/registration/types.js'
 import { listResourceLinks } from '../../mcp/resources/resource-links.js'
+import { DEFAULT_TASK_POLL_INTERVAL_MS, getTaskRuntime } from '../../mcp/tasks/runtime.js'
 import { createTool, type ToolDefinition } from '../../mcp/tool-factory.js'
 import { createExecuteContext } from '../context/execute-context.js'
 import type { GatewayCallResult } from '../gateway/api-gateway.js'
@@ -14,7 +20,9 @@ import { resolveSandboxRuntime } from '../sandbox/runtime.js'
 import { runExecuteInSubprocess } from '../sandbox/subprocess-runner.js'
 import {
   type DeployApplicationWorkflowInput,
+  prepareDeployApplicationWorkflow,
   runDeployApplicationWorkflow,
+  runPreparedDeployApplicationTask,
 } from '../workflows/deploy-application.js'
 
 const deployApplicationWorkflowSchema = z
@@ -30,6 +38,9 @@ const deployApplicationWorkflowSchema = z
       .object({
         includeProjectLogs: z.boolean().optional(),
         tailLines: z.number().int().min(0).max(120).optional(),
+        waitForRollout: z.boolean().optional(),
+        pollIntervalMs: z.number().int().min(250).max(10_000).optional(),
+        maxPolls: z.number().int().min(1).max(120).optional(),
       })
       .strict()
       .optional(),
@@ -55,7 +66,7 @@ const executeSchema = z
     workflow: deployApplicationWorkflowSchema
       .optional()
       .describe(
-        'Optional guided workflow mode. Currently supports `deploy-application` with interactive target resolution, preview/apply selection, bounded rollout options, and an MCP-native plan when phase 3 capabilities are enabled.',
+        'Optional guided workflow mode. Currently supports `deploy-application` with interactive target resolution, preview/apply selection, bounded rollout options, and an MCP-native plan when phase 3 sampling and elicitation are enabled.',
       ),
   })
   .strict()
@@ -71,6 +82,11 @@ interface ExecuteToolOptions {
   capabilityFlags?: McpCapabilityFlags
 }
 
+interface RunExecuteWithHostOptions {
+  signal?: AbortSignal
+  forceSubprocess?: boolean
+}
+
 export function buildExecuteContext(
   executor: CallExecutor,
   maxCalls = resolveSandboxLimits().maxCalls,
@@ -78,11 +94,16 @@ export function buildExecuteContext(
   return createExecuteContext(executor, maxCalls)
 }
 
-export async function runExecuteWithHost(code: string, host: SandboxHost) {
+export async function runExecuteWithHost(
+  code: string,
+  host: SandboxHost,
+  options: RunExecuteWithHostOptions = {},
+) {
   const execution =
-    resolveSandboxRuntime() === 'subprocess'
+    options.forceSubprocess === true || resolveSandboxRuntime() === 'subprocess'
       ? await runExecuteInSubprocess({
           code,
+          signal: options.signal,
           onCall: async (procedure, input) => {
             const result = await host.call(procedure, input)
             return result.data
@@ -141,20 +162,277 @@ function resolveExecuteRequest(input: ExecuteToolInput) {
   }
 }
 
+function wrapStructured(data: unknown): Record<string, unknown> {
+  if (Array.isArray(data)) {
+    return { items: data }
+  }
+
+  if (data === null || data === undefined || typeof data !== 'object') {
+    return { value: data }
+  }
+
+  return data as Record<string, unknown>
+}
+
+function buildToolSuccessResult(data: unknown): CallToolResult {
+  return {
+    content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+    structuredContent: wrapStructured(data),
+  }
+}
+
+function buildToolErrorResult(message: string, details?: string): CallToolResult {
+  const payload = { error: message, ...(details ? { details } : {}) }
+
+  return {
+    content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+    structuredContent: payload,
+    isError: true,
+  }
+}
+
+function isTaskAbortError(error: unknown) {
+  return error instanceof Error && error.name === 'AbortError'
+}
+
+async function safeGetTask(
+  extra: Pick<CreateTaskRequestHandlerExtra | TaskRequestHandlerExtra, 'taskStore'>,
+  taskId: string,
+) {
+  try {
+    return await extra.taskStore.getTask(taskId)
+  } catch {
+    return null
+  }
+}
+
+async function safeUpdateTaskStatus(
+  extra: Pick<CreateTaskRequestHandlerExtra | TaskRequestHandlerExtra, 'taskStore'>,
+  taskId: string,
+  status: 'working' | 'input_required' | 'cancelled',
+  statusMessage: string,
+) {
+  const task = await safeGetTask(extra, taskId)
+  if (
+    !task ||
+    task.status === 'completed' ||
+    task.status === 'failed' ||
+    task.status === 'cancelled'
+  ) {
+    return
+  }
+
+  try {
+    await extra.taskStore.updateTaskStatus(taskId, status, statusMessage)
+  } catch {
+    // Best-effort status update only.
+  }
+}
+
+async function safeStoreTaskResult(
+  extra: Pick<CreateTaskRequestHandlerExtra | TaskRequestHandlerExtra, 'taskStore'>,
+  taskId: string,
+  status: 'completed' | 'failed',
+  result: CallToolResult,
+) {
+  const task = await safeGetTask(extra, taskId)
+  if (
+    !task ||
+    task.status === 'completed' ||
+    task.status === 'failed' ||
+    task.status === 'cancelled'
+  ) {
+    return
+  }
+
+  try {
+    await extra.taskStore.storeTaskResult(taskId, status, result)
+  } catch {
+    // Best-effort task result persistence only.
+  }
+}
+
+function createExecuteTaskHandler(options: ExecuteToolOptions) {
+  return {
+    async createTask(input: ExecuteToolInput, extra: CreateTaskRequestHandlerExtra) {
+      const request = resolveExecuteRequest(input)
+      const taskRuntime = options.server ? getTaskRuntime(options.server) : undefined
+      const task = await extra.taskStore.createTask(
+        taskRuntime?.createTaskOptions(extra.taskRequestedTtl, DEFAULT_TASK_POLL_INTERVAL_MS) ?? {
+          ttl: 10 * 60 * 1000,
+          pollInterval: DEFAULT_TASK_POLL_INTERVAL_MS,
+        },
+      )
+
+      if (request.kind === 'code') {
+        const controller = new AbortController()
+        taskRuntime?.store.registerAbortController(task.taskId, controller)
+
+        queueMicrotask(() => {
+          void (async () => {
+            try {
+              await safeUpdateTaskStatus(
+                extra,
+                task.taskId,
+                'working',
+                'Running sandboxed execute code.',
+              )
+              const host = createSandboxHost({
+                signal: controller.signal,
+                onCallStart: async (procedure) => {
+                  await safeUpdateTaskStatus(
+                    extra,
+                    task.taskId,
+                    'working',
+                    `Calling ${procedure} from execute task.`,
+                  )
+                },
+              })
+              const result = await runExecuteWithHost(request.code, host, {
+                signal: controller.signal,
+              })
+              await safeStoreTaskResult(
+                extra,
+                task.taskId,
+                'completed',
+                buildToolSuccessResult(result),
+              )
+            } catch (error) {
+              if (isTaskAbortError(error)) {
+                return
+              }
+
+              await safeStoreTaskResult(
+                extra,
+                task.taskId,
+                'failed',
+                buildToolErrorResult(
+                  'Failed to execute execute',
+                  error instanceof Error ? error.message : String(error),
+                ),
+              )
+            }
+          })()
+        })
+
+        return { task: (await extra.taskStore.getTask(task.taskId)) ?? task }
+      }
+
+      if (!options.server) {
+        await safeStoreTaskResult(
+          extra,
+          task.taskId,
+          'failed',
+          buildToolErrorResult(
+            'Failed to execute execute',
+            'Guided execute workflows require a bound MCP server instance.',
+          ),
+        )
+        return { task: (await extra.taskStore.getTask(task.taskId)) ?? task }
+      }
+
+      try {
+        await safeUpdateTaskStatus(
+          extra,
+          task.taskId,
+          'working',
+          'Preparing guided deployment task.',
+        )
+        const prepared = await prepareDeployApplicationWorkflow(request.workflow, {
+          server: options.server,
+          capabilityFlags: options.capabilityFlags,
+        })
+
+        if (prepared.status === 'completed') {
+          const payload = {
+            result: prepared.result,
+            calls: prepared.getCalls(),
+            resourceLinks: listResourceLinks(prepared.result),
+          }
+          await safeStoreTaskResult(
+            extra,
+            task.taskId,
+            'completed',
+            buildToolSuccessResult(payload),
+          )
+          return { task: (await extra.taskStore.getTask(task.taskId)) ?? task }
+        }
+
+        const controller = new AbortController()
+        taskRuntime?.store.registerAbortController(task.taskId, controller)
+
+        queueMicrotask(() => {
+          void (async () => {
+            try {
+              await safeUpdateTaskStatus(
+                extra,
+                task.taskId,
+                'working',
+                'Executing deploy workflow task against Dokploy.',
+              )
+              const result = await runPreparedDeployApplicationTask(prepared, controller.signal)
+              const payload = {
+                result,
+                calls: prepared.getCalls(),
+                resourceLinks: listResourceLinks(result),
+              }
+              await safeStoreTaskResult(
+                extra,
+                task.taskId,
+                'completed',
+                buildToolSuccessResult(payload),
+              )
+            } catch (error) {
+              if (isTaskAbortError(error)) {
+                return
+              }
+
+              await safeStoreTaskResult(
+                extra,
+                task.taskId,
+                'failed',
+                buildToolErrorResult(
+                  'Failed to execute execute',
+                  error instanceof Error ? error.message : String(error),
+                ),
+              )
+            }
+          })()
+        })
+
+        return { task: (await extra.taskStore.getTask(task.taskId)) ?? task }
+      } catch (error) {
+        await safeStoreTaskResult(
+          extra,
+          task.taskId,
+          'failed',
+          buildToolErrorResult(
+            'Failed to execute execute',
+            error instanceof Error ? error.message : String(error),
+          ),
+        )
+        return { task: (await extra.taskStore.getTask(task.taskId)) ?? task }
+      }
+    },
+    async getTask(_input: ExecuteToolInput, extra: TaskRequestHandlerExtra) {
+      return await extra.taskStore.getTask(extra.taskId)
+    },
+    async getTaskResult(_input: ExecuteToolInput, extra: TaskRequestHandlerExtra) {
+      return (await extra.taskStore.getTaskResult(extra.taskId)) as CallToolResult
+    },
+  }
+}
+
 export function createExecuteTool(options: ExecuteToolOptions = {}): ToolDefinition {
-  return createTool({
+  const tool = createTool({
     name: 'execute',
     title: 'Execute Dokploy Workflow',
     description:
-      'Run JavaScript code or a guided workflow against the Dokploy API. ' +
-      'For code mode: do NOT wrap code in a function -- `dokploy` and `helpers` are already globals. ' +
-      'Write bare code like `await dokploy.project.all()` or `const x = await dokploy.application.one({ applicationId: "id" }); return x`. ' +
-      'For guided mode: pass `workflow`, currently `deploy-application`, to resolve missing targets, choose preview vs apply, gather bounded rollout options, and synthesize a bounded deployment plan when phase 3 sampling and elicitation are enabled. ' +
-      'When the result contains known Dokploy IDs, the tool also returns reusable `dokploy://...` resource links for follow-up inspection. ' +
-      'dokploy.<module>.<method>(params) calls the API. ' +
-      'Modules: project, environment, application, compose, domain, postgres, mysql, mariadb, mongo, redis, ' +
-      'deployment, docker, server, settings, user, notification, backup, mounts, registry, certificates, schedule, patch, sshKey, gitProvider, and more. ' +
-      'Use the search tool first to discover procedures when you stay in raw code mode.',
+      'Run JavaScript code or a guided Dokploy workflow. ' +
+      'In code mode, write bare JS against global `dokploy` and `helpers` without wrapping it in a function. ' +
+      'In workflow mode, `deploy-application` can resolve a target, choose preview vs apply, collect bounded rollout options, and build a bounded plan when sampling and elicitation are enabled. ' +
+      'When MCP tasks are enabled, execute also supports polling and cancellation for long-running runs. ' +
+      'Known Dokploy IDs yield reusable `dokploy://...` resource links, and `search` helps discover procedures.',
     schema: executeSchema,
     annotations: { openWorldHint: true },
     handler: async ({ input }) => {
@@ -174,6 +452,14 @@ export function createExecuteTool(options: ExecuteToolOptions = {}): ToolDefinit
       })
     },
   })
+
+  return {
+    ...tool,
+    execution: {
+      taskSupport: 'optional',
+    },
+    taskHandler: createExecuteTaskHandler(options),
+  }
 }
 
 export const executeTool = createExecuteTool()

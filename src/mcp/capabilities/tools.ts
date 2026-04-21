@@ -23,6 +23,26 @@ export function registerCodeModeToolCapabilities(
   options: McpCapabilityRegistrationOptions = {},
 ) {
   for (const tool of getCodeModeRuntimeTools(server, options)) {
+    if (
+      tool.taskHandler &&
+      (tool.execution?.taskSupport === 'optional' || tool.execution?.taskSupport === 'required')
+    ) {
+      server.experimental.tasks.registerToolTask(
+        tool.name,
+        {
+          title: tool.title,
+          description: tool.description,
+          inputSchema: tool.schema,
+          annotations: tool.annotations,
+          execution: {
+            taskSupport: tool.execution.taskSupport,
+          },
+        },
+        tool.taskHandler as never,
+      )
+      continue
+    }
+
     server.registerTool(
       tool.name,
       {

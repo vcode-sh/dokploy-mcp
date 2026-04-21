@@ -5,6 +5,7 @@ import net from 'node:net'
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
@@ -464,6 +465,53 @@ describe('http server transport', () => {
         'dokploy://server/{serverId}/summary',
       ])
       await expect(client.listPrompts()).rejects.toThrow()
+    })
+  })
+
+  it('supports execute tasks over HTTP when the phase 4 capability is enabled', async () => {
+    const handle = await startTestHttpServer({
+      mode: 'codemode',
+      capabilityFlags: {
+        tasks: true,
+      },
+    })
+
+    await withHttpClient(handle, async (client) => {
+      const { tools } = await client.listTools()
+      const messages = []
+
+      expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(
+        Object.keys((client.getServerCapabilities() ?? {}) as Record<string, unknown>).sort(),
+      ).toEqual(['tasks', 'tools'])
+
+      for await (const message of client.experimental.tasks.callToolStream(
+        {
+          name: 'execute',
+          arguments: {
+            code: 'await helpers.sleep(25); return { ok: true, via: "http-task" }',
+          },
+        },
+        CallToolResultSchema,
+        {
+          task: {},
+        },
+      )) {
+        messages.push(message)
+      }
+
+      expect(messages.some((message) => message.type === 'taskCreated')).toBe(true)
+      expect(messages.find((message) => message.type === 'result')).toMatchObject({
+        type: 'result',
+        result: {
+          structuredContent: {
+            result: {
+              ok: true,
+              via: 'http-task',
+            },
+          },
+        },
+      })
     })
   })
 
