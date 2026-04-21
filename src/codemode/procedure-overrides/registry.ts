@@ -5,6 +5,7 @@ import { dokployResourceConfigOverride } from './resource-config.js'
 import {
   transformArrayWithSecretGate,
   transformCertificateSecretResponse,
+  transformDataServiceSecretResponse,
   transformDestinationSecretResponse,
   transformProviderStyleSecretResponse,
   transformSshSecretResponse,
@@ -35,6 +36,23 @@ function createSecretListOverride(
   return {
     inputSchema: emptyIncludeSecretsInputSchema,
     mapInput: mapIncludeSecretsInput,
+    transformResponse,
+  }
+}
+
+function createTransformOnlyOverride(
+  transformResponse: ProcedureOverride['transformResponse'],
+): ProcedureOverride {
+  return {
+    transformResponse,
+  }
+}
+
+function createResourceConfigSecretOverride(
+  transformResponse: ProcedureOverride['transformResponse'],
+): ProcedureOverride {
+  return {
+    ...dokployResourceConfigOverride,
     transformResponse,
   }
 }
@@ -85,13 +103,41 @@ export const procedureOverrides: Record<string, ProcedureOverride> = {
   'sshKey.allForApps': createSecretListOverride(transformSshSecretResponse),
   ...Object.fromEntries(
     [
+      'libsql.create',
+      'libsql.deploy',
+      'libsql.one',
+      'mariadb.create',
+      'mariadb.deploy',
+      'mariadb.one',
+      'mongo.create',
+      'mongo.deploy',
+      'mongo.one',
+      'mysql.create',
+      'mysql.deploy',
+      'mysql.one',
+      'postgres.create',
+      'postgres.deploy',
+      'postgres.one',
+      'redis.create',
+      'redis.deploy',
+      'redis.one',
+    ].map((procedure) => [
+      procedure,
+      createTransformOnlyOverride(transformDataServiceSecretResponse),
+    ]),
+  ),
+  ...Object.fromEntries(
+    [
       'libsql.update',
       'mariadb.update',
       'mongo.update',
       'mysql.update',
       'postgres.update',
       'redis.update',
-    ].map((procedure) => [procedure, dokployResourceConfigOverride]),
+    ].map((procedure) => [
+      procedure,
+      createResourceConfigSecretOverride(transformDataServiceSecretResponse),
+    ]),
   ),
   ...Object.fromEntries(logProcedureNames.map((procedure) => [procedure, createLogReadOverride()])),
 }

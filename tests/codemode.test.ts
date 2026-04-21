@@ -174,6 +174,28 @@ describe('codemode runtime', () => {
     )
   })
 
+  it('search catalog get explains raw versus Git-backed compose flows', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('compose.create')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('compose.create')
+    expect(contract.responseHints).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('does not automatically imply a raw Compose deployment path'),
+      ]),
+    )
+    expect(contract.notes).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('sourceType: "raw"'),
+        expect.stringContaining('GitHub-backed workflow'),
+      ]),
+    )
+  })
+
   it('search catalog get merges manual response hints for key detail endpoints', async () => {
     const result = await searchTool.handler({
       code: "async ({ catalog }) => catalog.get('application.one')",
@@ -1209,6 +1231,135 @@ describe('codemode runtime', () => {
     ).rejects.toThrow('requests[0].containerId is required')
 
     expect(context.getCalls()).toHaveLength(0)
+  })
+
+  it('keeps project.logsOverview usable when one log source errors', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      if (procedure === 'project.one') {
+        return {
+          data: {
+            projectId: 'project-1',
+            name: 'Demo Project',
+            environments: [
+              {
+                environmentId: 'env-1',
+                name: 'production',
+                applications: [
+                  {
+                    applicationId: 'app-idle',
+                    name: 'Idle app',
+                  },
+                  {
+                    applicationId: 'app-live',
+                    name: 'Live app',
+                  },
+                ],
+                postgres: [
+                  {
+                    postgresId: 'pg-1',
+                    name: 'Primary DB',
+                  },
+                ],
+              },
+            ],
+          },
+          trace: {
+            procedure,
+            method: 'GET',
+            startedAt: 0,
+            finishedAt: 1,
+            durationMs: 1,
+          },
+        }
+      }
+
+      if (procedure === 'application.readLogs') {
+        if (input.applicationId === 'app-idle') {
+          throw new Error('No container or service found for: idle-app')
+        }
+
+        return {
+          data: 'live app logs',
+          trace: {
+            procedure,
+            method: 'GET',
+            startedAt: 0,
+            finishedAt: 1,
+            durationMs: 1,
+          },
+        }
+      }
+
+      if (procedure === 'postgres.readLogs') {
+        return {
+          data: 'db logs',
+          trace: {
+            procedure,
+            method: 'GET',
+            startedAt: 0,
+            finishedAt: 1,
+            durationMs: 1,
+          },
+        }
+      }
+
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 20)
+
+    const result = await runSandboxedFunction({
+      code: `
+        async ({ dokploy }) => {
+          return await dokploy.project.logsOverview({
+            projectId: 'project-1',
+            includeDatabases: true,
+            tail: 20,
+          })
+        }
+      `,
+      context: {
+        dokploy: context.dokploy,
+      },
+    })
+
+    expect(result).toMatchObject({
+      logs: [],
+      result: {
+        projectId: 'project-1',
+        projectName: 'Demo Project',
+        total: 3,
+      },
+    })
+    expect(result.result.items).toEqual([
+      expect.objectContaining({
+        kind: 'application',
+        applicationId: 'app-idle',
+        procedure: 'application.readLogs',
+        error: {
+          message: 'No container or service found for: idle-app',
+        },
+      }),
+      expect.objectContaining({
+        kind: 'application',
+        applicationId: 'app-live',
+        procedure: 'application.readLogs',
+        result: 'live app logs',
+      }),
+      expect.objectContaining({
+        kind: 'postgres',
+        postgresId: 'pg-1',
+        procedure: 'postgres.readLogs',
+        result: 'db logs',
+      }),
+    ])
   })
 
   it('validates virtual libsql.many input before issuing upstream calls', async () => {

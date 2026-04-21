@@ -21,6 +21,20 @@ The result is a dramatically smaller default MCP footprint.
 
 Need proof instead of ideology? See [docs/live-e2e-proof.md](./docs/live-e2e-proof.md).
 
+## Proof, Not Vibes
+
+- Live-tested against a real Dokploy project, not a README hallucination.
+- Proven on direct Docker apps, a Git-backed Dockerfile app, a raw Compose workload, and
+  `Postgres 18`.
+- End-to-end flow covered create, update, deploy, polling, logs, domains, hosted HTTP, and
+  per-step footprint tracking.
+- Default public surface stayed at `2` tools while the generated catalog still exposed `524`
+  procedures underneath.
+- Current default `tools/list` cost is about `1,485` tokens, which is `98.4%` smaller than the
+  classic endpoint-per-tool schema dump.
+- The live audit also found real bugs, and the server was hardened from them instead of pretending
+  the first run was flawless.
+
 <!-- docs-facts:readme:start -->
 ## Current Fact Snapshot
 

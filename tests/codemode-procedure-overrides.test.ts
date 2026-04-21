@@ -188,6 +188,38 @@ describe('codemode procedure overrides', () => {
     })
   })
 
+  it('redacts database service passwords from mutation and read responses by default', () => {
+    const postgres = {
+      postgresId: 'pg-1',
+      name: 'main-db',
+      databaseUser: 'app',
+      databasePassword: 'super-secret',
+      dockerImage: 'postgres:18-alpine',
+    }
+    const mysql = {
+      mysqlId: 'mysql-1',
+      name: 'main-mysql',
+      databaseUser: 'app',
+      databasePassword: 'secret-db-pass',
+      databaseRootPassword: 'secret-root-pass',
+    }
+
+    expect(transformProcedureResponse('postgres.deploy', {}, postgres)).toEqual({
+      postgresId: 'pg-1',
+      name: 'main-db',
+      databaseUser: 'app',
+      databasePassword: '[REDACTED]',
+      dockerImage: 'postgres:18-alpine',
+    })
+    expect(transformProcedureResponse('mysql.one', {}, mysql)).toEqual({
+      mysqlId: 'mysql-1',
+      name: 'main-mysql',
+      databaseUser: 'app',
+      databasePassword: '[REDACTED]',
+      databaseRootPassword: '[REDACTED]',
+    })
+  })
+
   it('redacts ssh key material by default and preserves it with includeSecrets', () => {
     const sshKey = {
       sshKeyId: 'ssh-1',

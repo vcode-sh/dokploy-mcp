@@ -874,6 +874,70 @@ describe('codemode gateway validation', () => {
       message: expect.stringContaining('select[1] must be a non-empty string'),
     })
   })
+
+  it('explains the raw versus Git-backed compose deploy distinction before compose.deploy', async () => {
+    const fakeApi = {
+      async get(path: string) {
+        if (path === '/compose.one') {
+          return {
+            composeId: 'compose-1',
+            sourceType: 'github',
+            composeFile: 'services:\n  whoami:\n    image: traefik/whoami:v1.10',
+            composePath: './docker-compose.yml',
+            githubId: null,
+            owner: null,
+            repository: null,
+          }
+        }
+
+        throw new Error(`Unexpected GET call: ${path}`)
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    await expect(
+      invokeProcedureWithApi('compose.deploy', { composeId: 'compose-1' }, fakeApi),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'compose.deploy',
+      message: expect.stringContaining('sourceType to "raw"'),
+    })
+  })
+
+  it('allows compose.deploy to proceed when raw compose content is configured explicitly', async () => {
+    const calls: string[] = []
+    const fakeApi = {
+      async get(path: string) {
+        calls.push(`GET ${path}`)
+        if (path === '/compose.one') {
+          return {
+            composeId: 'compose-1',
+            sourceType: 'raw',
+            composeFile: 'services:\n  whoami:\n    image: traefik/whoami:v1.10',
+          }
+        }
+
+        throw new Error(`Unexpected GET call: ${path}`)
+      },
+      async post(path: string, input: Record<string, unknown>) {
+        calls.push(`POST ${path}`)
+        expect(path).toBe('/compose.deploy')
+        expect(input).toEqual({ composeId: 'compose-1' })
+        return { success: true }
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'compose.deploy',
+      { composeId: 'compose-1' },
+      fakeApi,
+    )
+
+    expect(result.data).toEqual({ success: true })
+    expect(calls).toEqual(['GET /compose.one', 'POST /compose.deploy'])
+  })
 })
 
 describe('codemode gateway secret redaction', () => {

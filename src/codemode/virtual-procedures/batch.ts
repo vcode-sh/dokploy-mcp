@@ -248,12 +248,23 @@ async function executeLogsTailMany(
 
   for (const request of requests) {
     const { procedure, input: procedureInput } = buildLogRequestProcedure(request)
-    const result = await context.call(procedure, procedureInput)
-    items.push({
-      ...request,
-      procedure,
-      result,
-    })
+    try {
+      const result = await context.call(procedure, procedureInput)
+      items.push({
+        ...request,
+        procedure,
+        result,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      items.push({
+        ...request,
+        procedure,
+        error: {
+          message,
+        },
+      })
+    }
   }
 
   return {

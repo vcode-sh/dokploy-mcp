@@ -59,6 +59,10 @@ const providerStyleSecretKeys = createCaseInsensitiveKeySet([
 ])
 
 const certificateSecretKeys = createCaseInsensitiveKeySet(['privateKey'])
+const dataServiceSecretKeys = createCaseInsensitiveKeySet([
+  'databasePassword',
+  'databaseRootPassword',
+])
 
 // Top-level keys on an application object that contain nested git-provider data
 const gitProviderNestingKeys = new Set(['github', 'gitea', 'gitlab', 'bitbucket'])
@@ -165,3 +169,4 @@ export const transformDestinationSecretResponse = transformWithDeepSecretGate(de
 export const transformProviderStyleSecretResponse =
   transformWithDeepSecretGate(providerStyleSecretKeys)
 export const transformCertificateSecretResponse = transformWithDeepSecretGate(certificateSecretKeys)
+export const transformDataServiceSecretResponse = transformWithDeepSecretGate(dataServiceSecretKeys)

@@ -413,6 +413,103 @@ function validateNumericBounds(
   return errors
 }
 
+function getOptionalString(value: unknown, key: string) {
+  if (!(value && typeof value === 'object' && !Array.isArray(value))) {
+    return null
+  }
+
+  const candidate = (value as Record<string, unknown>)[key]
+  return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate.trim() : null
+}
+
+function hasAnyConfiguredFields(value: unknown, keys: string[]) {
+  return keys.some((key) => getOptionalString(value, key))
+}
+
+async function preflightComposeDeploy(
+  procedure: string,
+  input: Record<string, unknown>,
+  requestApi: RequestApi,
+) {
+  if (procedure !== 'compose.deploy') {
+    return
+  }
+
+  const composeId = typeof input.composeId === 'string' ? input.composeId.trim() : ''
+  if (composeId.length === 0) {
+    return
+  }
+
+  const compose = await requestApi.get('/compose.one', { composeId })
+  const sourceType = getOptionalString(compose, 'sourceType')
+  const composeFile = getOptionalString(compose, 'composeFile')
+  const composePath = getOptionalString(compose, 'composePath')
+
+  const hasGithubConfig =
+    hasAnyConfiguredFields(compose, ['githubId']) ||
+    (hasAnyConfiguredFields(compose, ['owner']) && hasAnyConfiguredFields(compose, ['repository']))
+  const hasGitlabConfig =
+    hasAnyConfiguredFields(compose, ['gitlabId', 'gitlabProjectId']) ||
+    hasAnyConfiguredFields(compose, ['gitlabOwner', 'gitlabRepository'])
+  const hasBitbucketConfig =
+    hasAnyConfiguredFields(compose, ['bitbucketId']) ||
+    hasAnyConfiguredFields(compose, ['bitbucketOwner', 'bitbucketRepository'])
+  const hasGiteaConfig =
+    hasAnyConfiguredFields(compose, ['giteaId']) ||
+    hasAnyConfiguredFields(compose, ['giteaOwner', 'giteaRepository'])
+  const hasCustomGitConfig = hasAnyConfiguredFields(compose, ['customGitUrl'])
+  const hasGitBackedConfig =
+    hasGithubConfig || hasGitlabConfig || hasBitbucketConfig || hasGiteaConfig || hasCustomGitConfig
+
+  if (sourceType === 'raw') {
+    if (!composeFile) {
+      throw formatGatewayError({
+        type: 'validation_error',
+        procedure,
+        message:
+          'compose.deploy requires composeFile when sourceType is "raw". Set composeFile before deploy.',
+      })
+    }
+    return
+  }
+
+  if (composeFile && !hasGitBackedConfig) {
+    throw formatGatewayError({
+      type: 'validation_error',
+      procedure,
+      message:
+        'This compose record has inline composeFile content but no Git-backed source configuration. If you want inline Compose, set sourceType to "raw" with compose.update before compose.deploy. If you want GitHub or another Git-backed flow, configure the provider details and composePath first.',
+    })
+  }
+
+  if (sourceType === 'github' && !hasGithubConfig) {
+    throw formatGatewayError({
+      type: 'validation_error',
+      procedure,
+      message:
+        'compose.deploy cannot continue because sourceType is "github" but the compose record is missing GitHub details. Configure githubId or owner/repository, and make sure composePath points to the Compose file in the repo.',
+    })
+  }
+
+  if (sourceType === 'git' && !hasCustomGitConfig) {
+    throw formatGatewayError({
+      type: 'validation_error',
+      procedure,
+      message:
+        'compose.deploy cannot continue because sourceType is "git" but customGitUrl is missing. Provide the Git URL and composePath before deploy.',
+    })
+  }
+
+  if (sourceType && sourceType !== 'raw' && !composePath) {
+    throw formatGatewayError({
+      type: 'validation_error',
+      procedure,
+      message:
+        'compose.deploy cannot continue because the Git-backed compose record is missing composePath. Point composePath at the Compose file inside the repository before deploy.',
+    })
+  }
+}
+
 export interface GatewayCallResult {
   data: unknown
   trace: GatewayTraceEntry
@@ -448,6 +545,8 @@ export async function invokeProcedureWithApi(
   const requestInput = mapProcedureInput(procedure, input)
 
   try {
+    await preflightComposeDeploy(procedure, requestInput, requestApi)
+
     let attempt = 0
     while (true) {
       try {

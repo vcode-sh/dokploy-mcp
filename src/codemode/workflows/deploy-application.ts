@@ -242,7 +242,15 @@ function compactApplicationPreview(value: unknown): ApplicationPreview {
 
 function compactLogsPreview(value: unknown) {
   if (!isRecord(value)) {
-    return { value }
+    return undefined
+  }
+
+  const items = extractItems(value.items).slice(0, 6)
+  const hasRenderableItems = items.some(
+    (item) => isRecord(item) && Object.hasOwn(item, 'result') && item.result !== undefined,
+  )
+  if (!hasRenderableItems) {
+    return undefined
   }
 
   return {
@@ -250,7 +258,7 @@ function compactLogsPreview(value: unknown) {
     projectName: getStringOrNull(value.projectName),
     total: value.total,
     sources: extractItems(value.sources).slice(0, 6),
-    items: extractItems(value.items).slice(0, 6),
+    items,
   }
 }
 
