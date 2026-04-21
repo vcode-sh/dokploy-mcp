@@ -30,7 +30,7 @@ describe('codemode contract', () => {
         name: 'execute',
         title: 'Execute Dokploy Workflow',
         description: expect.stringContaining('dokploy'),
-        keys: ['code'],
+        keys: ['code', 'workflow'],
         method: undefined,
         readOnlyHint: null,
         idempotentHint: null,

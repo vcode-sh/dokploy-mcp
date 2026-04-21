@@ -35,8 +35,8 @@ Observed live Dokploy version during verification:
 
 The next cycle is no longer about endpoint parity, but version skew still shapes the implementation.
 
-The shipped `resources`, `prompts`, and `completions` layers, plus any future `sampling`,
-`elicitation`, or `tasks` layer, must:
+The shipped `resources`, `prompts`, `completions`, `sampling`, and `elicitation` layers, plus the
+future `tasks` layer, must:
 
 - degrade cleanly when a connected Dokploy backend is older
 - keep compatibility-aware messaging

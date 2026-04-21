@@ -9,7 +9,8 @@ Status update:
 - `phase 0` is complete in code
 - `phase 1` is complete in code
 - `phase 2` is complete in code
-- the remaining execution plan starts at `phase 3`
+- `phase 3` is complete in code
+- the remaining execution plan starts at `phase 4`
 
 ## Target Outcome
 
@@ -46,7 +47,7 @@ By the end of this plan, the repository should:
 | A. MCP capability foundation | P0 | Complete | modular registration for shipped families and clean feature-flag handling |
 | B. Resources and templates | P0 | Complete | reusable, token-bounded Dokploy context objects |
 | C. Prompts and completions | P0 | Complete | guided workflows, bounded prompt rendering, and low-friction identifier discovery |
-| D. Sampling and elicitation | P1 | Next | interactive, MCP-native workflow composition |
+| D. Sampling and elicitation | P1 | Complete | interactive, MCP-native workflow composition |
 | E. Tasks | P1 | Next | progress, polling, and cancellation for long-running work |
 | F. Remote distribution and auth | P2 | Next | registry-ready metadata and modern remote server behavior |
 
@@ -215,6 +216,8 @@ Make high-value Dokploy workflows discoverable and guided.
 
 ## Phase 3: Sampling And Elicitation
 
+Status: Complete
+
 ### Goal
 
 Add MCP-native interactive workflow composition for clients that support it.
@@ -251,6 +254,23 @@ Add MCP-native interactive workflow composition for clients that support it.
 - `elicitation/create` form-mode coverage
 - URL-mode elicitation coverage for out-of-band flows
 - fallback coverage when a client does not support these capabilities
+
+### Implementation Closeout
+
+- `sampling` and `elicitation` are now shipped as staged capability flags
+- `execute` keeps raw JavaScript code mode and now also accepts a guided `workflow` input for
+  `deploy-application`
+- the shipped workflow can:
+  - resolve missing application targets through bounded search plus optional form elicitation
+  - capture deployment intent through form elicitation or a deterministic default
+  - ask for preview vs apply explicitly and fail closed to preview when interaction is not
+    available
+  - collect bounded rollout options through form elicitation for apply flows
+  - request URL-mode out-of-band approval handoff instead of collecting sensitive approval input
+    in-band
+- bounded deploy planning now uses `sampling/createMessage` when the client supports it and
+  degrades to a deterministic plan otherwise
+- unsupported clients still receive a correct non-interactive preview / needs-input path
 
 ### Done When
 
@@ -403,7 +423,7 @@ The remaining plan can be implemented in parallel without overlapping write scop
 
 ### Worker D
 
-- sampling and elicitation
+- closed: sampling and elicitation
 
 ### Worker E
 

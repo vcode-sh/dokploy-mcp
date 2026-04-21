@@ -184,6 +184,8 @@ describe('raw and hybrid server modes', () => {
         resources: true,
         prompts: true,
         completions: true,
+        sampling: true,
+        elicitation: true,
       },
     })
   })

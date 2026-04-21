@@ -34,6 +34,8 @@
     "test": "vitest run",
     "test:phase2": "vitest run --config vitest.phase2.config.ts",
     "test:phase2:coverage": "vitest run --config vitest.phase2.config.ts --coverage",
+    "test:phase3": "vitest run --config vitest.phase3.config.ts",
+    "test:phase3:coverage": "vitest run --config vitest.phase3.config.ts --coverage",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
@@ -45,16 +47,16 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@clack/prompts": "^1.1.0",
-    "@modelcontextprotocol/sdk": "^1.28.0",
+    "@clack/prompts": "^1.2.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.9",
-    "@types/node": "^24.0.10",
-    "@vitest/coverage-v8": "^4.1.1",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.1"
+    "@biomejs/biome": "^2.4.12",
+    "@types/node": "^24.12.2",
+    "@vitest/coverage-v8": "^4.1.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   },
   "engines": {
     "node": ">=24.0.0"

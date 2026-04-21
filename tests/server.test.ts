@@ -68,9 +68,13 @@ describe('createServer', () => {
       resources: true,
       prompts: true,
     })
-    expect(parseCapabilityFlags(' Resources , COMPLETIONS , invalid , tasks ')).toEqual({
+    expect(
+      parseCapabilityFlags(' Resources , COMPLETIONS , SAMPLING , ELICITATION , invalid , tasks '),
+    ).toEqual({
       resources: true,
       completions: true,
+      sampling: true,
+      elicitation: true,
     })
     expect(parseCapabilityFlags('')).toBeUndefined()
     expect(parseCapabilityFlags(' , invalid , ')).toBeUndefined()
@@ -81,7 +85,8 @@ describe('createServer', () => {
       resolveServerOptionsFromEnv({
         DOKPLOY_MCP_MODE: '  CoDeMoDe ',
         DOKPLOY_ENABLED_TAGS: ' project , APPLICATION ',
-        DOKPLOY_MCP_CAPABILITIES: ' resources , prompts , completions , tasks ',
+        DOKPLOY_MCP_CAPABILITIES:
+          ' resources , prompts , completions , sampling , elicitation , tasks ',
       }),
     ).toEqual({
       mode: 'codemode',
@@ -90,6 +95,8 @@ describe('createServer', () => {
         resources: true,
         prompts: true,
         completions: true,
+        sampling: true,
+        elicitation: true,
       },
     })
   })
@@ -157,6 +164,24 @@ describe('createServer', () => {
           'triage-project-logs',
         ])
         await expect(client.listResourceTemplates()).rejects.toThrow()
+      },
+    )
+  })
+
+  it('keeps phase 3 flags internal to execute workflows instead of advertising new server capabilities', async () => {
+    await withClient(
+      createServer({
+        mode: 'codemode',
+        capabilityFlags: {
+          sampling: true,
+          elicitation: true,
+        },
+      }),
+      async (client) => {
+        const { tools } = await client.listTools()
+
+        expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(getCapabilityKeys(client)).toEqual(['tools'])
       },
     )
   })

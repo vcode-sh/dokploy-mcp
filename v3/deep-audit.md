@@ -19,13 +19,14 @@ The repository now also ships the first modern MCP expansion:
 - execute results that surface resource links when they can be inferred safely
 - guided workflow prompts
 - bounded prompt argument completions for common IDs and enums
+- guided `execute.workflow` deploy orchestration
+- `sampling`-backed bounded planning
+- form and URL `elicitation` with safe fallbacks
 
 The next strategic gap is no longer "more Dokploy tools" and no longer "basic resources".
 
-The next strategic gap is the remaining modern MCP breadth:
+The next strategic gap is now the remaining modern MCP breadth:
 
-- `sampling`
-- `elicitation`
 - `tasks`
 - registry-native remote metadata and auth discovery
 
@@ -72,16 +73,14 @@ Compared to a basic endpoint-per-tool server, this repo already has:
 
 ## Verified Strategic Gaps
 
-### 1. The agentic workflow layer is still not shipped
+### 1. The long-running workflow layer is still not shipped
 
 There is still no shipped layer for:
 
-- `sampling`
-- `elicitation`
 - `tasks`
 
-That means the server can execute workflows, but it cannot yet guide or sustain them in a
-first-class MCP-native way.
+That means the server can now guide deploy workflows in an MCP-native way, but it still cannot
+sustain long-running operations with first-class progress, polling, and cancellation semantics.
 
 ### 2. The runtime is not yet registry-native
 
@@ -101,7 +100,8 @@ distribution details.
 
 ### Better agent workflows
 
-`sampling`, `elicitation`, and `tasks` make the server better at multi-step work:
+The shipped `sampling`/`elicitation` layer plus the remaining `tasks` phase make the server better
+at multi-step work:
 
 - asking for missing values
 - handling long-running operations
@@ -121,7 +121,7 @@ phase.
 It should be framed as the remaining modern MCP capability expansion project, executed in this
 order:
 
-1. `sampling` + `elicitation` + `tasks`
+1. `tasks`
 2. registry-native remote packaging and auth discovery
 
 ## Research Inputs

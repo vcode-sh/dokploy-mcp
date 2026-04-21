@@ -50,7 +50,8 @@ describe('http options', () => {
     process.env.DOKPLOY_MCP_HTTP_PORT = '8088'
     process.env.DOKPLOY_MCP_HTTP_PATH = 'rpc'
     process.env.DOKPLOY_MCP_HEALTH_PATH = 'status'
-    process.env.DOKPLOY_MCP_CAPABILITIES = 'tasks,resources,prompts,completions,invalid'
+    process.env.DOKPLOY_MCP_CAPABILITIES =
+      'tasks,resources,prompts,completions,sampling,elicitation,invalid'
 
     expect(resolveHttpOptions({ mode: 'hybrid', enabledTags: ['project'] })).toEqual({
       mode: 'hybrid',
@@ -59,6 +60,8 @@ describe('http options', () => {
         resources: true,
         prompts: true,
         completions: true,
+        sampling: true,
+        elicitation: true,
       },
       host: '0.0.0.0',
       port: 8088,
@@ -103,6 +106,8 @@ describe('http options', () => {
             resources: true,
             prompts: true,
             completions: true,
+            sampling: true,
+            elicitation: true,
           },
           mcpPath: '/rpc',
           healthPath: '/livez',
@@ -113,7 +118,7 @@ describe('http options', () => {
       transport: 'http',
       mode: 'raw',
       enabledTags: ['server', 'project'],
-      capabilityFlags: ['completions', 'prompts', 'resources'],
+      capabilityFlags: ['completions', 'elicitation', 'prompts', 'resources', 'sampling'],
       mcpPath: '/rpc',
       healthPath: '/livez',
     })

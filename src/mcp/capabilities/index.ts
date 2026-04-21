@@ -17,12 +17,12 @@ export const codeModeSharedCapabilities: readonly McpCapabilityRegistration[] = 
 export const codeModeCapabilities: readonly McpCapabilityRegistration[] = [
   codeModeToolsCapability,
   ...codeModeSharedCapabilities,
+  codeModeSamplingCapability,
+  codeModeElicitationCapability,
 ]
 
 // Reserved for later phases. These families stay out of the active registration set until they
 // expose real MCP behavior.
 export const codeModePlannedCapabilities: readonly McpCapabilityRegistration[] = [
-  codeModeSamplingCapability,
-  codeModeElicitationCapability,
   codeModeTasksCapability,
 ]

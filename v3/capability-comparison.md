@@ -13,8 +13,8 @@ This comparison answers two different questions:
 On Dokploy API coverage, this repository no longer meaningfully trails the official Dokploy MCP.
 
 On modern MCP capability breadth, this repo now ships a stronger resource plus prompt/completion
-story, while the main remaining gaps are `sampling`, `elicitation`, `tasks`, and remote product
-metadata.
+story, plus a guided `sampling`/`elicitation` workflow layer, while the main remaining gaps are
+`tasks` and remote product metadata.
 
 ## Side-By-Side
 
@@ -32,8 +32,8 @@ metadata.
 | Resource links from tool outputs | implemented for relevant execute results | not part of the audited advantage | improves reuse of bounded context |
 | `prompts` | implemented as an optional staged capability | not observed as a differentiator in the audit | `phase 2` is closed |
 | `completions` | implemented through completable prompt arguments and staged capability wiring | not observed as a differentiator in the audit | `phase 2` is closed |
-| `sampling` | not implemented | not observed as a differentiator in the audit | priority 2 |
-| `elicitation` | not implemented | not observed as a differentiator in the audit | priority 2 |
+| `sampling` | implemented as an optional staged capability behind guided `execute.workflow` flows | not observed as a differentiator in the audit | `phase 3` is closed |
+| `elicitation` | implemented as an optional staged capability behind guided `execute.workflow` flows | not observed as a differentiator in the audit | `phase 3` is closed |
 | `tasks` | not implemented | not observed as a differentiator in the audit | priority 2 |
 | Registry-ready `server.json` / `remotes` | not implemented | not part of the audited advantage | priority 3 |
 | Modern auth discovery and remote metadata | not implemented | not part of the audited advantage | priority 3 |
@@ -58,7 +58,8 @@ This repo should keep its current advantages:
 - stronger tests
 - stronger safety and compatibility posture
 
-The next step is no longer "ship resources" and no longer "ship prompts".
+The next step is no longer "ship resources", no longer "ship prompts", and no longer "ship
+sampling / elicitation".
 
-The next step is to become meaningfully better than the official repo on agent workflow
+The next step is to become meaningfully better than the official repo on long-running workflow
 capabilities and remote MCP product posture.

@@ -4,7 +4,8 @@ Last updated: 2026-04-21
 
 This folder is the authoritative planning and audit package for the current `v3` execution cycle.
 
-It now reflects the shipped state after closing `phase 0`, `phase 1`, and `phase 2` in code.
+It now reflects the shipped state after closing `phase 0`, `phase 1`, `phase 2`, and `phase 3`
+in code.
 
 ## Current State
 
@@ -14,10 +15,12 @@ It now reflects the shipped state after closing `phase 0`, `phase 1`, and `phase
 - default public MCP surface: `search`, `execute`
 - optional server modes: `raw`, `hybrid`
 - transports: `stdio`, `http`
-- shipped staged MCP capability families: `resources`, `prompts`, `completions`
-- phase 2 verification command: `npm run test:phase2:coverage`
-- latest measured phase 2 slice coverage: `92.64%` statements, `83.75%` branches,
-  `92.48%` functions, `92.97%` lines
+- shipped staged MCP capability families: `resources`, `prompts`, `completions`, `sampling`,
+  `elicitation`
+- phase 3 verification command: `npm run test:phase3:coverage`
+- latest measured phase 3 slice coverage: `96.56%` statements, `86.05%` branches,
+  `98.92%` functions, `96.54%` lines
+- docs fact sync status: current via `npm run docs:check:facts` after a successful build
 
 ## What Is Done
 
@@ -41,6 +44,13 @@ It now reflects the shipped state after closing `phase 0`, `phase 1`, and `phase
   - prompt argument completions for common IDs and enums
   - bounded prompt rendering with reusable `dokploy://...` links
   - compatibility-aware fallback messaging for stale or missing IDs
+- `phase 3` sampling and elicitation:
+  - guided `execute.workflow` support for `deploy-application`
+  - bounded deploy planning through `sampling/createMessage`
+  - form-mode elicitation for missing targets, deployment intent, preview/apply choice, and
+    bounded rollout options
+  - URL-mode elicitation for out-of-band approval handoff
+  - safe preview and needs-input fallbacks when a client does not support interactive capabilities
 
 ## What Is Not Done
 
@@ -48,21 +58,19 @@ The remaining gaps are no longer about Dokploy endpoint coverage or resources.
 
 They are about later modern MCP phases:
 
-- `sampling`
-- `elicitation`
 - `tasks`
 - registry-native remote packaging and metadata
 - modern remote auth discovery and scope-aware HTTP behavior
 
 ## Top 3 Priorities
 
-1. Add `phase 3`: `sampling` and `elicitation`.
-2. Add `phase 4`: `tasks`.
-3. Add `phase 5`: registry metadata, `server.json`, remotes, and modern auth discovery.
+1. Add `phase 4`: `tasks`.
+2. Add `phase 5`: registry metadata, `server.json`, remotes, and modern auth discovery.
+3. Keep expanding workflow ergonomics only when repeated evidence justifies more helpers.
 
 ## Execution Order
 
-1. `phase 3` and `phase 4`: agentic workflow layer
+1. `phase 4`: tasks and long-running workflow control
 2. `phase 5`: remote distribution and auth
 
 ## Documents
@@ -80,9 +88,12 @@ They are about later modern MCP phases:
   remaining phases
 - [phase-2-verification.md](./phase-2-verification.md): acceptance evidence, coverage command, and
   the verification matrix for the shipped prompt/completion surface
+- [phase-3-verification.md](./phase-3-verification.md): acceptance evidence, coverage command, and
+  the verification matrix for the shipped sampling/elicitation workflow surface
 
 ## Planning Rule
 
-Do not reopen `phase 0` or `phase 1` scope unless a real regression is found.
+Do not reopen `phase 0`, `phase 1`, `phase 2`, or `phase 3` scope unless a real regression is
+found.
 
-The next cycle starts at `phase 3`: the agentic workflow and remote capability layers.
+The next cycle starts at `phase 4`: tasks plus the remaining remote capability layers.

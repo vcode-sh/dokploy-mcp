@@ -1,10 +1,28 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
-import { codeModeTools } from '../../codemode/tools/index.js'
+import { createExecuteTool } from '../../codemode/tools/execute.js'
+import { searchTool } from '../../codemode/tools/search.js'
+import type { McpCapabilityRegistrationOptions } from '../registration/types.js'
 import { createCapabilityRegistration } from '../registration/types.js'
 
-export function registerCodeModeToolCapabilities(server: McpServer) {
-  for (const tool of codeModeTools) {
+function getCodeModeRuntimeTools(
+  server: McpServer,
+  options: McpCapabilityRegistrationOptions = {},
+) {
+  return [
+    searchTool,
+    createExecuteTool({
+      server,
+      capabilityFlags: options.capabilityFlags,
+    }),
+  ]
+}
+
+export function registerCodeModeToolCapabilities(
+  server: McpServer,
+  options: McpCapabilityRegistrationOptions = {},
+) {
+  for (const tool of getCodeModeRuntimeTools(server, options)) {
     server.registerTool(
       tool.name,
       {

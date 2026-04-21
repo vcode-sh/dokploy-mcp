@@ -10,6 +10,8 @@ The resource gap is also closed for the current `phase 1` scope.
 
 The prompt and completion gap is closed for the current `phase 2` scope.
 
+The `sampling` and `elicitation` gap is closed for the current `phase 3` scope.
+
 That means endpoint count, basic resource reuse, and guided prompt entry are no longer the
 blockers for `v3`.
 
@@ -22,7 +24,8 @@ blockers for `v3`.
 | Capability foundation | Closed for shipped families | modular registration and shipped feature flags are in place |
 | `resources` and `resource templates` | Closed for `phase 1` scope | reusable `dokploy://...` resources are implemented and tested |
 | Prompt and completion surface | Closed for `phase 2` scope | guided prompts and completion-backed prompt arguments are implemented and tested |
-| Agentic workflow layer | Open strategic gap | `sampling`, `elicitation`, and `tasks` are still missing |
+| `sampling` and `elicitation` workflow layer | Closed for `phase 3` scope | guided `execute.workflow` planning and interactive input collection are implemented and tested |
+| `tasks` workflow layer | Open strategic gap | long-running progress, polling, and cancellation are still missing |
 | Remote discovery and auth metadata | Open strategic gap | registry metadata, `server.json`, `remotes`, OIDC-aware discovery, and scope signaling are still missing |
 
 ## What Not To Do Next
@@ -37,7 +40,7 @@ New endpoint additions should happen only when upstream Dokploy changes again.
 
 Shift the roadmap to two remaining product gaps:
 
-1. Agentic workflow support
+1. `tasks` for long-running workflow support
 2. Remote-native distribution and auth
 
 ## Practical Interpretation
