@@ -65,7 +65,7 @@ function getConfig(): ClientConfig {
         '  1. Run: npx @vibetools/dokploy-mcp setup',
         '  2. Set environment variables: DOKPLOY_URL and DOKPLOY_API_KEY',
         '',
-        'Get your API key from Dokploy Settings > API.',
+        'Get your API key from Dokploy Settings > Profile > API/CLI.',
       ].join('\n'),
     )
   }

@@ -885,8 +885,8 @@ describe('codemode gateway validation', () => {
             composeFile: 'services:\n  whoami:\n    image: traefik/whoami:v1.10',
             composePath: './docker-compose.yml',
             githubId: null,
-            owner: null,
-            repository: null,
+            owner: 'docker',
+            repository: 'awesome-compose',
           }
         }
 
@@ -902,7 +902,7 @@ describe('codemode gateway validation', () => {
     ).rejects.toMatchObject({
       type: 'validation_error',
       procedure: 'compose.deploy',
-      message: expect.stringContaining('sourceType to "raw"'),
+      message: expect.stringContaining('githubId, owner, repository, and composePath'),
     })
   })
 

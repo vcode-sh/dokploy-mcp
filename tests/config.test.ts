@@ -550,7 +550,7 @@ describe('validateCredentials', () => {
 
     await expect(validateCredentials('https://panel.example.com', 'bad-key')).resolves.toEqual({
       valid: false,
-      error: 'Invalid API key. Check your key in Dokploy Settings > API.',
+      error: 'Invalid API key. Check your key in Dokploy Settings > Profile > API/CLI.',
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)

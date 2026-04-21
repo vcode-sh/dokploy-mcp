@@ -252,7 +252,10 @@ function apiHeaders(apiKey: string): Record<string, string> {
 
 function mapAuthError(status: number, statusText: string): ValidationResult {
   if (status === 401 || status === 403) {
-    return { valid: false, error: 'Invalid API key. Check your key in Dokploy Settings > API.' }
+    return {
+      valid: false,
+      error: 'Invalid API key. Check your key in Dokploy Settings > Profile > API/CLI.',
+    }
   }
   if (status === 404) {
     return { valid: false, error: 'Not Found' }

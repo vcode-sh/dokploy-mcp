@@ -21,7 +21,7 @@ export const composeCatalogResponseHints: Record<string, CatalogResponseHints> =
     ],
     notes: [
       'Inline composeFile plus sourceType "raw" is the safest MCP path when you already have the Compose content in hand.',
-      'Git-backed compose deployments still need provider identity and composePath, not just a name and a deploy call.',
+      'GitHub-backed compose deployments should be treated as githubId plus owner/repository plus composePath, not just a name and a deploy call.',
     ],
   }),
   ...createSharedHints(['compose.deploy'], {
@@ -30,7 +30,7 @@ export const composeCatalogResponseHints: Record<string, CatalogResponseHints> =
     ],
     notes: [
       'Raw Compose path: sourceType "raw" plus composeFile.',
-      'GitHub path: sourceType "github" plus GitHub details and composePath.',
+      'GitHub path: sourceType "github" plus githubId, owner, repository, and composePath.',
     ],
   }),
 }

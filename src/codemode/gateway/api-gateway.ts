@@ -444,10 +444,11 @@ async function preflightComposeDeploy(
   const sourceType = getOptionalString(compose, 'sourceType')
   const composeFile = getOptionalString(compose, 'composeFile')
   const composePath = getOptionalString(compose, 'composePath')
+  const githubId = getOptionalString(compose, 'githubId')
+  const owner = getOptionalString(compose, 'owner')
+  const repository = getOptionalString(compose, 'repository')
 
-  const hasGithubConfig =
-    hasAnyConfiguredFields(compose, ['githubId']) ||
-    (hasAnyConfiguredFields(compose, ['owner']) && hasAnyConfiguredFields(compose, ['repository']))
+  const hasGithubConfig = Boolean(githubId && owner && repository)
   const hasGitlabConfig =
     hasAnyConfiguredFields(compose, ['gitlabId', 'gitlabProjectId']) ||
     hasAnyConfiguredFields(compose, ['gitlabOwner', 'gitlabRepository'])
@@ -473,21 +474,21 @@ async function preflightComposeDeploy(
     return
   }
 
+  if (sourceType === 'github' && !hasGithubConfig) {
+    throw formatGatewayError({
+      type: 'validation_error',
+      procedure,
+      message:
+        'compose.deploy cannot continue because sourceType is "github" but the compose record is missing required GitHub details. Configure githubId, owner, repository, and composePath before deploy.',
+    })
+  }
+
   if (composeFile && !hasGitBackedConfig) {
     throw formatGatewayError({
       type: 'validation_error',
       procedure,
       message:
         'This compose record has inline composeFile content but no Git-backed source configuration. If you want inline Compose, set sourceType to "raw" with compose.update before compose.deploy. If you want GitHub or another Git-backed flow, configure the provider details and composePath first.',
-    })
-  }
-
-  if (sourceType === 'github' && !hasGithubConfig) {
-    throw formatGatewayError({
-      type: 'validation_error',
-      procedure,
-      message:
-        'compose.deploy cannot continue because sourceType is "github" but the compose record is missing GitHub details. Configure githubId or owner/repository, and make sure composePath points to the Compose file in the repo.',
     })
   }
 
