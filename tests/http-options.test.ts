@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { getHealthPayload, resolveHttpOptions } from '../src/http/options.js'
+import { remoteDokployHeaderInputs } from '../src/http/security.js'
 
 const ORIGINAL_ENV = { ...process.env }
 
@@ -12,6 +13,8 @@ function omitEnv(
     | 'DOKPLOY_MCP_HTTP_PATH'
     | 'DOKPLOY_MCP_HEALTH_PATH'
     | 'DOKPLOY_MCP_CAPABILITIES'
+    | 'DOKPLOY_MCP_ALLOWED_ORIGINS'
+    | 'DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK'
   >
 ) {
   return Object.fromEntries(
@@ -32,6 +35,8 @@ describe('http options', () => {
       'DOKPLOY_MCP_HTTP_PATH',
       'DOKPLOY_MCP_HEALTH_PATH',
       'DOKPLOY_MCP_CAPABILITIES',
+      'DOKPLOY_MCP_ALLOWED_ORIGINS',
+      'DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK',
     )
 
     expect(resolveHttpOptions()).toEqual({
@@ -42,16 +47,21 @@ describe('http options', () => {
       port: 3000,
       mcpPath: '/mcp',
       healthPath: '/health',
+      allowedOrigins: [],
+      allowConfigFallback: false,
+      remoteHeaders: remoteDokployHeaderInputs,
     })
   })
 
-  it('normalizes env-derived paths and capability flags', () => {
+  it('normalizes env-derived paths, capability flags, and remote HTTP settings', () => {
     process.env.DOKPLOY_MCP_HTTP_HOST = '0.0.0.0'
     process.env.DOKPLOY_MCP_HTTP_PORT = '8088'
     process.env.DOKPLOY_MCP_HTTP_PATH = 'rpc'
     process.env.DOKPLOY_MCP_HEALTH_PATH = 'status'
     process.env.DOKPLOY_MCP_CAPABILITIES =
       'tasks,resources,prompts,completions,sampling,elicitation,invalid'
+    process.env.DOKPLOY_MCP_ALLOWED_ORIGINS = 'https://app.example.com, https://admin.example.com'
+    process.env.DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK = 'true'
 
     expect(resolveHttpOptions({ mode: 'hybrid', enabledTags: ['project'] })).toEqual({
       mode: 'hybrid',
@@ -68,6 +78,9 @@ describe('http options', () => {
       port: 8088,
       mcpPath: '/rpc',
       healthPath: '/status',
+      allowedOrigins: ['https://app.example.com', 'https://admin.example.com'],
+      allowConfigFallback: true,
+      remoteHeaders: remoteDokployHeaderInputs,
     })
   })
 
@@ -85,6 +98,8 @@ describe('http options', () => {
         mcpPath: 'explicit-mcp',
         healthPath: 'explicit-health',
         capabilityFlags: { resources: true },
+        allowedOrigins: ['https://cursor.example.com'],
+        allowConfigFallback: true,
       }),
     ).toEqual({
       mode: 'codemode',
@@ -94,10 +109,22 @@ describe('http options', () => {
       port: 4000,
       mcpPath: '/explicit-mcp',
       healthPath: '/explicit-health',
+      allowedOrigins: ['https://cursor.example.com'],
+      allowConfigFallback: true,
+      remoteHeaders: remoteDokployHeaderInputs,
     })
   })
 
-  it('serializes health payload with sorted capability flags', () => {
+  it('treats explicit false and invalid remote fallback env values distinctly', () => {
+    process.env.DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK = 'false'
+
+    expect(resolveHttpOptions().allowConfigFallback).toBe(false)
+
+    process.env.DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK = 'not-a-boolean'
+    expect(resolveHttpOptions().allowConfigFallback).toBe(false)
+  })
+
+  it('serializes health payload with sorted capability flags and remote auth metadata', () => {
     expect(
       getHealthPayload(
         resolveHttpOptions({
@@ -113,6 +140,7 @@ describe('http options', () => {
           },
           mcpPath: '/rpc',
           healthPath: '/livez',
+          allowedOrigins: ['https://cursor.example.com'],
         }),
       ),
     ).toEqual({
@@ -123,6 +151,22 @@ describe('http options', () => {
       capabilityFlags: ['completions', 'elicitation', 'prompts', 'resources', 'sampling', 'tasks'],
       mcpPath: '/rpc',
       healthPath: '/livez',
+      remoteAuth: {
+        allowConfigFallback: false,
+        allowedOrigins: ['https://cursor.example.com'],
+        headers: [
+          {
+            name: 'X-Dokploy-Url',
+            isRequired: true,
+            isSecret: false,
+          },
+          {
+            name: 'X-Dokploy-Api-Key',
+            isRequired: true,
+            isSecret: true,
+          },
+        ],
+      },
     })
   })
 })

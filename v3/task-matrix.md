@@ -21,14 +21,15 @@ work that can wait.
 | `phase 2` prompts and completions | Done | guided workflow prompts, bounded prompt rendering, and ID/enum completions are shipped behind staged capability flags |
 | `phase 3` sampling and elicitation | Done | guided `execute.workflow` deploy orchestration, bounded planning, and interactive input collection are shipped behind staged capability flags |
 | `phase 4` tasks | Done | long-running `execute` runs now expose task lifecycle, polling, cancellation, and shutdown-safe cleanup behind the staged `tasks` capability |
+| `phase 5` remote distribution and auth | Done | registry-ready metadata, `server.json`, remote header auth, origin validation, and hosted session isolation are shipped and verified |
 | Verification and release hygiene | Done | build, test, lint, typecheck, budgets, docs automation, and release metadata work are in place |
 
 ## Next
 
 | Track | Status | Why it matters now |
 | --- | --- | --- |
-| Registry-native remote metadata | Next | improves discovery and remote consumption |
-| Pragmatic remote auth | Next | remote HTTP needs a simple auth contract that works on standard Dokploy installs |
+| Final verification and rollout | Next | the remote surface is shipped; now it needs release-closeout validation and rollout follow-through |
+| Live compatibility recheck on older Dokploy backends | Next | phase 5 changed the remote path, so version-skew evidence still matters before release |
 
 ## Later
 
@@ -41,4 +42,4 @@ work that can wait.
 
 ## Priority Order
 
-1. registry-native remote packaging and pragmatic auth
+1. final verification and rollout

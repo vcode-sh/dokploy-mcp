@@ -6,8 +6,8 @@ import net from 'node:net'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js'
-import { afterEach, describe, expect, it } from 'vitest'
-
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { remoteDokployHeaders } from '../src/http/security.js'
 import {
   createHttpServer,
   resolveHttpEnabledTags,
@@ -17,12 +17,20 @@ import {
 } from '../src/http-server.js'
 
 const startedServers: StartedHttpServer[] = []
+const ORIGINAL_ENV = { ...process.env }
+const defaultRemoteDokployUrl = 'https://panel.example.com'
+const defaultRemoteDokployApiKey = 'test-api-key'
 
 afterEach(async () => {
   while (startedServers.length > 0) {
     const handle = startedServers.pop()
     await handle?.close()
   }
+
+  process.env = { ...ORIGINAL_ENV }
+  vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 async function waitFor(milliseconds: number) {
@@ -46,6 +54,64 @@ async function settleWithin<T>(promise: Promise<T>, label: string, timeoutMs = 2
     if (timeoutId) {
       clearTimeout(timeoutId)
     }
+  }
+}
+
+function normalizeHeaders(headers?: HeadersInit) {
+  if (!headers) {
+    return {}
+  }
+
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries())
+  }
+
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers)
+  }
+
+  return { ...headers }
+}
+
+function createRemoteRequestHeaders(overrides: Record<string, string> = {}) {
+  return {
+    [remoteDokployHeaders.url.name]: defaultRemoteDokployUrl,
+    [remoteDokployHeaders.apiKey.name]: defaultRemoteDokployApiKey,
+    ...overrides,
+  }
+}
+
+function createRemoteHeaderLines(overrides: Record<string, string> = {}) {
+  return Object.entries(createRemoteRequestHeaders(overrides)).map(
+    ([name, value]) => `${name}: ${value}`,
+  )
+}
+
+function createJsonTextResponse(data: unknown, status = 200, statusText = 'OK') {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText,
+    async text() {
+      return JSON.stringify(data)
+    },
+  }
+}
+
+function withRemoteRequestInit(
+  options?: ConstructorParameters<typeof StreamableHTTPClientTransport>[1],
+  headerOverrides: Record<string, string> = {},
+): ConstructorParameters<typeof StreamableHTTPClientTransport>[1] {
+  return {
+    ...options,
+    requestInit: {
+      ...options?.requestInit,
+      headers: {
+        ...createRemoteRequestHeaders(),
+        ...normalizeHeaders(options?.requestInit?.headers),
+        ...headerOverrides,
+      },
+    },
   }
 }
 
@@ -129,7 +195,10 @@ async function withHttpClient(handle: StartedHttpServer, run: (client: Client) =
     name: 'http-transport-client',
     version: '1.0.0',
   })
-  const transport = new StreamableHTTPClientTransport(new URL(handle.mcpUrl))
+  const transport = new StreamableHTTPClientTransport(
+    new URL(handle.mcpUrl),
+    withRemoteRequestInit(),
+  )
 
   await client.connect(transport)
 
@@ -148,7 +217,10 @@ async function withHttpClientTransport(
     name: 'http-transport-client',
     version: '1.0.0',
   })
-  const transport = new StreamableHTTPClientTransport(new URL(handle.mcpUrl))
+  const transport = new StreamableHTTPClientTransport(
+    new URL(handle.mcpUrl),
+    withRemoteRequestInit(),
+  )
 
   await client.connect(transport)
 
@@ -167,7 +239,10 @@ async function createConnectedHttpClient(
     name: 'http-transport-client',
     version: '1.0.0',
   })
-  const transport = new StreamableHTTPClientTransport(new URL(handle.mcpUrl), options)
+  const transport = new StreamableHTTPClientTransport(
+    new URL(handle.mcpUrl),
+    withRemoteRequestInit(options),
+  )
   await client.connect(transport)
   return { client, transport }
 }
@@ -177,8 +252,12 @@ async function closeHttpClient(client: {
   transport: StreamableHTTPClientTransport
 }) {
   await Promise.allSettled([
-    client.client.close().catch(() => undefined),
-    client.transport.close().catch(() => undefined),
+    Promise.resolve()
+      .then(() => client.client.close())
+      .catch(() => undefined),
+    Promise.resolve()
+      .then(() => client.transport.close())
+      .catch(() => undefined),
   ])
 }
 
@@ -189,6 +268,7 @@ async function expectSessionNotFound(handle: StartedHttpServer, sessionId: strin
       Accept: 'text/event-stream',
       'mcp-session-id': sessionId,
       'mcp-protocol-version': '2025-03-26',
+      ...createRemoteRequestHeaders(),
     },
   })
   const payload = (await response.json()) as Record<string, unknown>
@@ -217,6 +297,19 @@ function expectConnectionClosedToolError(result: {
   )
 }
 
+function expectConnectionClosedSdkError(error: unknown) {
+  expect(error).toBeInstanceOf(Error)
+  expect(error).toMatchObject({
+    message: expect.stringContaining('Connection closed'),
+  })
+}
+
+function captureToolCall<T>(promise: Promise<T>) {
+  return promise
+    .then((result) => ({ kind: 'result' as const, result }))
+    .catch((error: unknown) => ({ kind: 'error' as const, error }))
+}
+
 async function deleteSession(handle: StartedHttpServer, sessionId: string) {
   try {
     const response = await fetch(handle.mcpUrl, {
@@ -226,6 +319,7 @@ async function deleteSession(handle: StartedHttpServer, sessionId: string) {
         'content-type': 'application/json',
         'mcp-session-id': sessionId,
         'mcp-protocol-version': '2025-03-26',
+        ...createRemoteRequestHeaders(),
       },
     })
 
@@ -239,9 +333,12 @@ async function deleteSession(handle: StartedHttpServer, sessionId: string) {
 }
 
 async function createReconnectHttpClient(handle: StartedHttpServer, sessionId: string) {
-  const transport = new StreamableHTTPClientTransport(new URL(handle.mcpUrl), {
-    sessionId,
-  })
+  const transport = new StreamableHTTPClientTransport(
+    new URL(handle.mcpUrl),
+    withRemoteRequestInit({
+      sessionId,
+    }),
+  )
   transport.setProtocolVersion('2025-03-26')
 
   const client = new Client({
@@ -263,6 +360,7 @@ async function sendAbortedPartialPost(handle: StartedHttpServer) {
     headers: {
       Accept: 'application/json, text/event-stream',
       'content-type': 'application/json',
+      ...createRemoteRequestHeaders(),
     },
   })
   const requestSettled = new Promise<'close' | 'error'>((resolve) => {
@@ -304,6 +402,7 @@ async function sendTruncatedContentLengthPost(handle: StartedHttpServer) {
       'Accept: application/json, text/event-stream',
       'Content-Type: application/json',
       `Content-Length: ${declaredLength}`,
+      ...createRemoteHeaderLines(),
       'Connection: close',
       '',
       body,
@@ -371,6 +470,7 @@ async function openSessionEventStream(handle: StartedHttpServer, sessionId: stri
       Accept: 'text/event-stream',
       'mcp-session-id': sessionId,
       'mcp-protocol-version': '2025-03-26',
+      ...createRemoteRequestHeaders(),
     },
   })
 
@@ -410,6 +510,22 @@ describe('http server transport', () => {
       capabilityFlags: [],
       mcpPath: '/mcp',
       healthPath: '/health',
+      remoteAuth: {
+        allowConfigFallback: false,
+        allowedOrigins: [],
+        headers: [
+          {
+            name: 'X-Dokploy-Url',
+            isRequired: true,
+            isSecret: false,
+          },
+          {
+            name: 'X-Dokploy-Api-Key',
+            isRequired: true,
+            isSecret: true,
+          },
+        ],
+      },
     })
 
     await withHttpClient(handle, async (client) => {
@@ -602,6 +718,134 @@ describe('http server transport', () => {
     expect(payload).toEqual({ ok: false, error: 'Not found' })
   })
 
+  it('rejects MCP requests without the declared remote auth headers', async () => {
+    const handle = await startTestHttpServer({ mode: 'codemode' })
+
+    const response = await fetch(handle.mcpUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, text/event-stream',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'initialize',
+        id: 1,
+        params: {
+          clientInfo: {
+            name: 'unauthorized-client',
+            version: '1.0.0',
+          },
+          protocolVersion: '2025-03-26',
+          capabilities: {},
+        },
+      }),
+    })
+    const payload = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(401)
+    expect(payload).toMatchObject({
+      error: {
+        code: -32003,
+        message: expect.stringContaining('X-Dokploy-Url'),
+      },
+    })
+  })
+
+  it('rejects partial remote auth headers with a controlled 400', async () => {
+    const handle = await startTestHttpServer({ mode: 'codemode' })
+
+    const response = await fetch(handle.mcpUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, text/event-stream',
+        'content-type': 'application/json',
+        [remoteDokployHeaders.apiKey.name]: defaultRemoteDokployApiKey,
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'initialize',
+        id: 1,
+        params: {
+          clientInfo: {
+            name: 'partial-auth-client',
+            version: '1.0.0',
+          },
+          protocolVersion: '2025-03-26',
+          capabilities: {},
+        },
+      }),
+    })
+    const payload = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(400)
+    expect(payload).toMatchObject({
+      error: {
+        code: -32000,
+        message: expect.stringContaining('must be provided together'),
+      },
+    })
+  })
+
+  it('rejects disallowed browser origins and supports explicit preflight allowlists', async () => {
+    const handle = await startTestHttpServer({
+      mode: 'codemode',
+      allowedOrigins: ['https://cursor.example.com'],
+    })
+
+    const forbidden = await fetch(handle.mcpUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, text/event-stream',
+        'content-type': 'application/json',
+        Origin: 'https://evil.example.com',
+        ...createRemoteRequestHeaders(),
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'initialize',
+        id: 1,
+        params: {
+          clientInfo: {
+            name: 'origin-client',
+            version: '1.0.0',
+          },
+          protocolVersion: '2025-03-26',
+          capabilities: {},
+        },
+      }),
+    })
+    const forbiddenPayload = (await forbidden.json()) as Record<string, unknown>
+
+    expect(forbidden.status).toBe(403)
+    expect(forbiddenPayload).toMatchObject({
+      error: {
+        code: -32004,
+        message: expect.stringContaining('not allowed'),
+      },
+    })
+
+    const preflight = await fetch(handle.mcpUrl, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://cursor.example.com',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': [
+          remoteDokployHeaders.url.name,
+          remoteDokployHeaders.apiKey.name,
+          'Content-Type',
+        ].join(', '),
+      },
+    })
+
+    expect(preflight.status).toBe(204)
+    expect(preflight.headers.get('access-control-allow-origin')).toBe('https://cursor.example.com')
+    expect(preflight.headers.get('access-control-allow-methods')).toContain('POST')
+    expect(preflight.headers.get('access-control-allow-headers')).toContain(
+      remoteDokployHeaders.url.name,
+    )
+  })
+
   it('rejects GET requests to /mcp without a session header', async () => {
     const handle = await startTestHttpServer({ mode: 'codemode' })
 
@@ -609,6 +853,7 @@ describe('http server transport', () => {
       method: 'GET',
       headers: {
         Accept: 'text/event-stream',
+        ...createRemoteRequestHeaders(),
       },
     })
     const payload = (await response.json()) as Record<string, unknown>
@@ -632,6 +877,7 @@ describe('http server transport', () => {
         'content-type': 'application/json',
         'mcp-session-id': 'missing-session',
         'mcp-protocol-version': '2025-03-26',
+        ...createRemoteRequestHeaders(),
       },
     })
     const payload = (await response.json()) as Record<string, unknown>
@@ -653,6 +899,7 @@ describe('http server transport', () => {
       headers: {
         Accept: 'application/json, text/event-stream',
         'content-type': 'application/json',
+        ...createRemoteRequestHeaders(),
       },
       body: '{"jsonrpc":"2.0",',
     })
@@ -702,6 +949,7 @@ describe('http server transport', () => {
       headers: {
         Accept: 'application/json, text/event-stream',
         'content-type': 'application/json',
+        ...createRemoteRequestHeaders(),
       },
       body: JSON.stringify({ hello: 'world' }),
     })
@@ -724,6 +972,7 @@ describe('http server transport', () => {
       headers: {
         Accept: 'application/json, text/event-stream',
         'content-type': 'application/json',
+        ...createRemoteRequestHeaders(),
       },
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -795,6 +1044,7 @@ describe('http server transport', () => {
           'content-type': 'application/json',
           'mcp-session-id': sessionId!,
           'mcp-protocol-version': '2025-03-26',
+          ...createRemoteRequestHeaders(),
         },
       })
 
@@ -829,6 +1079,195 @@ describe('http server transport', () => {
       expect(result.isError).not.toBe(true)
     } finally {
       await Promise.allSettled([closeHttpClient(first), closeHttpClient(second)])
+    }
+  })
+
+  it('prefers per-request remote credentials over local HTTP fallback config', async () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://env.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'env-key')
+
+    const handle = await startTestHttpServer({
+      mode: 'hybrid',
+      enabledTags: ['project'],
+      allowConfigFallback: true,
+    })
+    const originalFetch = globalThis.fetch
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async (url: URL | RequestInfo, init?: RequestInit) => {
+        const urlString =
+          typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlString.startsWith(handle.url)) {
+          return await originalFetch(url, init)
+        }
+
+        return createJsonTextResponse({
+          result: {
+            data: {
+              json: [{ projectId: 'project-1', name: 'Remote project' }],
+            },
+          },
+        })
+      })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const client = await createConnectedHttpClient(handle, {
+      requestInit: {
+        headers: createRemoteRequestHeaders({
+          [remoteDokployHeaders.url.name]: 'https://remote.example.com',
+          [remoteDokployHeaders.apiKey.name]: 'remote-key',
+        }),
+      },
+    })
+
+    try {
+      const result = await client.client.callTool({
+        name: 'project.all',
+        arguments: {},
+      })
+
+      expect(result.isError).not.toBe(true)
+      expect(result.structuredContent).toMatchObject({
+        items: [{ projectId: 'project-1', name: 'Remote project' }],
+      })
+    } finally {
+      await closeHttpClient(client)
+    }
+
+    const dokployCalls = fetchMock.mock.calls.filter(([url]) => {
+      const urlString =
+        typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      return !urlString.startsWith(handle.url)
+    })
+    const [requestUrl, requestInit] = dokployCalls[0] as [string, RequestInit]
+    const requestHeaders = requestInit.headers as Record<string, string>
+
+    expect(dokployCalls).toHaveLength(1)
+    expect(requestUrl).toContain('https://remote.example.com/api/trpc/project.all')
+    expect(requestUrl).not.toContain('env.example.com')
+    expect(requestHeaders['x-api-key']).toBe('remote-key')
+  })
+
+  it('keeps remote Dokploy credentials isolated across concurrent HTTP sessions', async () => {
+    const handle = await startTestHttpServer({
+      mode: 'hybrid',
+      enabledTags: ['project'],
+    })
+    const originalFetch = globalThis.fetch
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async (url: URL | RequestInfo, init?: RequestInit) => {
+        const urlString =
+          typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlString.startsWith(handle.url)) {
+          return await originalFetch(url, init)
+        }
+
+        const headers = (init?.headers ?? {}) as Record<string, string>
+        const apiKey = headers['x-api-key']
+        const baseUrl = new URL(urlString)
+
+        return createJsonTextResponse({
+          result: {
+            data: {
+              json: [
+                {
+                  projectId: apiKey,
+                  name: baseUrl.hostname,
+                },
+              ],
+            },
+          },
+        })
+      })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const first = await createConnectedHttpClient(handle, {
+      requestInit: {
+        headers: createRemoteRequestHeaders({
+          [remoteDokployHeaders.url.name]: 'https://alpha.example.com',
+          [remoteDokployHeaders.apiKey.name]: 'alpha-key',
+        }),
+      },
+    })
+    const second = await createConnectedHttpClient(handle, {
+      requestInit: {
+        headers: createRemoteRequestHeaders({
+          [remoteDokployHeaders.url.name]: 'https://beta.example.com',
+          [remoteDokployHeaders.apiKey.name]: 'beta-key',
+        }),
+      },
+    })
+
+    try {
+      const [firstResult, secondResult] = await Promise.all([
+        first.client.callTool({
+          name: 'project.all',
+          arguments: {},
+        }),
+        second.client.callTool({
+          name: 'project.all',
+          arguments: {},
+        }),
+      ])
+
+      expect(firstResult.isError).not.toBe(true)
+      expect(firstResult.structuredContent).toMatchObject({
+        items: [{ projectId: 'alpha-key', name: 'alpha.example.com' }],
+      })
+      expect(secondResult.isError).not.toBe(true)
+      expect(secondResult.structuredContent).toMatchObject({
+        items: [{ projectId: 'beta-key', name: 'beta.example.com' }],
+      })
+    } finally {
+      await Promise.allSettled([closeHttpClient(first), closeHttpClient(second)])
+    }
+
+    const observedKeys = fetchMock.mock.calls
+      .filter(([url]) => {
+        const urlString =
+          typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        return !urlString.startsWith(handle.url)
+      })
+      .map(([, init]) => {
+        const headers = (init?.headers ?? {}) as Record<string, string>
+        return headers['x-api-key']
+      })
+
+    expect(observedKeys.sort()).toEqual(['alpha-key', 'beta-key'])
+  })
+
+  it('rejects session reuse when request credentials do not match the bound session config', async () => {
+    const handle = await startTestHttpServer({ mode: 'codemode' })
+    const client = await createConnectedHttpClient(handle)
+    const sessionId = client.transport.sessionId!
+
+    try {
+      const response = await fetch(handle.mcpUrl, {
+        method: 'GET',
+        headers: {
+          Accept: 'text/event-stream',
+          'mcp-session-id': sessionId,
+          'mcp-protocol-version': '2025-03-26',
+          ...createRemoteRequestHeaders({
+            [remoteDokployHeaders.url.name]: 'https://other.example.com',
+            [remoteDokployHeaders.apiKey.name]: 'other-key',
+          }),
+        },
+      })
+      const payload = (await response.json()) as Record<string, unknown>
+
+      expect(response.status).toBe(403)
+      expect(payload).toMatchObject({
+        error: {
+          code: -32004,
+          message: expect.stringContaining('do not match'),
+        },
+      })
+    } finally {
+      await closeHttpClient(client)
     }
   })
 
@@ -1126,12 +1565,14 @@ describe('http server transport', () => {
     const client = await createConnectedHttpClient(handle)
 
     try {
-      const pendingCall = client.client.callTool({
-        name: 'execute',
-        arguments: {
-          code: buildSleepExecuteCode(150, 'direct-create-http-server-close'),
-        },
-      })
+      const pendingCall = captureToolCall(
+        client.client.callTool({
+          name: 'execute',
+          arguments: {
+            code: buildSleepExecuteCode(150, 'direct-create-http-server-close'),
+          },
+        }),
+      )
       const partialRequest = sendAbortedPartialPost(handle)
 
       await waitFor(20)
@@ -1156,16 +1597,19 @@ describe('http server transport', () => {
         'direct createHttpServer close callers',
         4_000,
       )
+      await closeHttpClient(client)
       const result = await settleWithin(pendingCall, 'direct createHttpServer active call', 4_000)
       const partialResult = await partialRequest
 
       expect(closeResults).toHaveLength(4)
       expect(['close', 'error']).toContain(partialResult)
 
-      if (result.isError) {
-        expectConnectionClosedToolError(result)
+      if (result.kind === 'error') {
+        expectConnectionClosedSdkError(result.error)
+      } else if (result.result.isError) {
+        expectConnectionClosedToolError(result.result)
       } else {
-        expect(result.structuredContent).toMatchObject({
+        expect(result.result.structuredContent).toMatchObject({
           result: {
             label: 'direct-create-http-server-close',
             slept: 150,
@@ -1204,6 +1648,7 @@ describe('http server transport', () => {
           headers: {
             Accept: 'application/json, text/event-stream',
             'content-type': 'application/json',
+            ...createRemoteRequestHeaders(),
           },
           body: '{"jsonrpc":"2.0",',
         }).then(async (response) => ({
@@ -1218,6 +1663,7 @@ describe('http server transport', () => {
           headers: {
             Accept: 'application/json, text/event-stream',
             'content-type': 'application/json',
+            ...createRemoteRequestHeaders(),
           },
           body: JSON.stringify({ invalid: true }),
         }).then(async (response) => ({
@@ -1321,6 +1767,7 @@ describe('http server transport', () => {
           headers: {
             Accept: 'application/json, text/event-stream',
             'content-type': 'application/json',
+            ...createRemoteRequestHeaders(),
           },
           body: '{"jsonrpc":"2.0",',
         }).then(async (response) => ({
@@ -1334,6 +1781,7 @@ describe('http server transport', () => {
           headers: {
             Accept: 'application/json, text/event-stream',
             'content-type': 'application/json',
+            ...createRemoteRequestHeaders(),
           },
           body: JSON.stringify({ invalid: true }),
         }).then(async (response) => ({
@@ -1480,30 +1928,34 @@ describe('http server transport', () => {
     const client = await createConnectedHttpClient(handle)
 
     try {
-      const pendingCall = client.client.callTool({
-        name: 'execute',
-        arguments: {
-          code: buildSleepExecuteCode(150, 'shutdown-drain-complete'),
-        },
-      })
+      const pendingCall = captureToolCall(
+        client.client.callTool({
+          name: 'execute',
+          arguments: {
+            code: buildSleepExecuteCode(150, 'shutdown-drain-complete'),
+          },
+        }),
+      )
 
       await waitFor(20)
 
       const closePromise = settleWithin(handle.close(), 'shutdown drain close', 4_000)
+      await closePromise
+      await closeHttpClient(client)
       const result = await settleWithin(pendingCall, 'shutdown drain active call', 4_000)
 
-      if (result.isError) {
-        expectConnectionClosedToolError(result)
+      if (result.kind === 'error') {
+        expectConnectionClosedSdkError(result.error)
+      } else if (result.result.isError) {
+        expectConnectionClosedToolError(result.result)
       } else {
-        expect(result.structuredContent).toMatchObject({
+        expect(result.result.structuredContent).toMatchObject({
           result: {
             label: 'shutdown-drain-complete',
             slept: 150,
           },
         })
       }
-
-      await closePromise
     } finally {
       await closeHttpClient(client)
     }
@@ -1515,20 +1967,23 @@ describe('http server transport', () => {
     const sessionId = client.transport.sessionId!
 
     try {
-      const pendingCall = client.client.callTool({
-        name: 'execute',
-        arguments: {
-          code: buildSleepExecuteCode(150, 'race-finished'),
-        },
-      })
+      const pendingCall = captureToolCall(
+        client.client.callTool({
+          name: 'execute',
+          arguments: {
+            code: buildSleepExecuteCode(150, 'race-finished'),
+          },
+        }),
+      )
 
       await waitFor(20)
 
-      const [deleteResult, closeResult, callResult] = await Promise.all([
-        settleWithin(deleteSession(handle, sessionId), 'shutdown race delete'),
-        settleWithin(handle.close(), 'shutdown race close'),
-        settleWithin(pendingCall, 'shutdown race active call', 4_000),
-      ])
+      const deletePromise = settleWithin(deleteSession(handle, sessionId), 'shutdown race delete')
+      const closePromise = settleWithin(handle.close(), 'shutdown race close')
+      const deleteResult = await deletePromise
+      const closeResult = await closePromise
+      await closeHttpClient(client)
+      const callResult = await settleWithin(pendingCall, 'shutdown race active call', 4_000)
 
       if (deleteResult.kind === 'response') {
         expect([200, 404, 503]).toContain(deleteResult.response.status)
@@ -1536,10 +1991,12 @@ describe('http server transport', () => {
         expect(deleteResult.error).toBeInstanceOf(Error)
       }
 
-      if (callResult.isError) {
-        expectConnectionClosedToolError(callResult)
+      if (callResult.kind === 'error') {
+        expectConnectionClosedSdkError(callResult.error)
+      } else if (callResult.result.isError) {
+        expectConnectionClosedToolError(callResult.result)
       } else {
-        expect(callResult.structuredContent).toMatchObject({
+        expect(callResult.result.structuredContent).toMatchObject({
           result: {
             label: 'race-finished',
             slept: 150,
@@ -1563,6 +2020,7 @@ describe('http server transport', () => {
       headers: {
         Accept: 'application/json, text/event-stream',
         'content-type': 'application/json',
+        ...createRemoteRequestHeaders(),
       },
     })
     const requestSettled = new Promise<'close' | 'error'>((resolve) => {
@@ -1600,6 +2058,7 @@ describe('http server transport', () => {
         Accept: 'text/event-stream',
         'mcp-session-id': sessionId!,
         'mcp-protocol-version': '2025-03-26',
+        ...createRemoteRequestHeaders(),
       },
     })
 
@@ -1737,12 +2196,14 @@ describe('http server transport', () => {
       }
 
       const activeCalls = clients.slice(2).map((client, index) =>
-        client.client.callTool({
-          name: 'execute',
-          arguments: {
-            code: buildSleepExecuteCode(175, `shutdown-pressure-${index}`),
-          },
-        }),
+        captureToolCall(
+          client.client.callTool({
+            name: 'execute',
+            arguments: {
+              code: buildSleepExecuteCode(175, `shutdown-pressure-${index}`),
+            },
+          }),
+        ),
       )
       const abortedRequests = Array.from({ length: 4 }, () => sendAbortedPartialPost(handle))
       const truncatedRequests = Array.from({ length: 4 }, () =>
@@ -1750,6 +2211,11 @@ describe('http server transport', () => {
       )
 
       await waitFor(20)
+
+      const closeResult = await settleWithin(handle.close(), 'shutdown pressure close', 6_000)
+      expect(closeResult).toBeUndefined()
+
+      await Promise.allSettled(clients.map((client) => closeHttpClient(client)))
 
       const [callResults, abortedResults, truncatedResults, streamResults] = await Promise.all([
         Promise.all(activeCalls),
@@ -1760,19 +2226,15 @@ describe('http server transport', () => {
             settleWithin(stream.settled, 'shutdown pressure stream cleanup', 4_000),
           ),
         ),
-        settleWithin(handle.close(), 'shutdown pressure close', 6_000),
-      ]).then(([calls, aborted, truncated, settledStreams]) => [
-        calls,
-        aborted,
-        truncated,
-        settledStreams,
       ])
 
       for (const [index, result] of callResults.entries()) {
-        if (result.isError) {
-          expectConnectionClosedToolError(result)
+        if (result.kind === 'error') {
+          expectConnectionClosedSdkError(result.error)
+        } else if (result.result.isError) {
+          expectConnectionClosedToolError(result.result)
         } else {
-          expect(result.structuredContent).toMatchObject({
+          expect(result.result.structuredContent).toMatchObject({
             result: {
               label: `shutdown-pressure-${index}`,
               slept: 175,

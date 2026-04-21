@@ -1,10 +1,11 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { execSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { z } from 'zod'
 
-import type { ConfigFile, DokployConfig, ResolvedConfig } from './types.js'
+import type { ConfigFile, ConfigSource, DokployConfig, ResolvedConfig } from './types.js'
 import { getConfigDir, getConfigFilePath } from './types.js'
 
 const configFileSchema = z.object({
@@ -31,8 +32,9 @@ const userSchema = z
 
 const versionSchema = z.union([z.string(), z.object({ version: z.string() }).passthrough()])
 const defaultTimeoutMs = 30_000
+const configOverrideStorage = new AsyncLocalStorage<ResolvedConfig | null>()
 
-function resolveTimeout(rawTimeout: string | undefined): number {
+export function resolveTimeout(rawTimeout: string | undefined): number {
   if (!rawTimeout) {
     return defaultTimeoutMs
   }
@@ -56,6 +58,32 @@ export function normalizeUrl(url: string): string {
   return `${stripped}/api/trpc`
 }
 
+export function createResolvedConfig(
+  url: string,
+  apiKey: string,
+  source: ConfigSource,
+  timeout: number,
+): ResolvedConfig {
+  return {
+    url: normalizeUrl(url),
+    apiKey,
+    source,
+    timeout,
+  }
+}
+
+export function withResolvedConfigOverride<T>(config: ResolvedConfig | null, callback: () => T): T {
+  return configOverrideStorage.run(config, callback)
+}
+
+export function getResolvedConfigOverride() {
+  return configOverrideStorage.getStore() ?? null
+}
+
+export interface ResolveConfigOptions {
+  includeOverride?: boolean
+}
+
 /**
  * Resolves Dokploy configuration from multiple sources in priority order:
  * 1. Environment variables (DOKPLOY_URL + DOKPLOY_API_KEY)
@@ -65,42 +93,34 @@ export function normalizeUrl(url: string): string {
  * URLs are automatically normalized to the tRPC API base path.
  * Returns null if no configuration is found.
  */
-export function resolveConfig(): ResolvedConfig | null {
+export function resolveConfig(options: ResolveConfigOptions = {}): ResolvedConfig | null {
   const timeout = resolveTimeout(process.env.DOKPLOY_TIMEOUT)
+
+  if (options.includeOverride !== false) {
+    const override = getResolvedConfigOverride()
+    if (override) {
+      return override
+    }
+  }
 
   // 1. Environment variables (highest priority)
   const envUrl = process.env.DOKPLOY_URL
   const envApiKey = process.env.DOKPLOY_API_KEY
 
   if (envUrl && envApiKey) {
-    return {
-      url: normalizeUrl(envUrl),
-      apiKey: envApiKey,
-      source: 'env',
-      timeout,
-    }
+    return createResolvedConfig(envUrl, envApiKey, 'env', timeout)
   }
 
   // 2. Config file
   const configFromFile = readConfigFile()
   if (configFromFile) {
-    return {
-      url: normalizeUrl(configFromFile.url),
-      apiKey: configFromFile.apiKey,
-      source: 'config-file',
-      timeout,
-    }
+    return createResolvedConfig(configFromFile.url, configFromFile.apiKey, 'config-file', timeout)
   }
 
   // 3. Dokploy CLI config
   const configFromCli = readDokployCliConfig()
   if (configFromCli) {
-    return {
-      url: normalizeUrl(configFromCli.url),
-      apiKey: configFromCli.apiKey,
-      source: 'dokploy-cli',
-      timeout,
-    }
+    return createResolvedConfig(configFromCli.url, configFromCli.apiKey, 'dokploy-cli', timeout)
   }
 
   return null

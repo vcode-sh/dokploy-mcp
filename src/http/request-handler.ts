@@ -12,6 +12,7 @@ import {
   writeServerUnavailable,
   writeSessionNotFound,
 } from './responses.js'
+import { authorizeMcpRequest, handleMcpPreflight, withHttpRequestConfig } from './security.js'
 import { createSessionRecord } from './sessions.js'
 import type {
   HttpRequestHandler,
@@ -170,7 +171,9 @@ async function handleTrackedSessionRequest(
   }
 
   try {
-    await session.transport.handleRequest(req, res, parsedBody)
+    await withHttpRequestConfig(session.resolvedConfig, () =>
+      session.transport.handleRequest(req, res, parsedBody),
+    )
   } finally {
     if (requestKind !== 'control') {
       sessions.unregisterRequestAborter(session, abortRequest)
@@ -184,17 +187,11 @@ async function handleExistingPostSession(
   req: IncomingMessage,
   res: ServerResponse,
   sessions: SessionRegistry,
+  session: SessionRecord | undefined,
   parsedBody: unknown,
 ) {
-  const sessionId = getSessionIdHeader(req)
-  if (!sessionId) {
-    return false
-  }
-
-  const session = sessions.get(sessionId)
   if (!session) {
-    writeSessionNotFound(req, res)
-    return true
+    return false
   }
 
   await handleTrackedSessionRequest(req, res, sessions, session, parsedBody)
@@ -207,13 +204,14 @@ async function handleInitializePostSession(
   sessions: SessionRegistry,
   options: ResolvedHttpServerOptions,
   parsedBody: unknown,
+  resolvedConfig: SessionRecord['resolvedConfig'],
 ) {
   if (sessions.isShuttingDown()) {
     writeServerUnavailable(req, res)
     return
   }
 
-  const session = createSessionRecord(sessions, options)
+  const session = createSessionRecord(sessions, options, resolvedConfig)
   if (!sessions.beginRequest(session, 'request')) {
     await sessions.closeRecord(session)
     writeServerUnavailable(req, res)
@@ -221,8 +219,10 @@ async function handleInitializePostSession(
   }
 
   try {
-    await session.server.connect(session.transport)
-    await session.transport.handleRequest(req, res, parsedBody)
+    await withHttpRequestConfig(session.resolvedConfig, async () => {
+      await session.server.connect(session.transport)
+      await session.transport.handleRequest(req, res, parsedBody)
+    })
   } catch (error) {
     const sessionId = session.transport.sessionId
     if (sessionId) {
@@ -250,6 +250,18 @@ async function handlePostRequest(
   options: ResolvedHttpServerOptions,
   sessions: SessionRegistry,
 ) {
+  const sessionId = getSessionIdHeader(req)
+  const session = sessionId ? sessions.get(sessionId) : undefined
+  if (sessionId && !session) {
+    writeSessionNotFound(req, res)
+    return
+  }
+
+  const resolvedConfig = authorizeMcpRequest(req, res, options, session)
+  if (!resolvedConfig) {
+    return
+  }
+
   let parsedBody: unknown
 
   try {
@@ -270,7 +282,7 @@ async function handlePostRequest(
     return
   }
 
-  if (await handleExistingPostSession(req, res, sessions, parsedBody)) {
+  if (await handleExistingPostSession(req, res, sessions, session, parsedBody)) {
     return
   }
 
@@ -279,16 +291,21 @@ async function handlePostRequest(
     return
   }
 
-  await handleInitializePostSession(req, res, sessions, options, parsedBody)
+  await handleInitializePostSession(req, res, sessions, options, parsedBody, resolvedConfig)
 }
 
 async function handleSessionRequest(
   req: IncomingMessage,
   res: ServerResponse,
+  options: ResolvedHttpServerOptions,
   sessions: SessionRegistry,
 ) {
   const session = getSessionRecord(req, res, sessions)
   if (!session) {
+    return
+  }
+
+  if (!authorizeMcpRequest(req, res, options, session)) {
     return
   }
 
@@ -312,7 +329,7 @@ async function handleMcpRequest(
       return
     }
 
-    await handleSessionRequest(req, res, sessions)
+    await handleSessionRequest(req, res, options, sessions)
   } catch (error) {
     if (canWriteResponse(res)) {
       writeJsonRpcError(
@@ -343,6 +360,10 @@ export function createHttpRequestHandler(
     }
 
     if (url.pathname === options.mcpPath) {
+      if (handleMcpPreflight(req, res, options)) {
+        return
+      }
+
       await handleMcpRequest(req, res, options, sessions)
       return
     }

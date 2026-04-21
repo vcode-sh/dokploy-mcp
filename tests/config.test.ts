@@ -23,10 +23,12 @@ vi.mock('node:fs', () => ({
 }))
 
 import {
+  createResolvedConfig,
   normalizeUrl,
   resolveConfig,
   saveConfig,
   validateCredentials,
+  withResolvedConfigOverride,
 } from '../src/config/resolver.js'
 import { getConfigDir, getConfigFilePath } from '../src/config/types.js'
 
@@ -158,6 +160,59 @@ describe('resolveConfig', () => {
       url: 'https://env.example.com/api/trpc',
       apiKey: 'env-key',
       source: 'env',
+      timeout: 30_000,
+    })
+  })
+
+  it('prefers request-scoped HTTP header overrides over env and file-based config', () => {
+    configureConfigSources({
+      configFileContent: JSON.stringify({
+        url: 'https://file.example.com/api',
+        apiKey: 'file-key',
+      }),
+    })
+    vi.stubEnv('DOKPLOY_URL', 'https://env.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'env-key')
+
+    const override = createResolvedConfig(
+      'https://remote.example.com',
+      'remote-key',
+      'http-headers',
+      45_000,
+    )
+
+    const resolved = withResolvedConfigOverride(override, () => resolveConfig())
+    expect(resolved).toEqual({
+      url: 'https://remote.example.com/api/trpc',
+      apiKey: 'remote-key',
+      source: 'http-headers',
+      timeout: 45_000,
+    })
+  })
+
+  it('can ignore request-scoped overrides when HTTP fallback needs the local sources only', () => {
+    configureConfigSources({
+      configFileContent: JSON.stringify({
+        url: 'https://file.example.com/api',
+        apiKey: 'file-key',
+      }),
+    })
+
+    const override = createResolvedConfig(
+      'https://remote.example.com',
+      'remote-key',
+      'http-headers',
+      45_000,
+    )
+
+    const resolved = withResolvedConfigOverride(override, () =>
+      resolveConfig({ includeOverride: false }),
+    )
+
+    expect(resolved).toEqual({
+      url: 'https://file.example.com/api/trpc',
+      apiKey: 'file-key',
+      source: 'config-file',
       timeout: 30_000,
     })
   })
@@ -436,6 +491,56 @@ describe('validateCredentials', () => {
     )
   })
 
+  it('accepts an already normalized /api/trpc URL without probing fallback paths', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        createJsonResponse(200, {
+          result: {
+            data: {
+              json: {
+                email: 'user@example.com',
+              },
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse(200, {
+          result: {
+            data: {
+              json: {
+                version: 'v0.31.0',
+              },
+            },
+          },
+        }),
+      )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      validateCredentials('https://panel.example.com/api/trpc', 'test-key'),
+    ).resolves.toEqual({
+      valid: true,
+      resolvedUrl: 'https://panel.example.com/api/trpc',
+      user: 'user@example.com',
+      version: 'v0.31.0',
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://panel.example.com/api/trpc/user.get',
+      expect.any(Object),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://panel.example.com/api/trpc/settings.getDokployVersion',
+      expect.any(Object),
+    )
+  })
+
   it('stops after an auth error instead of trying every fallback URL', async () => {
     const fetchMock = vi
       .fn()
@@ -453,6 +558,21 @@ describe('validateCredentials', () => {
       'https://panel.example.com/api/trpc/user.get',
       expect.any(Object),
     )
+  })
+
+  it('returns generic API errors for unexpected auth response codes', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createJsonResponse(500, { message: 'boom' }, 'Server Error'))
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(validateCredentials('https://panel.example.com', 'test-key')).resolves.toEqual({
+      valid: false,
+      error: 'API returned HTTP 500: Server Error',
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('returns a timeout error when the Dokploy server does not respond', async () => {
@@ -480,6 +600,32 @@ describe('validateCredentials', () => {
       valid: false,
       error:
         'Could not connect to Dokploy at https://panel.example.com. Ensure the URL is correct and the server is running.',
+    })
+  })
+
+  it('treats version lookup failures as non-fatal after auth succeeds', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        createJsonResponse(200, {
+          result: {
+            data: {
+              json: {
+                email: 'user@example.com',
+              },
+            },
+          },
+        }),
+      )
+      .mockRejectedValueOnce(new Error('version probe failed'))
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(validateCredentials('https://panel.example.com', 'test-key')).resolves.toEqual({
+      valid: true,
+      resolvedUrl: 'https://panel.example.com/api/trpc',
+      user: 'user@example.com',
+      version: undefined,
     })
   })
 })

@@ -2,8 +2,11 @@ import { randomUUID } from 'node:crypto'
 
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 
+import type { ResolvedConfig } from '../config/types.js'
 import { createServer } from '../server.js'
 import type { ResolvedHttpServerOptions, SessionRecord, SessionRegistry } from './types.js'
+
+const SESSION_STREAM_SHUTDOWN_GRACE_MS = 3_000
 
 export async function closeSessionRecord(record: SessionRecord) {
   await Promise.allSettled([record.transport.close(), record.server.close()])
@@ -22,6 +25,7 @@ export function createSessionRegistry(): SessionRegistry {
       closeRequested: boolean
       closePromise?: Promise<void>
       drainedResolve?: () => void
+      streamDrainedResolve?: () => void
       sessionId?: string
       closed: boolean
     }
@@ -82,6 +86,26 @@ export function createSessionRegistry(): SessionRegistry {
         await new Promise<void>((resolve) => {
           state.drainedResolve = resolve
         })
+      }
+
+      if (state.activeStreams > 0) {
+        let timeoutId: NodeJS.Timeout | undefined
+        try {
+          await Promise.race([
+            new Promise<void>((resolve) => {
+              state.streamDrainedResolve = resolve
+            }),
+            new Promise<void>((resolve) => {
+              timeoutId = setTimeout(resolve, SESSION_STREAM_SHUTDOWN_GRACE_MS)
+              timeoutId.unref?.()
+            }),
+          ])
+        } finally {
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+          }
+          state.streamDrainedResolve = undefined
+        }
       }
 
       await finalizeRecord(record)
@@ -160,6 +184,11 @@ export function createSessionRegistry(): SessionRegistry {
         }
 
         state.activeStreams -= 1
+        if (state.activeStreams === 0 && state.streamDrainedResolve) {
+          const resolve = state.streamDrainedResolve
+          state.streamDrainedResolve = undefined
+          resolve()
+        }
         return
       }
 
@@ -203,6 +232,7 @@ export function createSessionRegistry(): SessionRegistry {
 export function createSessionRecord(
   sessions: SessionRegistry,
   options: ResolvedHttpServerOptions,
+  resolvedConfig: ResolvedConfig,
 ): SessionRecord {
   const server = createServer({
     mode: options.mode,
@@ -223,6 +253,7 @@ export function createSessionRecord(
   const record: SessionRecord = {
     server,
     transport,
+    resolvedConfig,
   }
   sessions.trackRecord(record)
 

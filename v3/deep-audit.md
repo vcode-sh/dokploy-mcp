@@ -4,7 +4,8 @@ Last updated: 2026-04-21
 
 This audit answers one question:
 
-After closing Dokploy endpoint parity, `phase 0`, `phase 1`, `phase 2`, `phase 3`, and `phase 4`,
+After closing Dokploy endpoint parity, `phase 0`, `phase 1`, `phase 2`, `phase 3`, `phase 4`, and
+`phase 5`,
 what is the
 highest-value next move for this repository?
 
@@ -25,12 +26,16 @@ The repository now also ships the first modern MCP expansion:
 - form and URL `elicitation` with safe fallbacks
 - staged `tasks` capability wiring with polling, cancellation, and shutdown-safe cleanup
 - task-aware `execute` runs for long-running code and guided deploy workflows
+- root `server.json` metadata with npm package and remote install paths
+- request-scoped hosted auth through Dokploy URL plus API key headers
+- origin validation and session-bound hosted credential isolation
 
-The next strategic gap is no longer "more Dokploy tools" and no longer "basic resources".
+The next strategic gap is no longer "more Dokploy tools", no longer "basic resources", and no
+longer "remote metadata/auth".
 
-The next strategic gap is now the remaining modern MCP breadth:
+The remaining work is now release-oriented:
 
-- registry-native remote metadata and a pragmatic remote auth story
+- final verification and rollout of the shipped remote surface
 
 ## Verified Strengths In This Repository
 
@@ -73,37 +78,30 @@ Compared to a basic endpoint-per-tool server, this repo already has:
 - adversarial subprocess coverage
 - protocol budget checks
 
-## Verified Strategic Gaps
+## Verified Remaining Constraints
 
-### 1. The runtime is not yet registry-native
+### 1. Final rollout still needs compatibility-aware live verification
 
-The CLI and runtime in [`src/index.ts`](../src/index.ts) expose `stdio` and `http`, which is fine,
-but the repository still does not present itself as a modern remote MCP product with:
+The first hosted remote release is now implemented, but it still needs the last read-only release
+checks against older Dokploy backends before calling the whole `v3` cycle complete.
 
-- `server.json`
-- registry-ready `remotes`
-- modern server metadata
-- capability metadata for remote discovery
-- a simple remote header contract for Dokploy URL and API key
-- explicit HTTP-side origin and remote security posture
+That matters because the new remote install path still depends on the same compatibility-aware
+gateway behavior that protects earlier phases from version skew.
 
-That gap matters because discovery and remote deployment are now part of the product, not just
-distribution details.
-
-### 2. Dokploy Enterprise SSO is not the right baseline for phase 5
+### 2. Dokploy Enterprise SSO is still not the right baseline after phase 5
 
 Dokploy's OIDC/SAML SSO support is an Enterprise feature and is about logging into Dokploy through
 an external identity provider.
 
 That is not the same thing as a broadly available authorization layer for this MCP server.
 
-So the next phase should not depend on:
+The shipped first remote release should still not depend on:
 
 - Dokploy Enterprise SSO being available on the target installation
 - Dokploy acting as the auth foundation for remote MCP access
 - a custom OAuth/OIDC layer in this repository before a real hosted use case exists
 
-The first remote release should instead stay aligned with how Dokploy actually authenticates API
+The shipped remote release instead stays aligned with how Dokploy actually authenticates API
 traffic today: URL plus API key.
 
 ## Why These Gaps Matter
@@ -121,16 +119,16 @@ work:
 ### Better remote adoption
 
 Remote metadata, registry publication, and a clear auth contract increasingly determine whether a
-server is easy to consume in the broader MCP ecosystem.
+server is easy to consume in the broader MCP ecosystem, which is why closing `phase 5` mattered.
 
 ## Audit Conclusion
 
 The next cycle should not be framed as another endpoint project and should not reopen the resource
 phase.
 
-It should now be framed as the remaining remote MCP productization project:
+It should now be framed as the release closeout project:
 
-1. registry-native remote packaging and pragmatic auth
+1. final verification and rollout for the shipped remote MCP surface
 
 ## Research Inputs
 

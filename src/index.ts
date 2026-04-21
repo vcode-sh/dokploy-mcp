@@ -29,6 +29,8 @@ async function startHttpTransport(options: StartServerOptions) {
     port: options.port,
     mcpPath: options.mcpPath,
     healthPath: options.healthPath,
+    allowedOrigins: options.allowedOrigins,
+    allowConfigFallback: options.allowConfigFallback,
   })
 
   console.error(`Dokploy MCP HTTP server listening at ${handle.mcpUrl}`)

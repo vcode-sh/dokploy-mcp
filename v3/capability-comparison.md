@@ -13,8 +13,8 @@ This comparison answers two different questions:
 On Dokploy API coverage, this repository no longer meaningfully trails the official Dokploy MCP.
 
 On modern MCP capability breadth, this repo now ships a stronger resource plus prompt/completion
-story, a guided `sampling`/`elicitation` workflow layer, and staged `tasks`, while the main
-remaining gaps are remote product metadata and a pragmatic remote auth story.
+story, a guided `sampling`/`elicitation` workflow layer, staged `tasks`, and the first remote MCP
+product surface through registry-ready metadata plus pragmatic remote auth.
 
 ## Side-By-Side
 
@@ -35,8 +35,8 @@ remaining gaps are remote product metadata and a pragmatic remote auth story.
 | `sampling` | implemented as an optional staged capability behind guided `execute.workflow` flows | not observed as a differentiator in the audit | `phase 3` is closed |
 | `elicitation` | implemented as an optional staged capability behind guided `execute.workflow` flows | not observed as a differentiator in the audit | `phase 3` is closed |
 | `tasks` | implemented as an optional staged capability behind task-aware `execute` runs | not observed as a differentiator in the audit | `phase 4` is closed |
-| Registry-ready `server.json` / `remotes` | not implemented | not part of the audited advantage | priority 2 |
-| Pragmatic remote auth for self-hosted Dokploy | not implemented | not part of the audited advantage | priority 2 |
+| Registry-ready `server.json` / `remotes` | yes: shipped in `phase 5` | not part of the audited advantage | this repo now leads on remote discoverability |
+| Pragmatic remote auth for self-hosted Dokploy | yes: shipped in `phase 5` through Dokploy URL + API key headers | not part of the audited advantage | this repo now closes the first remote auth gap without custom OAuth/OIDC |
 
 ## What This Means
 
@@ -59,7 +59,7 @@ This repo should keep its current advantages:
 - stronger safety and compatibility posture
 
 The next step is no longer "ship resources", no longer "ship prompts", no longer "ship
-sampling / elicitation", and no longer "ship tasks".
+sampling / elicitation", no longer "ship tasks", and no longer "ship remote metadata/auth".
 
-The next step is to become meaningfully better than the official repo on remote MCP product
-posture.
+The next step is to keep the new remote surface release-ready through final verification and
+rollout discipline.

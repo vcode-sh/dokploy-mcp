@@ -426,6 +426,7 @@ export async function runExecuteInSubprocess(options: {
       workerPath: options.workerPath,
       workerEnv: options.workerEnv,
     })
+    let pendingCallResults = 0
     let cleanupAbortListener: (() => void) | undefined
     const resolveWithCleanup = (value: SandboxExecutionResult) => {
       cleanupAbortListener?.()
@@ -458,13 +459,30 @@ export async function runExecuteInSubprocess(options: {
     timeoutId.unref?.()
 
     worker.on('message', (message: unknown) => {
-      void handleExecuteWorkerMessage(worker, settle, message, options.onCall).catch((error) => {
-        rejectUnexpectedWorkerMessageError(settle, error)
-      })
+      const tracksCallResult = isWorkerCallMessage(message)
+      if (tracksCallResult) {
+        pendingCallResults += 1
+      }
+
+      void handleExecuteWorkerMessage(worker, settle, message, options.onCall)
+        .catch((error) => {
+          rejectUnexpectedWorkerMessageError(settle, error)
+        })
+        .finally(() => {
+          if (tracksCallResult) {
+            pendingCallResults = Math.max(0, pendingCallResults - 1)
+          }
+        })
     })
 
     worker.on('error', (error) => settle.reject(normalizeError(error)))
-    worker.on('disconnect', () => settle.reject(buildDisconnectError()))
+    worker.on('disconnect', () =>
+      settle.reject(
+        pendingCallResults > 0
+          ? buildCallResultTransportError(new Error(buildDisconnectError().message))
+          : buildDisconnectError(),
+      ),
+    )
     worker.on('exit', (code, signal) => settle.reject(buildExitError(code, signal), false))
 
     sendInitialRunMessage(worker, settle, {

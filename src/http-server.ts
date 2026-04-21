@@ -15,7 +15,7 @@ import { parseEnabledTags, parseServerMode, type ServerMode } from './server.js'
 
 export type { HttpServerOptions, StartedHttpServer } from './http/types.js'
 
-const REQUEST_SHUTDOWN_GRACE_MS = 250
+const REQUEST_SHUTDOWN_GRACE_MS = 1_000
 const HTTP_HEADERS_TIMEOUT_MS = 30_000
 const HTTP_REQUEST_TIMEOUT_MS = 30_000
 const HTTP_KEEP_ALIVE_TIMEOUT_MS = 5_000
@@ -133,7 +133,9 @@ function createActiveRequestTracker(isShuttingDown: () => boolean) {
     abortBlockingRequests() {
       for (const activeRequest of activeRequests) {
         const shouldAbort =
-          !activeRequest.bodyComplete || hasEventStreamContentType(activeRequest.res)
+          !activeRequest.bodyComplete ||
+          hasEventStreamContentType(activeRequest.res) ||
+          !activeRequest.res.writableEnded
 
         if (!shouldAbort) {
           continue
@@ -244,7 +246,8 @@ function createManagedHttpServer(options: HttpServerOptions = {}) {
       forceAbortTimer.unref?.()
 
       try {
-        await Promise.all([ensureCleanup(), closeWait])
+        await closeWait
+        await ensureCleanup()
       } finally {
         clearTimeout(forceAbortTimer)
       }

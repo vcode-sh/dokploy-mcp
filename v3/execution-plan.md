@@ -11,7 +11,8 @@ Status update:
 - `phase 2` is complete in code
 - `phase 3` is complete in code
 - `phase 4` is complete in code
-- the remaining execution plan starts at `phase 5`
+- `phase 5` is complete in code
+- the remaining execution plan starts at `phase 6`
 
 ## Target Outcome
 
@@ -52,7 +53,7 @@ By the end of this plan, the repository should:
 | C. Prompts and completions | P0 | Complete | guided workflows, bounded prompt rendering, and low-friction identifier discovery |
 | D. Sampling and elicitation | P1 | Complete | interactive, MCP-native workflow composition |
 | E. Tasks | P1 | Complete | progress, polling, cancellation, and shutdown-safe cleanup for long-running work |
-| F. Remote distribution and auth | P2 | Next | registry-ready metadata and pragmatic remote server behavior |
+| F. Remote distribution and auth | P2 | Complete | registry-ready metadata and pragmatic remote server behavior |
 
 ## Phase 0: Capability Foundation
 
@@ -342,6 +343,8 @@ Support long-running or multi-step workflows with progress, polling, and cancell
 
 ## Phase 5: Remote Distribution And Pragmatic Auth
 
+Status: Complete
+
 ### Goal
 
 Make the server feel like a modern remote MCP product for normal Dokploy installs, not just a
@@ -375,6 +378,20 @@ local package with HTTP support and not a custom OAuth/OIDC project.
   - no protected resource metadata flow
   - no OIDC discovery integration
   - no dependency on Dokploy Enterprise SSO
+
+### Implementation Closeout
+
+- the repository now ships a root `server.json` with npm package metadata, Streamable HTTP
+  `remotes`, repository metadata, website metadata, and hosted icon metadata
+- hosted remote installs now declare the first-release Dokploy auth contract explicitly through
+  `X-Dokploy-Url` and `X-Dokploy-Api-Key`
+- the HTTP runtime now resolves request-scoped Dokploy credentials from those headers while keeping
+  local `stdio` resolution unchanged
+- hosted sessions are now bound to the credentials that created them, and mismatched follow-up
+  requests are rejected instead of silently switching target Dokploy backends
+- browser origins are rejected by default and can be allowlisted explicitly for hosted preflight
+  flows
+- dedicated metadata, adversarial, integration, and coverage checks now verify the remote surface
 
 ### Tests
 
@@ -457,7 +474,11 @@ The remaining plan can be implemented in parallel without overlapping write scop
 
 ### Worker F
 
-- remote metadata, pragmatic auth, CI, and docs
+- closed: remote metadata, pragmatic auth, CI, and docs
+
+### Worker G
+
+- final verification and rollout
 
 ## Key Risks And Mitigations
 

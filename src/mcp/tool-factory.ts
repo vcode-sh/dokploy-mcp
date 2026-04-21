@@ -65,7 +65,11 @@ function error(message: string, details?: string) {
 }
 
 const ERROR_MAP: Record<number, [string, (err: ApiError) => string]> = {
-  401: ['Authentication failed', () => 'Check your DOKPLOY_API_KEY environment variable.'],
+  401: [
+    'Authentication failed',
+    () =>
+      'Check your Dokploy API key. For stdio use DOKPLOY_API_KEY or local config; for remote HTTP use X-Dokploy-Api-Key.',
+  ],
   403: ['Permission denied', () => 'Your API key lacks permission for this operation.'],
   404: ['Resource not found', (err) => err.message],
   422: [

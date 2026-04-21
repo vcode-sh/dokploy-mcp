@@ -3,6 +3,7 @@ import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 
+import type { ResolvedConfig } from '../config/types.js'
 import type { CreateServerOptions, ServerMode } from '../server.js'
 
 export interface HttpServerOptions extends CreateServerOptions {
@@ -10,6 +11,8 @@ export interface HttpServerOptions extends CreateServerOptions {
   port?: number
   mcpPath?: string
   healthPath?: string
+  allowedOrigins?: string[]
+  allowConfigFallback?: boolean
 }
 
 export interface StartedHttpServer {
@@ -28,11 +31,23 @@ export interface ResolvedHttpServerOptions {
   port: number
   mcpPath: string
   healthPath: string
+  allowedOrigins: string[]
+  allowConfigFallback: boolean
+  remoteHeaders: readonly HttpRemoteHeaderInput[]
+}
+
+export interface HttpRemoteHeaderInput {
+  name: string
+  description: string
+  isRequired?: boolean
+  isSecret?: boolean
+  placeholder?: string
 }
 
 export interface SessionRecord {
   server: McpServer
   transport: StreamableHTTPServerTransport
+  resolvedConfig: ResolvedConfig
 }
 
 export interface SessionRegistry {

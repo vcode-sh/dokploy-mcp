@@ -6,7 +6,7 @@ export interface DokployConfig {
   apiKey: string // Dokploy API key
 }
 
-export type ConfigSource = 'env' | 'config-file' | 'dokploy-cli'
+export type ConfigSource = 'env' | 'config-file' | 'dokploy-cli' | 'http-headers'
 
 export interface ResolvedConfig extends DokployConfig {
   source: ConfigSource

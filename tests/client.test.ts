@@ -6,6 +6,7 @@ import {
   resetApiClientCachesForTests,
   unwrapTrpcResponse,
 } from '../src/api/client.js'
+import { createResolvedConfig, withResolvedConfigOverride } from '../src/config/resolver.js'
 
 beforeEach(() => {
   resetApiClientCachesForTests()
@@ -61,6 +62,21 @@ describe('ApiError', () => {
     expect(err.message).toBe(
       'Dokploy API error (400): Invalid input: expected object, received undefined',
     )
+  })
+
+  it('extracts direct error.message payloads', () => {
+    const err = new ApiError(
+      401,
+      'Unauthorized',
+      {
+        error: {
+          message: 'Bad Dokploy credentials',
+        },
+      },
+      'test.one',
+    )
+
+    expect(err.message).toBe('Dokploy API error (401): Bad Dokploy credentials')
   })
 
   it('is instanceof Error', () => {
@@ -193,6 +209,72 @@ describe('getBackendVersionInfo', () => {
     })
   })
 
+  it('shares the in-flight backend version probe promise for concurrent callers', async () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://dokploy.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'test-api-key')
+
+    let resolveFetch: ((value: unknown) => void) | undefined
+    const fetchMock = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveFetch = resolve
+        }),
+    )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const first = api.getBackendVersionInfo()
+    const second = api.getBackendVersionInfo()
+
+    resolveFetch?.({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      async text() {
+        return JSON.stringify({
+          result: {
+            data: {
+              json: 'v0.30.1',
+            },
+          },
+        })
+      },
+    })
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      { state: 'detected', version: 'v0.30.1' },
+      { state: 'detected', version: 'v0.30.1' },
+    ])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats blank or non-object version payloads as unavailable', async () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://dokploy.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'test-api-key')
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      async text() {
+        return JSON.stringify({
+          result: {
+            data: {
+              json: 123,
+            },
+          },
+        })
+      },
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(api.getBackendVersionInfo()).resolves.toEqual({
+      state: 'unavailable',
+      version: null,
+    })
+  })
+
   it('does not cache unavailable probe failures forever', async () => {
     vi.stubEnv('DOKPLOY_URL', 'https://dokploy.example.com')
     vi.stubEnv('DOKPLOY_API_KEY', 'test-api-key')
@@ -226,6 +308,58 @@ describe('getBackendVersionInfo', () => {
       version: 'v0.28.8',
     })
 
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps backend version caches isolated per resolved Dokploy credential set', async () => {
+    const versionsByKey = new Map([
+      ['remote-key-a', 'v0.30.0'],
+      ['remote-key-b', 'v0.31.0'],
+    ])
+    const fetchMock = vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+      const headers = (init?.headers ?? {}) as Record<string, string>
+      const version = versionsByKey.get(headers['x-api-key'])
+
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        async text() {
+          return JSON.stringify({
+            result: {
+              data: {
+                json: version,
+              },
+            },
+          })
+        },
+      }
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const configA = createResolvedConfig(
+      'https://remote-a.example.com',
+      'remote-key-a',
+      'http-headers',
+      30_000,
+    )
+    const configB = createResolvedConfig(
+      'https://remote-b.example.com',
+      'remote-key-b',
+      'http-headers',
+      30_000,
+    )
+
+    const firstA = await withResolvedConfigOverride(configA, () => api.getBackendVersionInfo())
+    const secondA = await withResolvedConfigOverride(configA, () => api.getBackendVersionInfo())
+    const firstB = await withResolvedConfigOverride(configB, () => api.getBackendVersionInfo())
+    const secondB = await withResolvedConfigOverride(configB, () => api.getBackendVersionInfo())
+
+    expect(firstA).toEqual({ state: 'detected', version: 'v0.30.0' })
+    expect(secondA).toEqual(firstA)
+    expect(firstB).toEqual({ state: 'detected', version: 'v0.31.0' })
+    expect(secondB).toEqual(firstB)
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })
@@ -263,6 +397,31 @@ describe('request helpers', () => {
 
     await expect(api.get('/project.all')).rejects.toThrow(
       'Request to /project.all timed out after 30000ms',
+    )
+  })
+
+  it('returns raw text bodies when a successful response is not JSON', async () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://dokploy.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'test-api-key')
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      async text() {
+        return 'plain-text-result'
+      },
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(api.post('/project.create', { name: 'Demo' })).resolves.toBe('plain-text-result')
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://dokploy.example.com/api/trpc/project.create',
+      expect.objectContaining({
+        method: 'POST',
+        body: '{"json":{"name":"Demo"}}',
+      }),
     )
   })
 })

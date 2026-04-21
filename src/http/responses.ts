@@ -52,6 +52,18 @@ export function writeSessionNotFound(req: IncomingMessage, res: ServerResponse) 
   writeJsonRpcError(req, res, 404, 'Session not found', -32001)
 }
 
+export function writeUnauthorized(
+  req: IncomingMessage,
+  res: ServerResponse,
+  message = 'Unauthorized',
+) {
+  writeJsonRpcError(req, res, 401, message, -32003)
+}
+
+export function writeForbidden(req: IncomingMessage, res: ServerResponse, message = 'Forbidden') {
+  writeJsonRpcError(req, res, 403, message, -32004)
+}
+
 export function writeServerUnavailable(
   req: IncomingMessage,
   res: ServerResponse,

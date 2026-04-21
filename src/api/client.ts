@@ -77,13 +77,15 @@ function getConfig(): ClientConfig {
   }
 }
 
-let _config: ClientConfig | null = null
-let _backendVersionInfo: BackendVersionInfo | null = null
-let _backendVersionPromise: Promise<BackendVersionInfo> | null = null
+function getConfigCacheKey(config: ClientConfig) {
+  return `${config.baseUrl}\n${config.apiKey}`
+}
+
+const _backendVersionInfo = new Map<string, BackendVersionInfo>()
+const _backendVersionPromise = new Map<string, Promise<BackendVersionInfo>>()
 
 function config(): ClientConfig {
-  _config ??= getConfig()
-  return _config
+  return getConfig()
 }
 
 export class ApiError extends Error {
@@ -129,8 +131,9 @@ async function request<T = unknown>(
   method: 'GET' | 'POST',
   path: string,
   body?: unknown,
+  clientConfig = config(),
 ): Promise<T> {
-  const { baseUrl, apiKey, timeout } = config()
+  const { baseUrl, apiKey, timeout } = clientConfig
 
   const qs = method === 'GET' ? buildQueryString(body) : ''
   const url = qs ? `${baseUrl}${path}?${qs}` : `${baseUrl}${path}`
@@ -176,9 +179,9 @@ async function request<T = unknown>(
   }
 }
 
-async function probeBackendVersion(): Promise<BackendVersionInfo> {
+async function probeBackendVersion(clientConfig: ClientConfig): Promise<BackendVersionInfo> {
   try {
-    const data = await request<unknown>('GET', VERSION_PROBE_PATH)
+    const data = await request<unknown>('GET', VERSION_PROBE_PATH, undefined, clientConfig)
     const version = getVersionString(data)
 
     return version ? { state: 'detected', version } : { state: 'unavailable', version: null }
@@ -192,33 +195,38 @@ async function probeBackendVersion(): Promise<BackendVersionInfo> {
 }
 
 export async function getBackendVersionInfo(): Promise<BackendVersionInfo> {
-  if (_backendVersionInfo) {
-    return _backendVersionInfo
+  const clientConfig = config()
+  const cacheKey = getConfigCacheKey(clientConfig)
+
+  const cachedInfo = _backendVersionInfo.get(cacheKey)
+  if (cachedInfo) {
+    return cachedInfo
   }
 
-  if (_backendVersionPromise) {
-    return _backendVersionPromise
+  const cachedPromise = _backendVersionPromise.get(cacheKey)
+  if (cachedPromise) {
+    return cachedPromise
   }
 
-  _backendVersionPromise = probeBackendVersion()
+  const probePromise = probeBackendVersion(clientConfig)
     .then((info) => {
       if (info.state !== 'unavailable') {
-        _backendVersionInfo = info
+        _backendVersionInfo.set(cacheKey, info)
       }
 
       return info
     })
     .finally(() => {
-      _backendVersionPromise = null
+      _backendVersionPromise.delete(cacheKey)
     })
 
-  return _backendVersionPromise
+  _backendVersionPromise.set(cacheKey, probePromise)
+  return probePromise
 }
 
 export function resetApiClientCachesForTests() {
-  _config = null
-  _backendVersionInfo = null
-  _backendVersionPromise = null
+  _backendVersionInfo.clear()
+  _backendVersionPromise.clear()
 }
 
 export const api = {

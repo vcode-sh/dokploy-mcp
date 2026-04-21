@@ -13,6 +13,8 @@ v3 also adds:
 - optional `raw` mode for one-tool-per-procedure MCP
 - optional `hybrid` mode for Code Mode plus filtered raw tools
 - Streamable HTTP transport with a health endpoint
+- registry-ready `server.json` metadata for local packages and hosted remotes
+- pragmatic remote HTTP auth via Dokploy URL and API key headers
 - compatibility-aware errors when the MCP catalog is newer than the connected Dokploy server
 
 The result is a dramatically smaller default MCP footprint.
@@ -184,8 +186,14 @@ Available as globals inside `execute`:
 | `DOKPLOY_MCP_HTTP_PORT` | No | HTTP bind port (default: `3000`) |
 | `DOKPLOY_MCP_HTTP_PATH` | No | MCP HTTP path (default: `/mcp`) |
 | `DOKPLOY_MCP_HEALTH_PATH` | No | HTTP health path (default: `/health`) |
+| `DOKPLOY_MCP_ALLOWED_ORIGINS` | No | Comma-separated browser origin allowlist for hosted HTTP clients |
+| `DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK` | No | Allow HTTP requests without remote headers to fall back to local Dokploy config |
 
 Resolution order: env vars > `~/.config/dokploy-mcp/config.json` > Dokploy CLI config. First match wins.
+
+For hosted HTTP requests, the remote credential contract is `X-Dokploy-Url` plus
+`X-Dokploy-Api-Key`. When `DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK=true`, those headers still take
+precedence over local env/config/CLI credentials.
 
 <details>
 <summary>Sandbox tuning -- for when the defaults aren't enough drama</summary>
@@ -237,6 +245,17 @@ Example:
 ```bash
 DOKPLOY_MCP_MODE=hybrid DOKPLOY_ENABLED_TAGS=project,application npx @vibetools/dokploy-mcp serve-http
 ```
+
+Hosted remotes use the shipped `server.json` metadata and should send:
+
+- `X-Dokploy-Url`: the target Dokploy panel URL
+- `X-Dokploy-Api-Key`: the Dokploy API key used as the first remote auth boundary
+
+Browser-based hosted clients are rejected by default unless you explicitly allow their origins with
+`DOKPLOY_MCP_ALLOWED_ORIGINS`.
+
+For the hosted deployment contract, origin rules, fallback behavior, and verification commands, see
+[docs/remote-http.md](./docs/remote-http.md).
 
 ## What's in the box
 

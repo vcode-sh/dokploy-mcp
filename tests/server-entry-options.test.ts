@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import {
   isServerCommand,
+  parseBooleanCommandFlag,
+  parseBooleanFlagValue,
+  parseCsvFlag,
   parseFlagValue,
   parseNumberFlag,
   resolveServerOptions,
@@ -20,6 +23,8 @@ describe('server entry options', () => {
         DOKPLOY_MCP_HTTP_PORT: '8080',
         DOKPLOY_MCP_HTTP_PATH: '/rpc',
         DOKPLOY_MCP_HEALTH_PATH: 'healthz',
+        DOKPLOY_MCP_ALLOWED_ORIGINS: 'https://app.example.com, https://admin.example.com',
+        DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK: 'true',
       }),
     ).toEqual({
       transport: 'http',
@@ -34,6 +39,8 @@ describe('server entry options', () => {
       port: 8080,
       mcpPath: '/rpc',
       healthPath: 'healthz',
+      allowedOrigins: ['https://app.example.com', 'https://admin.example.com'],
+      allowConfigFallback: true,
     })
   })
 
@@ -58,6 +65,9 @@ describe('server entry options', () => {
           'mcp-alt',
           '--health-path',
           '/health-alt',
+          '--allowed-origins',
+          'https://app.example.com,https://cursor.example.com',
+          '--allow-config-fallback',
         ],
         {},
       ),
@@ -77,6 +87,8 @@ describe('server entry options', () => {
       port: 3001,
       mcpPath: 'mcp-alt',
       healthPath: '/health-alt',
+      allowedOrigins: ['https://app.example.com', 'https://cursor.example.com'],
+      allowConfigFallback: true,
     })
   })
 
@@ -102,6 +114,8 @@ describe('server entry options', () => {
       port: undefined,
       mcpPath: undefined,
       healthPath: undefined,
+      allowedOrigins: undefined,
+      allowConfigFallback: undefined,
     })
   })
 
@@ -110,6 +124,25 @@ describe('server entry options', () => {
     expect(parseFlagValue(['serve'], '--port')).toBeUndefined()
     expect(parseNumberFlag('8080')).toBe(8080)
     expect(parseNumberFlag('not-a-number')).toBeUndefined()
+    expect(parseBooleanFlagValue('true')).toBe(true)
+    expect(parseBooleanFlagValue('0')).toBe(false)
+    expect(parseBooleanFlagValue(undefined)).toBeUndefined()
+    expect(parseBooleanFlagValue('maybe')).toBeUndefined()
+    expect(parseCsvFlag('https://a.example.com, https://b.example.com')).toEqual([
+      'https://a.example.com',
+      'https://b.example.com',
+    ])
+    expect(parseCsvFlag(' , ')).toBeUndefined()
+    expect(
+      parseBooleanCommandFlag(['serve', '--allow-config-fallback'], '--allow-config-fallback'),
+    ).toBe(true)
+    expect(
+      parseBooleanCommandFlag(
+        ['serve', '--allow-config-fallback', 'false'],
+        '--allow-config-fallback',
+      ),
+    ).toBe(false)
+    expect(parseBooleanCommandFlag(['serve'], '--allow-config-fallback')).toBeUndefined()
     expect(isServerCommand('serve-http')).toBe(true)
     expect(isServerCommand('setup')).toBe(false)
     expect(resolveTransportFromEnv({ DOKPLOY_MCP_TRANSPORT: 'http' })).toBe('http')

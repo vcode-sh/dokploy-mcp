@@ -2,8 +2,8 @@
 
 Last updated: 2026-04-21
 
-This file records the read-only live verification that still matters for the next implementation
-cycle.
+This file records the read-only live verification that still matters for the remaining `v3`
+closeout work.
 
 ## Verified Backend Fact
 
@@ -44,6 +44,7 @@ must:
 
 ## Rule For The Next Cycle
 
-Build new MCP capabilities on top of the existing compatibility-aware gateway behavior.
+Keep the shipped remote surface and any release follow-through on top of the existing
+compatibility-aware gateway behavior.
 
 Do not regress the current handling of newer Dokploy procedures on older backends.

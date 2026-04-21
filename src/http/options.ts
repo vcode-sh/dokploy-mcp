@@ -1,4 +1,5 @@
 import { parseCapabilityFlags, serverCapabilityFlags } from '../server.js'
+import { parseAllowedOrigins, remoteDokployHeaderInputs } from './security.js'
 import type { HttpServerOptions, ResolvedHttpServerOptions } from './types.js'
 
 const DEFAULT_HTTP_HOST = '127.0.0.1'
@@ -13,6 +14,23 @@ function parsePort(value?: string) {
 
   const parsed = Number.parseInt(value, 10)
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
+}
+
+function parseBoolean(value?: string) {
+  if (!value) {
+    return undefined
+  }
+
+  const normalized = value.trim().toLowerCase()
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true
+  }
+
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false
+  }
+
+  return undefined
 }
 
 function normalizePath(pathname: string | undefined, fallback: string) {
@@ -36,6 +54,13 @@ export function resolveHttpOptions(options: HttpServerOptions = {}): ResolvedHtt
       options.healthPath ?? process.env.DOKPLOY_MCP_HEALTH_PATH,
       DEFAULT_HEALTH_PATH,
     ),
+    allowedOrigins:
+      options.allowedOrigins ?? parseAllowedOrigins(process.env.DOKPLOY_MCP_ALLOWED_ORIGINS) ?? [],
+    allowConfigFallback:
+      options.allowConfigFallback ??
+      parseBoolean(process.env.DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK) ??
+      false,
+    remoteHeaders: remoteDokployHeaderInputs,
   }
 }
 
@@ -52,5 +77,14 @@ export function getHealthPayload(options: ResolvedHttpServerOptions) {
       .sort(),
     mcpPath: options.mcpPath,
     healthPath: options.healthPath,
+    remoteAuth: {
+      allowConfigFallback: options.allowConfigFallback,
+      allowedOrigins: options.allowedOrigins,
+      headers: options.remoteHeaders.map((header) => ({
+        name: header.name,
+        isRequired: header.isRequired ?? false,
+        isSecret: header.isSecret ?? false,
+      })),
+    },
   }
 }

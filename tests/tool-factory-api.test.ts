@@ -123,7 +123,8 @@ describe('tool factory API integration', () => {
     expect(result.isError).toBe(true)
     expect(payload).toEqual({
       error: 'Authentication failed',
-      details: 'Check your DOKPLOY_API_KEY environment variable.',
+      details:
+        'Check your Dokploy API key. For stdio use DOKPLOY_API_KEY or local config; for remote HTTP use X-Dokploy-Api-Key.',
     })
   })
 

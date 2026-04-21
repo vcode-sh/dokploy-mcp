@@ -28,7 +28,7 @@ blockers for `v3`.
 | Prompt and completion surface | Closed for `phase 2` scope | guided prompts and completion-backed prompt arguments are implemented and tested |
 | `sampling` and `elicitation` workflow layer | Closed for `phase 3` scope | guided `execute.workflow` planning and interactive input collection are implemented and tested |
 | `tasks` workflow layer | Closed for `phase 4` scope | long-running progress, polling, cancellation, and task-backed execution are implemented and tested |
-| Remote distribution and auth metadata | Open strategic gap | registry metadata, `server.json`, `remotes`, and a pragmatic remote auth contract are still missing |
+| Remote distribution and auth metadata | Closed for `phase 5` scope | registry metadata, `server.json`, `remotes`, and the pragmatic remote auth contract are shipped and verified |
 
 ## What Not To Do Next
 
@@ -40,9 +40,9 @@ New endpoint additions should happen only when upstream Dokploy changes again.
 
 ## What To Do Next
 
-Shift the roadmap to the remaining product gap:
+Shift the roadmap to the remaining release closeout work:
 
-1. Remote-native distribution and pragmatic auth
+1. Final verification and rollout
 
 ## Practical Interpretation
 
@@ -50,4 +50,5 @@ If a user says "the official repo has more tools", the correct answer is now:
 
 - not in the only way that still matters for Dokploy API coverage
 - yes, possibly at the presentation layer depending on mode, but that is not the strategic gap
-- the real remaining gap is the remote product posture after closing resources, prompts, and tasks
+- the real remaining work is release follow-through after closing resources, prompts, tasks, and
+  remote product posture

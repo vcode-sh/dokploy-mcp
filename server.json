@@ -1,0 +1,77 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.vcode-sh/dokploy-mcp",
+  "title": "Dokploy MCP",
+  "description": "Dokploy MCP server with compact search/execute defaults for local stdio and hosted HTTP.",
+  "version": "3.0.0",
+  "websiteUrl": "https://github.com/vcode-sh/dokploy-mcp#readme",
+  "repository": {
+    "url": "https://github.com/vcode-sh/dokploy-mcp",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/vcode-sh/dokploy-mcp/main/docs/assets/dokploy-mcp-icon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": ["any"]
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@vibetools/dokploy-mcp",
+      "version": "3.0.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "DOKPLOY_URL",
+          "description": "Optional when local Dokploy credentials already exist. Otherwise provide the Dokploy panel URL.",
+          "placeholder": "https://panel.example.com"
+        },
+        {
+          "name": "DOKPLOY_API_KEY",
+          "description": "Optional when local Dokploy credentials already exist. Otherwise provide the Dokploy API key.",
+          "isSecret": true,
+          "placeholder": "dokp_..."
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{remoteHost}{mcpPath}",
+      "variables": {
+        "remoteHost": {
+          "description": "Hostname of your hosted dokploy-mcp server without the https:// prefix.",
+          "isRequired": true,
+          "placeholder": "mcp.example.com"
+        },
+        "mcpPath": {
+          "description": "MCP HTTP path exposed by the hosted server.",
+          "default": "/mcp",
+          "placeholder": "/mcp"
+        }
+      },
+      "headers": [
+        {
+          "name": "X-Dokploy-Url",
+          "description": "Dokploy panel URL for this request. Accepts the panel URL, /api, or /api/trpc and is normalized automatically.",
+          "isRequired": true,
+          "placeholder": "https://panel.example.com"
+        },
+        {
+          "name": "X-Dokploy-Api-Key",
+          "description": "Dokploy API key from Settings > Profile > API/CLI.",
+          "isRequired": true,
+          "isSecret": true,
+          "placeholder": "dokp_..."
+        }
+      ]
+    }
+  ]
+}
