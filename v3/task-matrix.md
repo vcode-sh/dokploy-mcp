@@ -28,7 +28,7 @@ work that can wait.
 | Track | Status | Why it matters now |
 | --- | --- | --- |
 | Registry-native remote metadata | Next | improves discovery and remote consumption |
-| Modern auth discovery | Next | required for a serious remote MCP product posture |
+| Pragmatic remote auth | Next | remote HTTP needs a simple auth contract that works on standard Dokploy installs |
 
 ## Later
 
@@ -37,7 +37,8 @@ work that can wait.
 | Additional helper growth | Later | add only when repeated workflow evidence justifies it |
 | Search tuning beyond the current layer | Later | keep improving, but not before the remaining MCP capability gaps are closed |
 | Further stress/performance tuning | Later | continue once prompts, workflow, and remote layers are in place |
+| Custom OAuth/OIDC layer | Later | only revisit if a real hosted multi-tenant MCP use case justifies it |
 
 ## Priority Order
 
-1. registry-native remote packaging and auth
+1. registry-native remote packaging and pragmatic auth

@@ -14,7 +14,7 @@ On Dokploy API coverage, this repository no longer meaningfully trails the offic
 
 On modern MCP capability breadth, this repo now ships a stronger resource plus prompt/completion
 story, a guided `sampling`/`elicitation` workflow layer, and staged `tasks`, while the main
-remaining gaps are remote product metadata and auth discovery.
+remaining gaps are remote product metadata and a pragmatic remote auth story.
 
 ## Side-By-Side
 
@@ -36,7 +36,7 @@ remaining gaps are remote product metadata and auth discovery.
 | `elicitation` | implemented as an optional staged capability behind guided `execute.workflow` flows | not observed as a differentiator in the audit | `phase 3` is closed |
 | `tasks` | implemented as an optional staged capability behind task-aware `execute` runs | not observed as a differentiator in the audit | `phase 4` is closed |
 | Registry-ready `server.json` / `remotes` | not implemented | not part of the audited advantage | priority 2 |
-| Modern auth discovery and remote metadata | not implemented | not part of the audited advantage | priority 2 |
+| Pragmatic remote auth for self-hosted Dokploy | not implemented | not part of the audited advantage | priority 2 |
 
 ## What This Means
 

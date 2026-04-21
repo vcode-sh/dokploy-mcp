@@ -22,7 +22,7 @@ By the end of this plan, the repository should:
 - add `prompts` and `completions`
 - add `sampling`, `elicitation`, and `tasks` without regressing existing workflows
 - become registry-ready for remote distribution
-- add modern remote auth discovery and scope-aware HTTP behavior
+- add pragmatic remote auth for Streamable HTTP without a custom OAuth/OIDC layer
 - keep compatibility-aware handling for older Dokploy backends
 - keep the current safety, token, and regression advantages
 
@@ -32,6 +32,8 @@ By the end of this plan, the repository should:
 - do not grow raw endpoint-per-tool surface for its own sake
 - do not add new helpers unless they clearly beat direct API composition
 - do not regress the current two-tool default UX
+- do not build a custom OAuth/OIDC layer for this phase
+- do not make Dokploy Enterprise SSO a requirement for baseline remote use
 
 ## Implementation Principles
 
@@ -50,7 +52,7 @@ By the end of this plan, the repository should:
 | C. Prompts and completions | P0 | Complete | guided workflows, bounded prompt rendering, and low-friction identifier discovery |
 | D. Sampling and elicitation | P1 | Complete | interactive, MCP-native workflow composition |
 | E. Tasks | P1 | Complete | progress, polling, cancellation, and shutdown-safe cleanup for long-running work |
-| F. Remote distribution and auth | P2 | Next | registry-ready metadata and modern remote server behavior |
+| F. Remote distribution and auth | P2 | Next | registry-ready metadata and pragmatic remote server behavior |
 
 ## Phase 0: Capability Foundation
 
@@ -338,11 +340,12 @@ Support long-running or multi-step workflows with progress, polling, and cancell
 - long-running workflows no longer rely on opaque blocking calls
 - clients can observe progress and cancel safely where possible
 
-## Phase 5: Remote Distribution And Auth
+## Phase 5: Remote Distribution And Pragmatic Auth
 
 ### Goal
 
-Make the server feel like a modern remote MCP product, not just a local package with HTTP support.
+Make the server feel like a modern remote MCP product for normal Dokploy installs, not just a
+local package with HTTP support and not a custom OAuth/OIDC project.
 
 ### Files
 
@@ -350,7 +353,7 @@ Make the server feel like a modern remote MCP product, not just a local package 
 - new `server.json`
 - `.github/workflows/*`
 - `src/http/*`
-- new `src/auth/*` or equivalent HTTP auth modules
+- `src/config/*` if shared credential resolution needs remote-aware extension
 - docs and publish scripts as needed
 
 ### Tasks
@@ -358,29 +361,36 @@ Make the server feel like a modern remote MCP product, not just a local package 
 - add `server.json`
 - add registry-ready metadata including `remotes`
 - add implementation metadata such as `title`, description, and icons where supported
-- validate remote URL and metadata shape in CI
-- implement modern remote auth discovery:
-  - protected resource metadata
-  - OIDC discovery integration where relevant
-  - scope-aware `WWW-Authenticate` challenges when needed
+- support both installation paths cleanly:
+  - npm package + `stdio` for local use
+  - Streamable HTTP `remotes` for hosted use
+- declare the required remote HTTP headers in `server.json` for Dokploy connectivity
+- teach the HTTP runtime to resolve credentials from declared remote headers while preserving the
+  current env/config/Dokploy CLI resolution for local `stdio` use
+- validate remote URL, header metadata shape, and credential-resolution precedence in CI
 - validate `Origin` and related HTTP security expectations for remote use
-- keep a simple scope model for the first release, for example:
-  - read
-  - operate
-  - admin
+- reuse Dokploy API keys as the first-release authorization boundary instead of inventing a new
+  MCP-side scope model
+- explicitly keep the first remote release out of custom auth scope:
+  - no protected resource metadata flow
+  - no OIDC discovery integration
+  - no dependency on Dokploy Enterprise SSO
 
 ### Tests
 
 - metadata validation tests
-- HTTP auth discovery tests
+- remote header metadata tests
+- remote credential resolution and precedence tests
+- remote session isolation tests when clients provide different credentials
 - origin validation tests
-- challenge / insufficient-scope behavior tests
 - remote smoke tests against the HTTP transport
 
 ### Done When
 
 - the repository can publish modern metadata cleanly
-- remote clients can discover and authenticate against the server predictably
+- remote clients can discover the required headers and connect against the server predictably
+- local `stdio` flows still work exactly as before
+- the remote path does not depend on custom OAuth/OIDC or Dokploy Enterprise-only features
 
 ## Phase 6: Final Verification And Rollout
 
@@ -447,7 +457,7 @@ The remaining plan can be implemented in parallel without overlapping write scop
 
 ### Worker F
 
-- remote metadata, auth, CI, and docs
+- remote metadata, pragmatic auth, CI, and docs
 
 ## Key Risks And Mitigations
 
@@ -473,12 +483,20 @@ Mitigation:
 - start with in-process task state plus TTL
 - add persistence only if real deployment requirements justify it
 
+### Remote auth can become a detour away from real Dokploy usage
+
+Mitigation:
+
+- keep the first release aligned with Dokploy's real API model: URL plus API key
+- declare remote headers in `server.json` instead of inventing a custom OAuth/OIDC layer
+- revisit richer auth only if a real hosted multi-tenant MCP use case justifies it
+
 ## Definition Of Done
 
 The remaining plan is complete only when:
 
 - the server exposes the remaining MCP surfaces described above
-- remote metadata and auth discovery are in place
+- remote metadata and pragmatic auth are in place
 - the default contract remains stable
 - verification is green
 - the `v3` folder reflects the shipped reality again

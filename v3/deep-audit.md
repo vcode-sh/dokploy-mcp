@@ -30,7 +30,7 @@ The next strategic gap is no longer "more Dokploy tools" and no longer "basic re
 
 The next strategic gap is now the remaining modern MCP breadth:
 
-- registry-native remote metadata and auth discovery
+- registry-native remote metadata and a pragmatic remote auth story
 
 ## Verified Strengths In This Repository
 
@@ -84,10 +84,27 @@ but the repository still does not present itself as a modern remote MCP product 
 - registry-ready `remotes`
 - modern server metadata
 - capability metadata for remote discovery
-- scope-aware auth discovery flow
+- a simple remote header contract for Dokploy URL and API key
+- explicit HTTP-side origin and remote security posture
 
 That gap matters because discovery and remote deployment are now part of the product, not just
 distribution details.
+
+### 2. Dokploy Enterprise SSO is not the right baseline for phase 5
+
+Dokploy's OIDC/SAML SSO support is an Enterprise feature and is about logging into Dokploy through
+an external identity provider.
+
+That is not the same thing as a broadly available authorization layer for this MCP server.
+
+So the next phase should not depend on:
+
+- Dokploy Enterprise SSO being available on the target installation
+- Dokploy acting as the auth foundation for remote MCP access
+- a custom OAuth/OIDC layer in this repository before a real hosted use case exists
+
+The first remote release should instead stay aligned with how Dokploy actually authenticates API
+traffic today: URL plus API key.
 
 ## Why These Gaps Matter
 
@@ -103,8 +120,8 @@ work:
 
 ### Better remote adoption
 
-Remote metadata, registry publication, and auth discovery increasingly determine whether a server is
-easy to consume in the broader MCP ecosystem.
+Remote metadata, registry publication, and a clear auth contract increasingly determine whether a
+server is easy to consume in the broader MCP ecosystem.
 
 ## Audit Conclusion
 
@@ -113,7 +130,7 @@ phase.
 
 It should now be framed as the remaining remote MCP productization project:
 
-1. registry-native remote packaging and auth discovery
+1. registry-native remote packaging and pragmatic auth
 
 ## Research Inputs
 

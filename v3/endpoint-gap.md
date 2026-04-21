@@ -12,6 +12,8 @@ The prompt and completion gap is closed for the current `phase 2` scope.
 
 The `sampling` and `elicitation` gap is closed for the current `phase 3` scope.
 
+The `tasks` gap is also closed for the current `phase 4` scope.
+
 That means endpoint count, basic resource reuse, and guided prompt entry are no longer the
 blockers for `v3`.
 
@@ -25,8 +27,8 @@ blockers for `v3`.
 | `resources` and `resource templates` | Closed for `phase 1` scope | reusable `dokploy://...` resources are implemented and tested |
 | Prompt and completion surface | Closed for `phase 2` scope | guided prompts and completion-backed prompt arguments are implemented and tested |
 | `sampling` and `elicitation` workflow layer | Closed for `phase 3` scope | guided `execute.workflow` planning and interactive input collection are implemented and tested |
-| `tasks` workflow layer | Open strategic gap | long-running progress, polling, and cancellation are still missing |
-| Remote discovery and auth metadata | Open strategic gap | registry metadata, `server.json`, `remotes`, OIDC-aware discovery, and scope signaling are still missing |
+| `tasks` workflow layer | Closed for `phase 4` scope | long-running progress, polling, cancellation, and task-backed execution are implemented and tested |
+| Remote distribution and auth metadata | Open strategic gap | registry metadata, `server.json`, `remotes`, and a pragmatic remote auth contract are still missing |
 
 ## What Not To Do Next
 
@@ -38,10 +40,9 @@ New endpoint additions should happen only when upstream Dokploy changes again.
 
 ## What To Do Next
 
-Shift the roadmap to two remaining product gaps:
+Shift the roadmap to the remaining product gap:
 
-1. `tasks` for long-running workflow support
-2. Remote-native distribution and auth
+1. Remote-native distribution and pragmatic auth
 
 ## Practical Interpretation
 
@@ -49,5 +50,4 @@ If a user says "the official repo has more tools", the correct answer is now:
 
 - not in the only way that still matters for Dokploy API coverage
 - yes, possibly at the presentation layer depending on mode, but that is not the strategic gap
-- the real remaining gap is the higher-level MCP capability surface after resources and prompts:
-  workflow utilities and remote product posture
+- the real remaining gap is the remote product posture after closing resources, prompts, and tasks

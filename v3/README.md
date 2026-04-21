@@ -67,17 +67,17 @@ The remaining gaps are no longer about Dokploy endpoint coverage or resources.
 They are about the final modern MCP phase:
 
 - registry-native remote packaging and metadata
-- modern remote auth discovery and scope-aware HTTP behavior
+- pragmatic remote auth for Streamable HTTP without custom OAuth/OIDC
 
 ## Top 3 Priorities
 
-1. Add `phase 5`: registry metadata, `server.json`, remotes, and modern auth discovery.
+1. Add `phase 5`: registry metadata, `server.json`, remotes, and pragmatic remote auth.
 2. Keep expanding workflow ergonomics only when repeated evidence justifies more helpers.
 3. Continue compatibility-aware live verification against older Dokploy backends.
 
 ## Execution Order
 
-1. `phase 5`: remote distribution and auth
+1. `phase 5`: remote distribution and pragmatic auth
 
 ## Documents
 
@@ -104,4 +104,4 @@ They are about the final modern MCP phase:
 Do not reopen `phase 0`, `phase 1`, `phase 2`, `phase 3`, or `phase 4` scope unless a real
 regression is found.
 
-The next cycle starts at `phase 5`: remote packaging, metadata, and auth discovery.
+The next cycle starts at `phase 5`: remote packaging, metadata, and pragmatic auth.
