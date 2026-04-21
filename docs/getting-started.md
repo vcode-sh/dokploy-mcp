@@ -38,6 +38,16 @@ Already authenticated with the Dokploy CLI or the local `dokploy-mcp` config fil
 
 You can usually skip the env block and let the resolver do the boring part.
 
+Want the wizard path instead of manual config?
+
+```bash
+npx @vibetools/dokploy-mcp setup
+```
+
+Want the full setup behavior, including `--yes`, `--save`, and `--no-save`?
+
+Read [Setup Wizard](./guides/setup-wizard.md).
+
 ## Pick Your Client
 
 - [Cursor](./clients/cursor.md)

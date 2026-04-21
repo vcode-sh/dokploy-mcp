@@ -73,8 +73,9 @@ vi.mock('../src/config/types.js', () => ({
 }))
 
 import {
-  buildClientSetupSteps,
+  buildClientSetupBlocks,
   buildMcpClientSnippet,
+  parseSetupOptions,
   runSetup,
   toPanelUrl,
 } from '../src/cli/setup.js'
@@ -127,12 +128,56 @@ describe('cli setup helpers', () => {
   })
 
   it('returns client-specific guidance for saved and unsaved credential flows', () => {
-    expect(buildClientSetupSteps({ savedToConfig: true }).join('\n')).toContain(
+    const savedBlocks = buildClientSetupBlocks({ savedToConfig: true })
+    const unsavedBlocks = buildClientSetupBlocks({
+      savedToConfig: false,
+      url: 'https://dokploy.example.com',
+    })
+
+    expect(savedBlocks.find((block) => block.title === 'Codex')?.content).toContain(
       'codex mcp add dokploy -- npx @vibetools/dokploy-mcp',
     )
-    expect(buildClientSetupSteps({ savedToConfig: false }).join('\n')).toContain(
-      '--env DOKPLOY_URL=https://panel.example.com',
+    expect(unsavedBlocks.find((block) => block.title === 'Codex')?.content).toContain(
+      '--env DOKPLOY_URL=https://dokploy.example.com',
     )
+    expect(unsavedBlocks.find((block) => block.title === 'Cursor')?.content).toContain(
+      '"DOKPLOY_URL": "https://dokploy.example.com"',
+    )
+  })
+
+  it('parses non-interactive setup flags', () => {
+    expect(
+      parseSetupOptions([
+        '--yes',
+        '--url',
+        'https://panel.example.com',
+        '--api-key',
+        'dokp_123',
+        '--no-save',
+        '--client',
+        'codex',
+      ]),
+    ).toEqual({
+      yes: true,
+      url: 'https://panel.example.com',
+      apiKey: 'dokp_123',
+      save: false,
+      client: 'codex',
+    })
+  })
+
+  it('can filter setup output down to a single client block', () => {
+    const blocks = buildClientSetupBlocks({
+      savedToConfig: false,
+      url: 'https://dokploy.example.com',
+      client: 'codex',
+    })
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0]).toMatchObject({
+      title: 'Codex',
+      client: 'codex',
+    })
   })
 })
 
@@ -157,14 +202,15 @@ describe('runSetup', () => {
     expect(saveConfigMock).not.toHaveBeenCalled()
     expect(noteMock).toHaveBeenCalledWith(
       expect.stringContaining('"DOKPLOY_URL": "https://env.example.com"'),
-      'Add to your MCP client config',
+      'Generic JSON config',
     )
     expect(noteMock).toHaveBeenCalledWith(
       expect.stringContaining('"DOKPLOY_API_KEY": "dokp_..."'),
-      'Add to your MCP client config',
+      'Generic JSON config',
     )
-    expect(stepMock).toHaveBeenCalledWith(
-      expect.stringContaining('codex mcp add dokploy --env DOKPLOY_URL=https://panel.example.com'),
+    expect(noteMock).toHaveBeenCalledWith(
+      expect.stringContaining('codex mcp add dokploy --env DOKPLOY_URL=https://env.example.com'),
+      'Codex',
     )
   })
 
@@ -196,5 +242,74 @@ describe('runSetup', () => {
     expect(errorMock).toHaveBeenCalledWith(
       'Invalid API key. Check your key in Dokploy Settings > Profile > API/CLI.',
     )
+  })
+
+  it('does not ask to save again when the user re-enters the same config-file credentials as a panel URL', async () => {
+    resolveConfigMock.mockReturnValue({
+      url: 'https://panel.example.com/api/trpc',
+      apiKey: 'same-key',
+      source: 'config-file',
+      timeout: 30_000,
+    })
+    confirmMock.mockResolvedValueOnce(false)
+    textMock.mockResolvedValueOnce('https://panel.example.com')
+    passwordMock.mockResolvedValueOnce('same-key')
+    validateCredentialsMock.mockResolvedValue({
+      valid: true,
+      resolvedUrl: 'https://panel.example.com/api/trpc',
+      user: 'tom@example.com',
+    })
+
+    await runSetup()
+
+    expect(confirmMock).toHaveBeenCalledTimes(1)
+    expect(saveConfigMock).not.toHaveBeenCalled()
+    expect(successMock).toHaveBeenCalledWith('Config already matches /mock/config.json')
+  })
+
+  it('supports non-interactive validation-only setup through --yes and --no-save', async () => {
+    resolveConfigMock.mockReturnValue(null)
+    validateCredentialsMock.mockResolvedValue({
+      valid: true,
+      resolvedUrl: 'https://panel.example.com/api/trpc',
+      user: 'tom@example.com',
+    })
+
+    await runSetup({
+      yes: true,
+      url: 'https://panel.example.com',
+      apiKey: 'dokp_123',
+      save: false,
+    })
+
+    expect(confirmMock).not.toHaveBeenCalled()
+    expect(textMock).not.toHaveBeenCalled()
+    expect(passwordMock).not.toHaveBeenCalled()
+    expect(saveConfigMock).not.toHaveBeenCalled()
+    expect(noteMock).toHaveBeenCalledWith(
+      expect.stringContaining('"DOKPLOY_API_KEY": "dokp_..."'),
+      'Generic JSON config',
+    )
+  })
+
+  it('can print setup output for only one client', async () => {
+    resolveConfigMock.mockReturnValue(null)
+    validateCredentialsMock.mockResolvedValue({
+      valid: true,
+      resolvedUrl: 'https://panel.example.com/api/trpc',
+      user: 'tom@example.com',
+    })
+
+    await runSetup({
+      yes: true,
+      url: 'https://panel.example.com',
+      apiKey: 'dokp_123',
+      save: false,
+      client: 'codex',
+    })
+
+    expect(noteMock).toHaveBeenCalledWith(expect.stringContaining('codex mcp add dokploy'), 'Codex')
+    expect(noteMock).not.toHaveBeenCalledWith(expect.any(String), 'Cursor')
+    expect(noteMock).not.toHaveBeenCalledWith(expect.any(String), 'Claude Code')
   })
 })
