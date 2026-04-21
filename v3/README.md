@@ -4,7 +4,7 @@ Last updated: 2026-04-21
 
 This folder is the authoritative planning and audit package for the current `v3` execution cycle.
 
-It now reflects the shipped state after closing `phase 0` and `phase 1` in code.
+It now reflects the shipped state after closing `phase 0`, `phase 1`, and `phase 2` in code.
 
 ## Current State
 
@@ -14,7 +14,10 @@ It now reflects the shipped state after closing `phase 0` and `phase 1` in code.
 - default public MCP surface: `search`, `execute`
 - optional server modes: `raw`, `hybrid`
 - transports: `stdio`, `http`
-- shipped staged MCP capability family: `resources`
+- shipped staged MCP capability families: `resources`, `prompts`, `completions`
+- phase 2 verification command: `npm run test:phase2:coverage`
+- latest measured phase 2 slice coverage: `92.64%` statements, `83.75%` branches,
+  `92.48%` functions, `92.97%` lines
 
 ## What Is Done
 
@@ -33,6 +36,11 @@ It now reflects the shipped state after closing `phase 0` and `phase 1` in code.
   - reusable `dokploy://...` resources
   - bounded and redacted resource payloads
   - resource links surfaced from relevant execute results
+- `phase 2` prompts and completions:
+  - five guided Dokploy workflow prompts
+  - prompt argument completions for common IDs and enums
+  - bounded prompt rendering with reusable `dokploy://...` links
+  - compatibility-aware fallback messaging for stale or missing IDs
 
 ## What Is Not Done
 
@@ -40,8 +48,6 @@ The remaining gaps are no longer about Dokploy endpoint coverage or resources.
 
 They are about later modern MCP phases:
 
-- `prompts`
-- `completions`
 - `sampling`
 - `elicitation`
 - `tasks`
@@ -50,15 +56,14 @@ They are about later modern MCP phases:
 
 ## Top 3 Priorities
 
-1. Add `phase 2`: `prompts` and `completions`.
-2. Add `phase 3` and `phase 4`: `sampling`, `elicitation`, and `tasks`.
+1. Add `phase 3`: `sampling` and `elicitation`.
+2. Add `phase 4`: `tasks`.
 3. Add `phase 5`: registry metadata, `server.json`, remotes, and modern auth discovery.
 
 ## Execution Order
 
-1. `phase 2`: prompts and completions
-2. `phase 3` and `phase 4`: agentic workflow layer
-3. `phase 5`: remote distribution and auth
+1. `phase 3` and `phase 4`: agentic workflow layer
+2. `phase 5`: remote distribution and auth
 
 ## Documents
 
@@ -73,10 +78,11 @@ They are about later modern MCP phases:
 - [task-matrix.md](./task-matrix.md): done vs next vs later workstreams
 - [execution-plan.md](./execution-plan.md): implementation plan with shipped phase status and the
   remaining phases
+- [phase-2-verification.md](./phase-2-verification.md): acceptance evidence, coverage command, and
+  the verification matrix for the shipped prompt/completion surface
 
 ## Planning Rule
 
 Do not reopen `phase 0` or `phase 1` scope unless a real regression is found.
 
-The next cycle starts at `phase 2`: prompts, completions, and the later workflow and remote
-capability layers.
+The next cycle starts at `phase 3`: the agentic workflow and remote capability layers.

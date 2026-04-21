@@ -32,6 +32,8 @@
     "smoke:execute": "node scripts/v2/smoke-execute-live.mjs",
     "start": "node dist/index.js",
     "test": "vitest run",
+    "test:phase2": "vitest run --config vitest.phase2.config.ts",
+    "test:phase2:coverage": "vitest run --config vitest.phase2.config.ts --coverage",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",

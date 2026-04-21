@@ -11,7 +11,7 @@ Run `npm run docs:sync:facts` after changing generated artifacts or budget-sensi
 - Generated tags: `48`
 - Default public MCP tools: `2`
 - Public tool surface: `search`, `execute`
-- Default `tools/list` footprint from the current budget check: about `636` tokens (`2,542` bytes)
+- Default `tools/list` footprint from the current budget check: about `669` tokens (`2,674` bytes)
 - Optional server modes: `raw`, `hybrid`
 - Optional HTTP transport: `Streamable HTTP`
 <!-- docs-facts:coverage-summary:end -->
@@ -37,7 +37,7 @@ The public server does not expose one MCP tool per Dokploy endpoint anymore. Ins
 <!-- docs-facts:coverage-budget:start -->
 ## Current Budget Snapshot
 
-- Current default `tools/list`: `2,542` bytes, about `636` tokens
+- Current default `tools/list`: `2,674` bytes, about `669` tokens
 - Classic comparison baseline: about `92,354` tokens for endpoint-per-tool discovery
 - Current reduction versus that baseline: `99.3%`
 - Current `ci:budgets` status from the managed budget check: `pass`

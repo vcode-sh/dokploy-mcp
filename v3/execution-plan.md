@@ -8,7 +8,8 @@ Status update:
 
 - `phase 0` is complete in code
 - `phase 1` is complete in code
-- the remaining execution plan starts at `phase 2`
+- `phase 2` is complete in code
+- the remaining execution plan starts at `phase 3`
 
 ## Target Outcome
 
@@ -44,7 +45,7 @@ By the end of this plan, the repository should:
 | --- | --- | --- | --- |
 | A. MCP capability foundation | P0 | Complete | modular registration for shipped families and clean feature-flag handling |
 | B. Resources and templates | P0 | Complete | reusable, token-bounded Dokploy context objects |
-| C. Prompts and completions | P0 | Next | guided workflows and low-friction identifier discovery |
+| C. Prompts and completions | P0 | Complete | guided workflows, bounded prompt rendering, and low-friction identifier discovery |
 | D. Sampling and elicitation | P1 | Next | interactive, MCP-native workflow composition |
 | E. Tasks | P1 | Next | progress, polling, and cancellation for long-running work |
 | F. Remote distribution and auth | P2 | Next | registry-ready metadata and modern remote server behavior |
@@ -153,6 +154,8 @@ reconstruct everything through tools.
 
 ## Phase 2: Prompts And Completions
 
+Status: Complete
+
 ### Goal
 
 Make high-value Dokploy workflows discoverable and guided.
@@ -195,6 +198,14 @@ Make high-value Dokploy workflows discoverable and guided.
 - prompt argument validation
 - completion matching and fallback coverage
 - prompt rendering coverage for missing / invalid / stale IDs
+
+### Implementation Closeout
+
+- the five planned workflow prompts are implemented
+- prompt argument completions are shipped for common IDs and bounded enums
+- prompt outputs now embed reusable `dokploy://...` links where they add value
+- completion handlers stay read-only and bounded
+- stale or missing IDs now return guided fallback messaging instead of opaque failures
 
 ### Done When
 
@@ -388,7 +399,7 @@ The remaining plan can be implemented in parallel without overlapping write scop
 
 ### Worker C
 
-- prompts and completions
+- closed: prompts and completions
 
 ### Worker D
 

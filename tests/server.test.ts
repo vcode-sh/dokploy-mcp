@@ -66,9 +66,11 @@ describe('createServer', () => {
   it('parses and normalizes capability flag values', () => {
     expect(parseCapabilityFlags('resources,prompts,resources')).toEqual({
       resources: true,
+      prompts: true,
     })
     expect(parseCapabilityFlags(' Resources , COMPLETIONS , invalid , tasks ')).toEqual({
       resources: true,
+      completions: true,
     })
     expect(parseCapabilityFlags('')).toBeUndefined()
     expect(parseCapabilityFlags(' , invalid , ')).toBeUndefined()
@@ -79,13 +81,15 @@ describe('createServer', () => {
       resolveServerOptionsFromEnv({
         DOKPLOY_MCP_MODE: '  CoDeMoDe ',
         DOKPLOY_ENABLED_TAGS: ' project , APPLICATION ',
-        DOKPLOY_MCP_CAPABILITIES: ' resources , prompts , tasks ',
+        DOKPLOY_MCP_CAPABILITIES: ' resources , prompts , completions , tasks ',
       }),
     ).toEqual({
       mode: 'codemode',
       enabledTags: ['project', 'application'],
       capabilityFlags: {
         resources: true,
+        prompts: true,
+        completions: true,
       },
     })
   })
@@ -128,6 +132,31 @@ describe('createServer', () => {
           'dokploy://server/{serverId}/summary',
         ])
         await expect(client.listPrompts()).rejects.toThrow()
+      },
+    )
+  })
+
+  it('enables prompts and prompt argument completions behind staged capability flags', async () => {
+    await withClient(
+      createServer({
+        mode: 'codemode',
+        capabilityFlags: {
+          prompts: true,
+          completions: true,
+        },
+      }),
+      async (client) => {
+        const { prompts } = await client.listPrompts()
+
+        expect(getCapabilityKeys(client)).toEqual(['completions', 'prompts', 'tools'])
+        expect(prompts.map((entry) => entry.name).sort()).toEqual([
+          'deploy-application',
+          'diagnose-deployment',
+          'review-project-infrastructure',
+          'rotate-database-password-preview',
+          'triage-project-logs',
+        ])
+        await expect(client.listResourceTemplates()).rejects.toThrow()
       },
     )
   })

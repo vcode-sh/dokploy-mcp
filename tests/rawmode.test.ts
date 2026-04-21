@@ -182,7 +182,37 @@ describe('raw and hybrid server modes', () => {
       enabledTags: ['project', 'application'],
       capabilityFlags: {
         resources: true,
+        prompts: true,
+        completions: true,
       },
     })
+  })
+
+  it('enables shared prompts and completions in raw and hybrid modes without changing tool registration', async () => {
+    for (const options of [
+      {
+        mode: 'raw' as const,
+        enabledTags: ['project'],
+        capabilityFlags: { prompts: true, completions: true },
+      },
+      {
+        mode: 'hybrid' as const,
+        enabledTags: ['project'],
+        capabilityFlags: { prompts: true, completions: true },
+      },
+    ]) {
+      await withClient(createServer(options), async (client) => {
+        const { prompts } = await client.listPrompts()
+
+        expect(getCapabilityKeys(client)).toEqual(['completions', 'prompts', 'tools'])
+        expect(prompts.map((entry) => entry.name).sort()).toEqual([
+          'deploy-application',
+          'diagnose-deployment',
+          'review-project-infrastructure',
+          'rotate-database-password-preview',
+          'triage-project-logs',
+        ])
+      })
+    }
   })
 })

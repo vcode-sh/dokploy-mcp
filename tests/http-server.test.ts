@@ -467,6 +467,43 @@ describe('http server transport', () => {
     })
   })
 
+  it('threads prompt and completion capability flags through HTTP options', async () => {
+    const handle = await startTestHttpServer({
+      mode: 'hybrid',
+      enabledTags: ['project'],
+      capabilityFlags: {
+        prompts: true,
+        completions: true,
+      },
+    })
+    const response = await fetch(handle.healthUrl)
+    const payload = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(200)
+    expect(payload).toMatchObject({
+      ok: true,
+      capabilityFlags: ['completions', 'prompts'],
+    })
+
+    await withHttpClient(handle, async (client) => {
+      const { tools } = await client.listTools()
+      const { prompts } = await client.listPrompts()
+
+      expect(tools.map((tool) => tool.name)).toContain('project.one')
+      expect(
+        Object.keys((client.getServerCapabilities() ?? {}) as Record<string, unknown>).sort(),
+      ).toEqual(['completions', 'prompts', 'tools'])
+      expect(prompts.map((entry) => entry.name).sort()).toEqual([
+        'deploy-application',
+        'diagnose-deployment',
+        'review-project-infrastructure',
+        'rotate-database-password-preview',
+        'triage-project-logs',
+      ])
+      await expect(client.listResourceTemplates()).rejects.toThrow()
+    })
+  })
+
   it('allows managed close before the HTTP server starts listening', async () => {
     const server = createHttpServer({
       host: '127.0.0.1',

@@ -14,7 +14,7 @@ describe('server entry options', () => {
       resolveServerOptions([], {
         DOKPLOY_MCP_MODE: ' RAW ',
         DOKPLOY_ENABLED_TAGS: 'project, application , project',
-        DOKPLOY_MCP_CAPABILITIES: 'resources,prompts,invalid',
+        DOKPLOY_MCP_CAPABILITIES: 'resources,prompts,completions,invalid',
         DOKPLOY_MCP_TRANSPORT: 'http',
         DOKPLOY_MCP_HTTP_HOST: '0.0.0.0',
         DOKPLOY_MCP_HTTP_PORT: '8080',
@@ -27,6 +27,8 @@ describe('server entry options', () => {
       enabledTags: ['project', 'application'],
       capabilityFlags: {
         resources: true,
+        prompts: true,
+        completions: true,
       },
       host: '0.0.0.0',
       port: 8080,
@@ -45,7 +47,7 @@ describe('server entry options', () => {
           '--enabled-tags',
           'project,server',
           '--capabilities',
-          'resources,tasks',
+          'resources,prompts,completions,tasks',
           '--transport',
           'http',
           '--host',
@@ -65,6 +67,8 @@ describe('server entry options', () => {
       enabledTags: ['project', 'server'],
       capabilityFlags: {
         resources: true,
+        prompts: true,
+        completions: true,
       },
       host: '127.0.0.1',
       port: 3001,

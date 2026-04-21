@@ -5,16 +5,16 @@ Last updated: 2026-04-21
 This comparison answers two different questions:
 
 1. Are we still behind the official Dokploy MCP on Dokploy coverage?
-2. What still separates us from the best next-step MCP shape after closing `phase 0` and
-   `phase 1`?
+2. What still separates us from the best next-step MCP shape after closing `phase 0`,
+   `phase 1`, and `phase 2`?
 
 ## Short Answer
 
 On Dokploy API coverage, this repository no longer meaningfully trails the official Dokploy MCP.
 
-On modern MCP capability breadth, this repo now ships a stronger resource story, while the main
-remaining gaps are `prompts`, `completions`, `sampling`, `elicitation`, `tasks`, and remote
-product metadata.
+On modern MCP capability breadth, this repo now ships a stronger resource plus prompt/completion
+story, while the main remaining gaps are `sampling`, `elicitation`, `tasks`, and remote product
+metadata.
 
 ## Side-By-Side
 
@@ -30,8 +30,8 @@ product metadata.
 | Test depth and regression guards | strong | historically lighter | keep this advantage |
 | `resources` and `resource templates` | implemented as an optional staged capability | not observed as a differentiator in the audit | `phase 0` and `phase 1` are no longer the gap |
 | Resource links from tool outputs | implemented for relevant execute results | not part of the audited advantage | improves reuse of bounded context |
-| `prompts` | not implemented | not observed as a differentiator in the audit | priority 1 |
-| `completions` | not implemented | not observed as a differentiator in the audit | priority 1 |
+| `prompts` | implemented as an optional staged capability | not observed as a differentiator in the audit | `phase 2` is closed |
+| `completions` | implemented through completable prompt arguments and staged capability wiring | not observed as a differentiator in the audit | `phase 2` is closed |
 | `sampling` | not implemented | not observed as a differentiator in the audit | priority 2 |
 | `elicitation` | not implemented | not observed as a differentiator in the audit | priority 2 |
 | `tasks` | not implemented | not observed as a differentiator in the audit | priority 2 |
@@ -44,7 +44,6 @@ The official Dokploy MCP claim of "more tools" is no longer the right benchmark.
 
 The better benchmark is now:
 
-- better prompt and completion guidance
 - better agent workflow support
 - better remote discoverability
 - better token efficiency through reusable bounded context
@@ -59,7 +58,7 @@ This repo should keep its current advantages:
 - stronger tests
 - stronger safety and compatibility posture
 
-The next step is no longer "ship resources".
+The next step is no longer "ship resources" and no longer "ship prompts".
 
-The next step is to become meaningfully better than the official repo on prompt guidance, workflow
-capabilities, and remote MCP product posture.
+The next step is to become meaningfully better than the official repo on agent workflow
+capabilities and remote MCP product posture.

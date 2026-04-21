@@ -18,14 +18,13 @@ work that can wait.
 | Secret-aware shaping and redaction | Done | safer default output posture |
 | `phase 0` capability foundation | Done | modular registration, shipped capability flags, and unchanged default behavior are in place |
 | `phase 1` resources and templates | Done | reusable `dokploy://...` resources, template reads/lists, bounded payloads, and execute resource links are shipped |
+| `phase 2` prompts and completions | Done | guided workflow prompts, bounded prompt rendering, and ID/enum completions are shipped behind staged capability flags |
 | Verification and release hygiene | Done | build, test, lint, typecheck, budgets, docs automation, and release metadata work are in place |
 
 ## Next
 
 | Track | Status | Why it matters now |
 | --- | --- | --- |
-| `prompts` | Next | lets the server teach high-value workflows directly |
-| `completions` | Next | lowers friction for IDs, names, and guided prompt filling |
 | `sampling` | Next | enables MCP-native planning and synthesis flows |
 | `elicitation` | Next | enables asking for missing values during workflows |
 | `tasks` | Next | enables long-running deploy, rollback, and wait flows |
@@ -42,6 +41,5 @@ work that can wait.
 
 ## Priority Order
 
-1. `prompts` + `completions`
-2. `sampling` + `elicitation` + `tasks`
-3. registry-native remote packaging and auth
+1. `sampling` + `elicitation` + `tasks`
+2. registry-native remote packaging and auth

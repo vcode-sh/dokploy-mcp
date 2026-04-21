@@ -4,8 +4,8 @@ Last updated: 2026-04-21
 
 This audit answers one question:
 
-After closing Dokploy endpoint parity, `phase 0`, and `phase 1`, what is the highest-value next
-move for this repository?
+After closing Dokploy endpoint parity, `phase 0`, `phase 1`, and `phase 2`, what is the
+highest-value next move for this repository?
 
 ## Executive Summary
 
@@ -17,13 +17,13 @@ The repository now also ships the first modern MCP expansion:
 - optional `resources` and `resource templates`
 - reusable `dokploy://...` context objects
 - execute results that surface resource links when they can be inferred safely
+- guided workflow prompts
+- bounded prompt argument completions for common IDs and enums
 
 The next strategic gap is no longer "more Dokploy tools" and no longer "basic resources".
 
 The next strategic gap is the remaining modern MCP breadth:
 
-- `prompts`
-- `completions`
 - `sampling`
 - `elicitation`
 - `tasks`
@@ -72,19 +72,7 @@ Compared to a basic endpoint-per-tool server, this repo already has:
 
 ## Verified Strategic Gaps
 
-### 1. Prompt and completion guidance is still missing
-
-The biggest product gap is no longer resources.
-
-The current shipped server still does not expose:
-
-- prompt templates
-- completion providers
-
-That means the server can execute and now reuse bounded context, but it still cannot teach clients
-the highest-value Dokploy workflows directly.
-
-### 2. The agentic workflow layer is still not shipped
+### 1. The agentic workflow layer is still not shipped
 
 There is still no shipped layer for:
 
@@ -95,7 +83,7 @@ There is still no shipped layer for:
 That means the server can execute workflows, but it cannot yet guide or sustain them in a
 first-class MCP-native way.
 
-### 3. The runtime is not yet registry-native
+### 2. The runtime is not yet registry-native
 
 The CLI and runtime in [`src/index.ts`](../src/index.ts) expose `stdio` and `http`, which is fine,
 but the repository still does not present itself as a modern remote MCP product with:
@@ -110,11 +98,6 @@ That gap matters because discovery and remote deployment are now part of the pro
 distribution details.
 
 ## Why These Gaps Matter
-
-### Better prompt understanding
-
-Prompt templates and completion providers let the server teach clients how to ask for high-value
-Dokploy workflows instead of expecting the user to discover everything via free-form prompts.
 
 ### Better agent workflows
 
@@ -138,9 +121,8 @@ phase.
 It should be framed as the remaining modern MCP capability expansion project, executed in this
 order:
 
-1. `prompts` + `completions`
-2. `sampling` + `elicitation` + `tasks`
-3. registry-native remote packaging and auth discovery
+1. `sampling` + `elicitation` + `tasks`
+2. registry-native remote packaging and auth discovery
 
 ## Research Inputs
 

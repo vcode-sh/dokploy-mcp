@@ -36,6 +36,6 @@ export function registerMcpCapabilities(
       continue
     }
 
-    registration.register(server)
+    registration.register(server, options)
   }
 }
