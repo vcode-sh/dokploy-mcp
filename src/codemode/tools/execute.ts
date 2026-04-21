@@ -5,12 +5,12 @@ import type {
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
-
 import type { McpCapabilityFlags } from '../../mcp/registration/types.js'
 import { listResourceLinks } from '../../mcp/resources/resource-links.js'
 import { DEFAULT_TASK_POLL_INTERVAL_MS, getTaskRuntime } from '../../mcp/tasks/runtime.js'
 import { createTool, type ToolDefinition } from '../../mcp/tool-factory.js'
 import { createExecuteContext } from '../context/execute-context.js'
+import { getCodemodeErrorMessage } from '../error-message.js'
 import type { GatewayCallResult } from '../gateway/api-gateway.js'
 import type { SandboxHost } from '../sandbox/host.js'
 import { createSandboxHost } from '../sandbox/host.js'
@@ -308,7 +308,7 @@ function createExecuteTaskHandler(options: ExecuteToolOptions) {
                 'failed',
                 buildToolErrorResult(
                   'Failed to execute execute',
-                  error instanceof Error ? error.message : String(error),
+                  getCodemodeErrorMessage(error, 'Unknown gateway error'),
                 ),
               )
             }
@@ -393,7 +393,7 @@ function createExecuteTaskHandler(options: ExecuteToolOptions) {
                 'failed',
                 buildToolErrorResult(
                   'Failed to execute execute',
-                  error instanceof Error ? error.message : String(error),
+                  getCodemodeErrorMessage(error, 'Unknown gateway error'),
                 ),
               )
             }
@@ -408,7 +408,7 @@ function createExecuteTaskHandler(options: ExecuteToolOptions) {
           'failed',
           buildToolErrorResult(
             'Failed to execute execute',
-            error instanceof Error ? error.message : String(error),
+            getCodemodeErrorMessage(error, 'Unknown gateway error'),
           ),
         )
         return { task: (await extra.taskStore.getTask(task.taskId)) ?? task }

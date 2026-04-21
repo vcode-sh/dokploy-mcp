@@ -145,6 +145,208 @@ describe('codemode gateway validation', () => {
     expect(result.data).toEqual({ ok: true })
   })
 
+  it('rejects Dokploy memory shorthand for resource update procedures before calling the API', async () => {
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    await expect(
+      invokeProcedureWithApi(
+        'application.update',
+        {
+          applicationId: 'app-1',
+          memoryLimit: '256M',
+        },
+        fakeApi,
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'application.update',
+      message: expect.stringContaining('memoryLimit must be a string containing bytes'),
+    })
+  })
+
+  it('trims and forwards valid Dokploy resource strings to update procedures', async () => {
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post(_path: string, input?: Record<string, unknown>) {
+        expect(input).toEqual({
+          applicationId: 'app-1',
+          memoryReservation: '134217728',
+          memoryLimit: '268435456',
+          cpuReservation: '0.10',
+          cpuLimit: '0.50',
+        })
+        return { ok: true }
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'application.update',
+      {
+        applicationId: 'app-1',
+        memoryReservation: ' 134217728 ',
+        memoryLimit: ' 268435456 ',
+        cpuReservation: ' 0.10 ',
+        cpuLimit: ' 0.50 ',
+      },
+      fakeApi,
+    )
+
+    expect(result.data).toEqual({ ok: true })
+  })
+
+  it('rejects bind mounts without hostPath before calling the API', async () => {
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    await expect(
+      invokeProcedureWithApi(
+        'mounts.create',
+        {
+          type: 'bind',
+          serviceType: 'application',
+          serviceId: 'app-1',
+          mountPath: '/data',
+        },
+        fakeApi,
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'mounts.create',
+      message: expect.stringContaining('bind mounts require hostPath'),
+    })
+  })
+
+  it('rejects volume mounts without volumeName before calling the API', async () => {
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    await expect(
+      invokeProcedureWithApi(
+        'mounts.create',
+        {
+          type: 'volume',
+          serviceType: 'application',
+          serviceId: 'app-1',
+          mountPath: '/data',
+        },
+        fakeApi,
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'mounts.create',
+      message: expect.stringContaining('volume mounts require volumeName'),
+    })
+  })
+
+  it('rejects conflicting mount fields before calling the API', async () => {
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    await expect(
+      invokeProcedureWithApi(
+        'mounts.create',
+        {
+          type: 'bind',
+          hostPath: '/srv/data',
+          volumeName: 'bad-mix',
+          serviceType: 'application',
+          serviceId: 'app-1',
+          mountPath: '/data',
+        },
+        fakeApi,
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'mounts.create',
+      message: expect.stringContaining('bind mounts should not set volumeName'),
+    })
+  })
+
+  it('rejects file mount type changes without filePath before calling the API', async () => {
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post() {
+        throw new Error('Unexpected POST call')
+      },
+    }
+
+    await expect(
+      invokeProcedureWithApi(
+        'mounts.update',
+        {
+          mountId: 'mount-1',
+          type: 'file',
+        },
+        fakeApi,
+      ),
+    ).rejects.toMatchObject({
+      type: 'validation_error',
+      procedure: 'mounts.update',
+      message: expect.stringContaining('changing a mount to type "file" requires filePath'),
+    })
+  })
+
+  it('accepts valid named volume mount creation and trims strings before calling the API', async () => {
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post(_path: string, input?: Record<string, unknown>) {
+        expect(input).toEqual({
+          type: 'volume',
+          serviceType: 'application',
+          serviceId: 'app-1',
+          mountPath: '/data',
+          volumeName: 'audit-volume',
+        })
+        return { ok: true }
+      },
+    }
+
+    const result = await invokeProcedureWithApi(
+      'mounts.create',
+      {
+        type: 'volume',
+        serviceType: 'application',
+        serviceId: ' app-1 ',
+        mountPath: ' /data ',
+        volumeName: ' audit-volume ',
+      },
+      fakeApi,
+    )
+
+    expect(result.data).toEqual({ ok: true })
+  })
+
   it('rejects nested enum violations in object array inputs', async () => {
     await expect(
       invokeProcedureWithApi(

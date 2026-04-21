@@ -164,4 +164,17 @@ describe('phase 4 execute tool metadata', () => {
       },
     })
   })
+
+  it('surfaces structured validation errors from execute code as readable details', async () => {
+    const tool = createExecuteTool()
+    const result = await tool.handler({
+      code: 'return await dokploy.application.update({ applicationId: "app-1", memoryLimit: "256M" })',
+    })
+
+    expect(result.isError).toBe(true)
+    expect(result.structuredContent).toMatchObject({
+      error: 'Failed to execute execute',
+      details: expect.stringContaining('memoryLimit must be a string containing bytes'),
+    })
+  })
 })

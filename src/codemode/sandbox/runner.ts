@@ -1,5 +1,6 @@
 import { createContext, Script } from 'node:vm'
 
+import { normalizeCodemodeError } from '../error-message.js'
 import { resolveSandboxLimits } from './limits.js'
 import { serializeSandboxValue } from './serialize.js'
 import type { SandboxExecutionResult, SandboxLimits } from './types.js'
@@ -154,12 +155,18 @@ export async function runSandboxedFunction<TContext extends Record<string, unkno
     }),
   )
 
-  const result = await Promise.race([executionPromise, timeoutPromise]).finally(() => {
+  let result: unknown
+
+  try {
+    result = await Promise.race([executionPromise, timeoutPromise])
+  } catch (error) {
+    throw normalizeCodemodeError(error, 'Sandbox execution failed.')
+  } finally {
     settled = true
     if (timeoutId) {
       clearTimeout(timeoutId)
     }
-  })
+  }
 
   const serializedResult = serializeSandboxValue(result, limits.maxResultBytes)
   const heapEstimateBytes = Buffer.byteLength(JSON.stringify(serializedResult), 'utf8')

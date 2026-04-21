@@ -2,6 +2,7 @@ import type { CatalogEndpoint } from '../../generated/dokploy-catalog.js'
 
 import { mergeCatalogResponseHints } from './builders.js'
 import { coreCatalogResponseHints } from './core-hints.js'
+import { resourceCatalogResponseHints } from './resource-hints.js'
 import { runtimeCatalogResponseHints } from './runtime-hints.js'
 import { securityCatalogResponseHints } from './security-hints.js'
 import { settingsCatalogResponseHints } from './settings-hints.js'
@@ -9,6 +10,7 @@ import type { CatalogEndpointWithHints, CatalogResponseHints } from './types.js'
 
 const catalogResponseHints = mergeCatalogResponseHints(
   coreCatalogResponseHints,
+  resourceCatalogResponseHints,
   securityCatalogResponseHints,
   settingsCatalogResponseHints,
   runtimeCatalogResponseHints,

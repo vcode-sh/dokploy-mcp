@@ -168,11 +168,19 @@ The practical “max” setting in the current Dokploy API surface maps to the l
 - `memoryLimit`
 - `cpuLimit`
 
+For Dokploy memory fields, use byte values rather than Docker-style shorthand strings.
+Examples:
+
+- `128MB` -> `134217728`
+- `256MB` -> `268435456`
+- `192MB` -> `201326592`
+- `384MB` -> `402653184`
+
 Tasks:
 
 - [ ] update the app with a small safe baseline, for example:
-  - `memoryReservation: "128M"`
-  - `memoryLimit: "256M"`
+  - `memoryReservation: "134217728"`
+  - `memoryLimit: "268435456"`
   - `cpuReservation: "0.10"`
   - `cpuLimit: "0.50"`
 - [ ] read back the app with `application.one({ applicationId })`
@@ -204,6 +212,19 @@ Safety rule:
 
 Use only `type: "volume"` unless there is a compelling reason to test `file`. Do not use `bind`
 mounts against arbitrary host paths on the production server.
+
+Mount type guidance:
+
+- `volume`: default safe choice for portable persistent data; prefer this for the core audit path
+- `bind`: use only when a workload must mount a specific host directory; the `hostPath` must already
+  exist on the Dokploy host
+- `file`: use for managed config files or small generated file content rather than directories
+
+Cluster warning:
+
+If Dokploy cluster features are in use, bind mounts can fail unless the same `hostPath` exists on
+all relevant worker and manager nodes. That is why bind mounts are not the default validation path
+in this plan.
 
 Tasks:
 

@@ -1,5 +1,6 @@
 import { createExecuteContext } from '../context/execute-context.js'
 import { createSearchCatalogView } from '../context/search-context.js'
+import { getCodemodeErrorMessage, normalizeCodemodeError } from '../error-message.js'
 import type { GatewayCallResult } from '../gateway/api-gateway.js'
 import { normalizeSandboxLimits, resolveSandboxLimits } from './limits.js'
 import { runSandboxedFunction } from './runner.js'
@@ -74,7 +75,7 @@ function buildInvalidLimitsError() {
 }
 
 function normalizeWorkerError(error: unknown) {
-  return error instanceof Error ? error : new Error(String(error))
+  return normalizeCodemodeError(error, 'Sandbox worker error')
 }
 
 function formatWorkerError(error: unknown) {
@@ -134,7 +135,7 @@ function handleCallResultMessage(payload: Record<string, unknown>) {
     if (payload.ok === true) {
       pending.resolve(payload.data)
     } else {
-      pending.reject(new Error(String(payload.error ?? 'Unknown gateway error')))
+      pending.reject(normalizeCodemodeError(payload.error, 'Unknown gateway error'))
     }
     return true
   }
@@ -231,7 +232,7 @@ async function handleRunMessage(payload: Record<string, unknown>) {
       logs: execution.logs,
     })
   } catch (error) {
-    await reportWorkerFailure(error instanceof Error ? error.message : String(error))
+    await reportWorkerFailure(getCodemodeErrorMessage(error, 'Sandbox worker execution failed'))
   } finally {
     workerRunState = 'completed'
   }

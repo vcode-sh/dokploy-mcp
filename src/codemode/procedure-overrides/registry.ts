@@ -1,5 +1,7 @@
 import { applicationOneOverride } from './application-one.js'
 import { createLogReadOverride, logProcedureNames } from './logs.js'
+import { mountsCreateOverride, mountsUpdateOverride } from './mounts.js'
+import { dokployResourceConfigOverride } from './resource-config.js'
 import {
   transformArrayWithSecretGate,
   transformCertificateSecretResponse,
@@ -50,6 +52,9 @@ const sshKeyGenerateInputSchema = withIncludeSecrets({
 
 export const procedureOverrides: Record<string, ProcedureOverride> = {
   'application.one': applicationOneOverride,
+  'application.update': dokployResourceConfigOverride,
+  'mounts.create': mountsCreateOverride,
+  'mounts.update': mountsUpdateOverride,
   'github.one': createSecretReadOverride('githubId', transformWithSecretGate),
   'github.githubProviders': createSecretListOverride(transformArrayWithSecretGate),
   'gitea.one': createSecretReadOverride('giteaId', transformWithSecretGate),
@@ -78,5 +83,15 @@ export const procedureOverrides: Record<string, ProcedureOverride> = {
   },
   'sshKey.one': createSecretReadOverride('sshKeyId', transformSshSecretResponse),
   'sshKey.allForApps': createSecretListOverride(transformSshSecretResponse),
+  ...Object.fromEntries(
+    [
+      'libsql.update',
+      'mariadb.update',
+      'mongo.update',
+      'mysql.update',
+      'postgres.update',
+      'redis.update',
+    ].map((procedure) => [procedure, dokployResourceConfigOverride]),
+  ),
   ...Object.fromEntries(logProcedureNames.map((procedure) => [procedure, createLogReadOverride()])),
 }

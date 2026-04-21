@@ -15,7 +15,7 @@ const searchSchema = z
         'JavaScript code. `catalog` is a global -- do NOT wrap in a function. ' +
           'Examples: `catalog.searchText("application deploy")` | ' +
           '`catalog.recommend("safe database password rotation")` | ' +
-          '`catalog.getByTag("compose")` | `catalog.get("application.one")`. ' +
+          '`catalog.getByTag("compose")` | `catalog.get("application.one")` | `catalog.get("application.update")`. ' +
           'Methods: searchText(query), recommend(query), get(procedure), getByTag(tag), endpoints, byTag.',
       ),
   })
@@ -68,7 +68,7 @@ export const searchTool: ToolDefinition = createTool({
     'Search the Dokploy API catalog. ' +
     'IMPORTANT: Do NOT wrap code in a function -- `catalog` is already a global. ' +
     'Write bare code: `catalog.searchText("deploy")` or `catalog.recommend("safe database password rotation")` or `catalog.getByTag("application")` or `catalog.get("application.one")`. ' +
-    'Common patterns: `catalog.recommend("tail project logs across environments")` -> helper-first workflow suggestions; `catalog.get("application.one")` -> application detail fields plus optional shaping params; `catalog.get("application.many")` -> batched application reads; `catalog.get("project.overview")` -> compact project state view; `catalog.get("deployment.all")` -> deployment history entries. ' +
+    'Common patterns: `catalog.recommend("tail project logs across environments")` -> helper-first workflow suggestions; `catalog.get("application.one")` -> application detail fields plus optional shaping params; `catalog.get("application.update")` -> build/runtime/resource tuning fields such as byte-based memory limits; `catalog.get("application.many")` -> batched application reads; `catalog.get("project.overview")` -> compact project state view; `catalog.get("deployment.all")` -> deployment history entries. ' +
     'Returns procedure names, parameters, HTTP methods, schemas, and response hints for key endpoints.',
   schema: searchSchema,
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },

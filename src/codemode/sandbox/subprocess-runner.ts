@@ -2,6 +2,7 @@ import { fork } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { getCodemodeErrorMessage, normalizeCodemodeError } from '../error-message.js'
 import { normalizeSandboxLimits, resolveSandboxLimits } from './limits.js'
 import type { SandboxExecutionResult, SandboxLimits } from './types.js'
 
@@ -176,7 +177,7 @@ function buildCallResultTransportError(error: Error) {
 }
 
 function normalizeError(error: unknown) {
-  return error instanceof Error ? error : new Error(String(error))
+  return normalizeCodemodeError(error, 'Unknown subprocess error')
 }
 
 function isLikelySerializationError(error: Error) {
@@ -351,7 +352,7 @@ async function handleExecuteWorkerMessage(
         worker,
         settle,
         message.requestId,
-        error instanceof Error ? error.message : String(error ?? 'Unknown gateway error'),
+        getCodemodeErrorMessage(error, 'Unknown gateway error'),
       )
     }
     return

@@ -210,6 +210,70 @@ describe('sandbox subprocess runner', () => {
     )
   })
 
+  it('serializes structured gateway-style errors into readable execute call results', async () => {
+    const worker = queueWorker()
+    const sent: unknown[] = []
+
+    worker.send = vi.fn((message: unknown, callback?: (error: Error | null) => void) => {
+      sent.push(message)
+
+      if (
+        typeof message === 'object' &&
+        message !== null &&
+        'type' in message &&
+        message.type === 'callResult' &&
+        'ok' in message &&
+        message.ok === false
+      ) {
+        queueMicrotask(() => {
+          callback?.(null)
+          worker.emit('message', {
+            type: 'done',
+            ok: false,
+            error:
+              typeof message.error === 'string'
+                ? message.error
+                : 'memoryLimit must be a string containing bytes.',
+          })
+        })
+        return true
+      }
+
+      callback?.(null)
+      return true
+    })
+
+    const { promise } = await startExecuteRun({
+      worker,
+      onCall: async () => {
+        throw {
+          type: 'validation_error',
+          procedure: 'application.update',
+          message: 'memoryLimit must be a string containing bytes. Example: 256MB -> "268435456".',
+        }
+      },
+    })
+
+    worker.emit('message', {
+      type: 'call',
+      requestId: 11,
+      procedure: 'application.update',
+      input: { applicationId: 'app-1', memoryLimit: '256M' },
+    })
+
+    await expect(promise).rejects.toThrow('memoryLimit must be a string containing bytes')
+    expect(sent).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'callResult',
+          requestId: 11,
+          ok: false,
+          error: 'memoryLimit must be a string containing bytes. Example: 256MB -> "268435456".',
+        }),
+      ]),
+    )
+  })
+
   it('falls back to an explicit IPC serialization error when a call result send fails asynchronously', async () => {
     const worker = queueWorker()
     const sent: unknown[] = []

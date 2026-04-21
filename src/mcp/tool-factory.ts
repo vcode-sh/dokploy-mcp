@@ -53,13 +53,16 @@ function success(data: unknown) {
 }
 
 function error(message: string, details?: string) {
+  const payload = { error: message, ...(details ? { details } : {}) }
+
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify({ error: message, ...(details ? { details } : {}) }, null, 2),
+        text: JSON.stringify(payload, null, 2),
       },
     ],
+    structuredContent: payload,
     isError: true,
   }
 }

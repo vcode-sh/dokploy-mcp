@@ -96,6 +96,84 @@ describe('codemode runtime', () => {
     expect(contract.outputSchema).toBeDefined()
   })
 
+  it('search catalog get explains Dokploy resource field formats for application.update', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('application.update')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('application.update')
+    expect(contract.optionalInputs).toEqual(
+      expect.arrayContaining(['memoryReservation', 'memoryLimit', 'cpuReservation', 'cpuLimit']),
+    )
+    expect(contract.responseHints).toEqual(
+      expect.arrayContaining([expect.stringContaining('resource tuning')]),
+    )
+    expect(contract.notes).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('string fields containing bytes'),
+        expect.stringContaining('numeric strings such as "0.25"'),
+      ]),
+    )
+    expect(contract.examples).toEqual(
+      expect.arrayContaining([expect.stringContaining('268435456')]),
+    )
+  })
+
+  it('search catalog get explains safe mount creation for mounts.create', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('mounts.create')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('mounts.create')
+    expect(contract.requiredInputs).toEqual(
+      expect.arrayContaining(['type', 'mountPath', 'serviceId']),
+    )
+    expect(contract.responseHints).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('three mount types: bind, volume, and file'),
+        expect.stringContaining('default portable persistent-data case'),
+        expect.stringContaining('specific existing host path'),
+        expect.stringContaining('managed config files'),
+      ]),
+    )
+    expect(contract.notes).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('path must already exist on the Dokploy host machine'),
+        expect.stringContaining('Cluster warning'),
+        expect.stringContaining('cannot prove that the path exists'),
+      ]),
+    )
+  })
+
+  it('search catalog get explains safe mount updates for mounts.update', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('mounts.update')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('mounts.update')
+    expect(contract.responseHints).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('changing the mount type'),
+        expect.stringContaining('hostPath for bind'),
+      ]),
+    )
+    expect(contract.notes).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Bind mount updates still depend on the host path existing'),
+        expect.stringContaining('clustered Dokploy deployments'),
+      ]),
+    )
+  })
+
   it('search catalog get merges manual response hints for key detail endpoints', async () => {
     const result = await searchTool.handler({
       code: "async ({ catalog }) => catalog.get('application.one')",
@@ -369,6 +447,17 @@ describe('codemode runtime', () => {
 
     const payload = result.structuredContent as { result?: unknown }
     expect(payload.result).toEqual(expect.arrayContaining(['application.one', 'application.many']))
+  })
+
+  it('search can find resource update procedures by byte-based memory hints', async () => {
+    const result = await searchTool.handler({
+      code: 'async ({ catalog }) => catalog.searchText("memory bytes cpu limit").map((entry) => entry.procedure)',
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    expect(payload.result).toEqual(
+      expect.arrayContaining(['application.update', 'postgres.update', 'redis.update']),
+    )
   })
 
   it('search can find project.overview by overview-specific fields', async () => {
