@@ -2,9 +2,14 @@ import type {
   CreateTaskRequestHandlerExtra,
   TaskRequestHandlerExtra,
 } from '@modelcontextprotocol/sdk/experimental/tasks'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createExecuteTool } from '../src/codemode/tools/execute.js'
 import { createTaskRuntime, DEFAULT_TASK_POLL_INTERVAL_MS } from '../src/mcp/tasks/runtime.js'
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
+})
 
 function createTaskExtra() {
   const runtime = createTaskRuntime()
@@ -54,6 +59,23 @@ function createTaskExtra() {
         throw new Error('Unexpected nested task request')
       },
     } satisfies CreateTaskRequestHandlerExtra,
+  }
+}
+
+function createTrpcTextResponse(json: unknown) {
+  return {
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    async text() {
+      return JSON.stringify({
+        result: {
+          data: {
+            json,
+          },
+        },
+      })
+    },
   }
 }
 
@@ -176,5 +198,143 @@ describe('phase 4 execute tool metadata', () => {
       error: 'Failed to execute execute',
       details: expect.stringContaining('memoryLimit must be a string containing bytes'),
     })
+  })
+
+  it('requires a profile for direct execute when multiple profiles are configured', async () => {
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        redivo: {
+          url: 'https://redivo.example.com',
+          apiKey: 'secret-redivo-key',
+        },
+        personal: {
+          url: 'https://personal.example.com',
+          apiKey: 'secret-personal-key',
+        },
+      }),
+    )
+
+    const tool = createExecuteTool()
+    const result = await tool.handler({
+      code: 'return { ok: true }',
+    })
+
+    expect(result.isError).toBe(true)
+    expect(result.structuredContent).toMatchObject({
+      error: 'Failed to execute execute',
+      details:
+        'Dokploy profile is required when multiple profiles are configured. Available profiles: personal, redivo.',
+    })
+    expect(JSON.stringify(result.structuredContent)).not.toContain('secret')
+  })
+
+  it('uses the selected profile for direct execute API calls', async () => {
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        redivo: {
+          url: 'https://redivo.example.com',
+          apiKey: 'redivo-key',
+        },
+        mezon: {
+          url: 'https://mezon.example.com',
+          apiKey: 'mezon-key',
+        },
+      }),
+    )
+    const fetchMock = vi.fn().mockResolvedValue(createTrpcTextResponse([{ projectId: 'p1' }]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const tool = createExecuteTool()
+    const result = await tool.handler({
+      profile: 'mezon',
+      code: 'return await dokploy.project.all()',
+    })
+
+    expect(result.isError).not.toBe(true)
+    expect(result.structuredContent).toMatchObject({
+      result: [{ projectId: 'p1' }],
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('https://mezon.example.com/api/trpc/project.all'),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'x-api-key': 'mezon-key',
+        }),
+      }),
+    )
+  })
+
+  it('uses the selected profile for task-based execute API calls', async () => {
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        redivo: {
+          url: 'https://redivo.example.com',
+          apiKey: 'redivo-key',
+        },
+        personal: {
+          url: 'https://personal.example.com',
+          apiKey: 'personal-key',
+        },
+      }),
+    )
+    const fetchMock = vi.fn().mockResolvedValue(createTrpcTextResponse([{ projectId: 'p2' }]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const tool = createExecuteTool()
+    const taskHandler = tool.taskHandler as {
+      createTask: (
+        input: Record<string, unknown>,
+        extra: CreateTaskRequestHandlerExtra,
+      ) => Promise<{
+        task: { taskId: string }
+      }>
+      getTask: (
+        input: Record<string, unknown>,
+        extra: TaskRequestHandlerExtra,
+      ) => Promise<{
+        status: string
+      }>
+      getTaskResult: (
+        input: Record<string, unknown>,
+        extra: TaskRequestHandlerExtra,
+      ) => Promise<{ structuredContent?: Record<string, unknown> }>
+    }
+    const { extra } = createTaskExtra()
+    const created = await taskHandler.createTask(
+      {
+        profile: 'personal',
+        code: 'return await dokploy.project.all()',
+      },
+      extra,
+    )
+
+    const taskExtra = {
+      ...extra,
+      taskId: created.task.taskId,
+    } satisfies TaskRequestHandlerExtra
+    let task = await taskHandler.getTask({}, taskExtra)
+
+    for (let attempt = 0; attempt < 20 && task.status === 'working'; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 25))
+      task = await taskHandler.getTask({}, taskExtra)
+    }
+
+    const result = await taskHandler.getTaskResult({}, taskExtra)
+
+    expect(task.status).toBe('completed')
+    expect(result.structuredContent).toMatchObject({
+      result: [{ projectId: 'p2' }],
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('https://personal.example.com/api/trpc/project.all'),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'x-api-key': 'personal-key',
+        }),
+      }),
+    )
   })
 })

@@ -38,6 +38,39 @@ Already authenticated with the Dokploy CLI or the local `dokploy-mcp` config fil
 
 You can usually skip the env block and let the resolver do the boring part.
 
+## Multiple Organizations
+
+If you use several Dokploy organizations, keep one MCP server and configure named profiles:
+
+```json
+{
+  "mcpServers": {
+    "dokploy": {
+      "command": "npx",
+      "args": ["@vibetools/dokploy-mcp"],
+      "env": {
+        "DOKPLOY_PROFILES_JSON": "{\"redivo\":{\"url\":\"https://redivo.example.com\",\"apiKey\":\"dokp_redivo\"},\"personal\":{\"url\":\"https://personal.example.com\",\"apiKey\":\"dokp_personal\"},\"mezon\":{\"url\":\"https://mezon.example.com\",\"apiKey\":\"dokp_mezon\"}}"
+      }
+    }
+  }
+}
+```
+
+The public surface stays compact:
+
+- `list_profiles` lists profile names and normalized URLs without API keys.
+- `search` accepts optional `profile` for profile-name validation.
+- `execute` accepts `profile`; it is required when more than one profile is configured.
+
+Example execute input:
+
+```json
+{
+  "profile": "mezon",
+  "code": "return await dokploy.project.all()"
+}
+```
+
 Want the wizard path instead of manual config?
 
 ```bash
@@ -77,6 +110,7 @@ Default public surface:
 
 - `search`
 - `execute`
+- `list_profiles`
 
 That is intentional.
 

@@ -5,6 +5,7 @@ import type {
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
+import { resolveProfileConfig, withResolvedConfigOverride } from '../../config/resolver.js'
 import type { McpCapabilityFlags } from '../../mcp/registration/types.js'
 import { listResourceLinks } from '../../mcp/resources/resource-links.js'
 import { DEFAULT_TASK_POLL_INTERVAL_MS, getTaskRuntime } from '../../mcp/tasks/runtime.js'
@@ -67,6 +68,13 @@ const executeSchema = z
       .optional()
       .describe(
         'Optional guided workflow mode. Currently supports `deploy-application` with interactive target resolution, preview/apply selection, bounded rollout options, and an MCP-native plan when phase 3 sampling and elicitation are enabled.',
+      ),
+    profile: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Dokploy profile name. Required when DOKPLOY_PROFILES_JSON configures multiple profiles.',
       ),
   })
   .strict()
@@ -263,6 +271,21 @@ function createExecuteTaskHandler(options: ExecuteToolOptions) {
           pollInterval: DEFAULT_TASK_POLL_INTERVAL_MS,
         },
       )
+      let selectedConfig: ReturnType<typeof resolveProfileConfig>
+      try {
+        selectedConfig = resolveProfileConfig(input.profile)
+      } catch (error) {
+        await safeStoreTaskResult(
+          extra,
+          task.taskId,
+          'failed',
+          buildToolErrorResult(
+            'Failed to execute execute',
+            getCodemodeErrorMessage(error, 'Unknown profile error'),
+          ),
+        )
+        return { task: (await extra.taskStore.getTask(task.taskId)) ?? task }
+      }
 
       if (request.kind === 'code') {
         const controller = new AbortController()
@@ -288,9 +311,11 @@ function createExecuteTaskHandler(options: ExecuteToolOptions) {
                   )
                 },
               })
-              const result = await runExecuteWithHost(request.code, host, {
-                signal: controller.signal,
-              })
+              const result = await withResolvedConfigOverride(selectedConfig, () =>
+                runExecuteWithHost(request.code, host, {
+                  signal: controller.signal,
+                }),
+              )
               await safeStoreTaskResult(
                 extra,
                 task.taskId,
@@ -330,6 +355,7 @@ function createExecuteTaskHandler(options: ExecuteToolOptions) {
         )
         return { task: (await extra.taskStore.getTask(task.taskId)) ?? task }
       }
+      const server = options.server
 
       try {
         await safeUpdateTaskStatus(
@@ -338,10 +364,12 @@ function createExecuteTaskHandler(options: ExecuteToolOptions) {
           'working',
           'Preparing guided deployment task.',
         )
-        const prepared = await prepareDeployApplicationWorkflow(request.workflow, {
-          server: options.server,
-          capabilityFlags: options.capabilityFlags,
-        })
+        const prepared = await withResolvedConfigOverride(selectedConfig, () =>
+          prepareDeployApplicationWorkflow(request.workflow, {
+            server,
+            capabilityFlags: options.capabilityFlags,
+          }),
+        )
 
         if (prepared.status === 'completed') {
           const payload = {
@@ -370,7 +398,9 @@ function createExecuteTaskHandler(options: ExecuteToolOptions) {
                 'working',
                 'Executing deploy workflow task against Dokploy.',
               )
-              const result = await runPreparedDeployApplicationTask(prepared, controller.signal)
+              const result = await withResolvedConfigOverride(selectedConfig, () =>
+                runPreparedDeployApplicationTask(prepared, controller.signal),
+              )
               const payload = {
                 result,
                 calls: prepared.getCalls(),
@@ -437,19 +467,25 @@ export function createExecuteTool(options: ExecuteToolOptions = {}): ToolDefinit
     annotations: { openWorldHint: true },
     handler: async ({ input }) => {
       const request = resolveExecuteRequest(input)
+      const selectedConfig = resolveProfileConfig(input.profile)
       if (request.kind === 'code') {
         const host = createSandboxHost()
-        return runExecuteWithHost(request.code, host)
+        return withResolvedConfigOverride(selectedConfig, () =>
+          runExecuteWithHost(request.code, host),
+        )
       }
 
       if (!options.server) {
         throw new Error('Guided execute workflows require a bound MCP server instance.')
       }
+      const server = options.server
 
-      return runDeployApplicationWorkflow(request.workflow, {
-        server: options.server,
-        capabilityFlags: options.capabilityFlags,
-      })
+      return withResolvedConfigOverride(selectedConfig, () =>
+        runDeployApplicationWorkflow(request.workflow, {
+          server,
+          capabilityFlags: options.capabilityFlags,
+        }),
+      )
     },
   })
 

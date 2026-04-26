@@ -6,16 +6,23 @@ export interface DokployConfig {
   apiKey: string // Dokploy API key
 }
 
-export type ConfigSource = 'env' | 'config-file' | 'dokploy-cli' | 'http-headers'
+export type ConfigSource = 'env' | 'profiles-json' | 'config-file' | 'dokploy-cli' | 'http-headers'
 
 export interface ResolvedConfig extends DokployConfig {
   source: ConfigSource
   timeout: number
+  profile?: string
 }
 
 export interface ConfigFile {
   url: string
   apiKey: string
+}
+
+export interface ListedProfile {
+  name: string
+  url: string
+  source: ConfigSource
 }
 
 /**

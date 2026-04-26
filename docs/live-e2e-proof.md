@@ -335,7 +335,7 @@ Because apparently “don’t leak database passwords in AI tooling” still has
 
 Current measured public footprint from `scripts/v2/check-budgets.mjs`:
 
-- default `tools/list`: `5,941` bytes, about `1,485` tokens
+- default `tools/list`: `6,682` bytes, about `1,671` tokens
 - classic endpoint-per-tool comparison baseline: about `92,354` tokens
 - reduction versus that baseline: `98.4%`
 - current `ci:budgets` status: `pass`

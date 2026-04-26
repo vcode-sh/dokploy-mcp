@@ -9,9 +9,9 @@ Run `npm run docs:sync:facts` after changing generated artifacts or budget-sensi
 
 - Generated procedures in the pinned snapshot-backed catalog: `524`
 - Generated tags: `48`
-- Default public MCP tools: `2`
-- Public tool surface: `search`, `execute`
-- Default `tools/list` footprint from the current budget check: about `1,485` tokens (`5,941` bytes)
+- Default public MCP tools: `3`
+- Public tool surface: `search`, `execute`, `list_profiles`
+- Default `tools/list` footprint from the current budget check: about `1,671` tokens (`6,682` bytes)
 - Optional server modes: `raw`, `hybrid`
 - Optional HTTP transport: `Streamable HTTP`
 <!-- docs-facts:coverage-summary:end -->
@@ -37,9 +37,9 @@ The public server does not expose one MCP tool per Dokploy endpoint anymore. Ins
 <!-- docs-facts:coverage-budget:start -->
 ## Current Budget Snapshot
 
-- Current default `tools/list`: `5,941` bytes, about `1,485` tokens
+- Current default `tools/list`: `6,682` bytes, about `1,671` tokens
 - Classic comparison baseline: about `92,354` tokens for endpoint-per-tool discovery
-- Current reduction versus that baseline: `98.4%`
+- Current reduction versus that baseline: `98.2%`
 - Current `ci:budgets` status from the managed budget check: `pass`
 - Runtime latency budgets remain enforced by `scripts/v2/check-budgets.mjs` in CI.
 <!-- docs-facts:coverage-budget:end -->

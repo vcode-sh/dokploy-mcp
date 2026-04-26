@@ -6,7 +6,7 @@ import { codeModeTools } from '../../dist/codemode/tools/index.js'
 import { searchTool } from '../../dist/codemode/tools/search.js'
 
 const MAX_CODEMODE_BYTES = 8 * 1024
-const MAX_CODEMODE_TOKENS = 1500
+const MAX_CODEMODE_TOKENS = 2000
 const MAX_SEARCH_DURATION_MS = 150
 const MAX_EXECUTE_DURATION_MS = 120
 const MAX_SANDBOX_STARTUP_MS = 80

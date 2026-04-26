@@ -30,15 +30,15 @@ async function withClient(server: McpServer, run: (client: Client) => Promise<vo
 
 describe('codemode tools/list contract', () => {
   it('exposes only the fixed codemode surface', () => {
-    expect(codeModeTools).toHaveLength(2)
-    expect(codeModeTools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+    expect(codeModeTools).toHaveLength(3)
+    expect(codeModeTools.map((tool) => tool.name)).toEqual(['search', 'execute', 'list_profiles'])
   })
 
-  it('keeps the default MCP tools/list response fixed on search and execute', async () => {
+  it('keeps the default MCP tools/list response fixed on the compact Code Mode surface', async () => {
     await withClient(createServer(), async (client) => {
       const { tools } = await client.listTools()
-      expect(tools).toHaveLength(2)
-      expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(tools).toHaveLength(3)
+      expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute', 'list_profiles'])
     })
   })
 })

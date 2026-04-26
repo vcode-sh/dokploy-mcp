@@ -20,6 +20,7 @@ const startedServers: StartedHttpServer[] = []
 const ORIGINAL_ENV = { ...process.env }
 const defaultRemoteDokployUrl = 'https://panel.example.com'
 const defaultRemoteDokployApiKey = 'test-api-key'
+const codeModeToolNames = ['search', 'execute', 'list_profiles']
 
 afterEach(async () => {
   while (startedServers.length > 0) {
@@ -531,7 +532,7 @@ describe('http server transport', () => {
     await withHttpClient(handle, async (client) => {
       const { tools } = await client.listTools()
 
-      expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
 
       const result = await client.callTool({
         name: 'search',
@@ -568,7 +569,7 @@ describe('http server transport', () => {
       const { tools } = await client.listTools()
       const { resourceTemplates } = await client.listResourceTemplates()
 
-      expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
       expect(
         Object.keys((client.getServerCapabilities() ?? {}) as Record<string, unknown>).sort(),
       ).toEqual(['resources', 'tools'])
@@ -596,7 +597,7 @@ describe('http server transport', () => {
       const { tools } = await client.listTools()
       const messages = []
 
-      expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
       expect(
         Object.keys((client.getServerCapabilities() ?? {}) as Record<string, unknown>).sort(),
       ).toEqual(['tasks', 'tools'])
@@ -689,8 +690,8 @@ describe('http server transport', () => {
       const firstTools = await client.listTools()
       const secondTools = await client.listTools()
 
-      expect(firstTools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
-      expect(secondTools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(firstTools.tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
+      expect(secondTools.tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
       expect(transport.sessionId).toBe(firstSessionId)
     })
   })
@@ -1067,7 +1068,7 @@ describe('http server transport', () => {
       expect(first.transport.sessionId).toBeUndefined()
 
       const tools = await second.client.listTools()
-      expect(tools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(tools.tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
 
       const result = await second.client.callTool({
         name: 'search',
@@ -1286,7 +1287,7 @@ describe('http server transport', () => {
       expect(reconnect.transport.sessionId).toBe(sessionId)
 
       const tools = await reconnect.client.listTools()
-      expect(tools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(tools.tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
 
       const result = await reconnect.client.callTool({
         name: 'search',
@@ -1349,7 +1350,7 @@ describe('http server transport', () => {
       )
 
       for (const [index, result] of results.entries()) {
-        expect(result.tools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(result.tools.tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
         expect(result.callResult.isError).not.toBe(true)
         expect(result.callResult.structuredContent).toMatchObject({
           result: expect.any(Number),
@@ -1414,8 +1415,8 @@ describe('http server transport', () => {
         }),
       ])
 
-      expect(initialTools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
-      expect(reconnectTools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(initialTools.tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
+      expect(reconnectTools.tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
       expect(initialCall.isError).not.toBe(true)
       expect(reconnectCall.isError).not.toBe(true)
 
@@ -1467,7 +1468,7 @@ describe('http server transport', () => {
       )
 
       for (const result of firstWave) {
-        expect(result.tools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(result.tools.tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
         expect(result.callResult.isError).not.toBe(true)
       }
 
@@ -1804,7 +1805,7 @@ describe('http server transport', () => {
         ])
 
       for (const result of validResults) {
-        expect(result.tools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(result.tools.tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
         expect(result.callResult.isError).not.toBe(true)
       }
 
@@ -1897,7 +1898,7 @@ describe('http server transport', () => {
       }
 
       for (const result of validResults) {
-        expect(result.tools.tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(result.tools.tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
         expect(result.callResult.isError).not.toBe(true)
       }
 
