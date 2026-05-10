@@ -2,13 +2,54 @@ import type {
   CreateTaskRequestHandlerExtra,
   TaskRequestHandlerExtra,
 } from '@modelcontextprotocol/sdk/experimental/tasks'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { execSyncMock, existsSyncMock, mkdirSyncMock, readFileSyncMock, writeFileSyncMock } =
+  vi.hoisted(() => ({
+    execSyncMock: vi.fn(),
+    existsSyncMock: vi.fn(),
+    mkdirSyncMock: vi.fn(),
+    readFileSyncMock: vi.fn(),
+    writeFileSyncMock: vi.fn(),
+  }))
+
+vi.mock('node:child_process', () => ({
+  execSync: execSyncMock,
+}))
+
+vi.mock('node:fs', () => ({
+  existsSync: existsSyncMock,
+  mkdirSync: mkdirSyncMock,
+  readFileSync: readFileSyncMock,
+  writeFileSync: writeFileSyncMock,
+}))
+
 import { createExecuteTool } from '../src/codemode/tools/execute.js'
+import { createResolvedConfig, withResolvedConfigOverride } from '../src/config/resolver.js'
 import { createTaskRuntime, DEFAULT_TASK_POLL_INTERVAL_MS } from '../src/mcp/tasks/runtime.js'
+
+beforeEach(() => {
+  execSyncMock.mockReset()
+  existsSyncMock.mockReset()
+  mkdirSyncMock.mockReset()
+  readFileSyncMock.mockReset()
+  writeFileSyncMock.mockReset()
+  execSyncMock.mockImplementation(() => {
+    throw new Error('Unexpected Dokploy CLI lookup')
+  })
+  existsSyncMock.mockReturnValue(false)
+})
 
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
+
+afterAll(() => {
+  vi.doUnmock('node:child_process')
+  vi.doUnmock('node:fs')
+  vi.resetModules()
 })
 
 function createTaskExtra() {
@@ -266,6 +307,38 @@ describe('phase 4 execute tool metadata', () => {
     )
   })
 
+  it('rejects named profiles when request-scoped HTTP credentials are active', async () => {
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        redivo: {
+          url: 'https://redivo.example.com',
+          apiKey: 'redivo-key',
+        },
+      }),
+    )
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const tool = createExecuteTool()
+    const result = await withResolvedConfigOverride(
+      createResolvedConfig('https://remote.example.com', 'remote-key', 'http-headers', 45_000),
+      () =>
+        tool.handler({
+          profile: 'redivo',
+          code: 'return await dokploy.project.all()',
+        }),
+    )
+
+    expect(result.isError).toBe(true)
+    expect(result.structuredContent).toMatchObject({
+      error: 'Failed to execute execute',
+      details:
+        'Named Dokploy profiles are unavailable when request-scoped HTTP credentials are active. Omit `profile` to use the bound session credentials.',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('uses the selected profile for task-based execute API calls', async () => {
     vi.stubEnv(
       'DOKPLOY_PROFILES_JSON',
@@ -335,6 +408,45 @@ describe('phase 4 execute tool metadata', () => {
           'x-api-key': 'personal-key',
         }),
       }),
+    )
+  })
+
+  it('rejects invalid profile selection before creating a task', async () => {
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        redivo: {
+          url: 'https://redivo.example.com',
+          apiKey: 'redivo-key',
+        },
+      }),
+    )
+
+    const tool = createExecuteTool()
+    const taskHandler = tool.taskHandler as {
+      createTask: (
+        input: Record<string, unknown>,
+        extra: CreateTaskRequestHandlerExtra,
+      ) => Promise<{
+        task: { taskId: string }
+      }>
+    }
+    const { extra } = createTaskExtra()
+
+    await expect(
+      withResolvedConfigOverride(
+        createResolvedConfig('https://remote.example.com', 'remote-key', 'http-headers', 45_000),
+        () =>
+          taskHandler.createTask(
+            {
+              profile: 'redivo',
+              code: 'return await dokploy.project.all()',
+            },
+            extra,
+          ),
+      ),
+    ).rejects.toThrow(
+      'Named Dokploy profiles are unavailable when request-scoped HTTP credentials are active. Omit `profile` to use the bound session credentials.',
     )
   })
 })

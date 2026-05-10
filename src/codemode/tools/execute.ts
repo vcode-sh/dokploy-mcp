@@ -264,6 +264,7 @@ function createExecuteTaskHandler(options: ExecuteToolOptions) {
   return {
     async createTask(input: ExecuteToolInput, extra: CreateTaskRequestHandlerExtra) {
       const request = resolveExecuteRequest(input)
+      const selectedConfig = resolveProfileConfig(input.profile)
       const taskRuntime = options.server ? getTaskRuntime(options.server) : undefined
       const task = await extra.taskStore.createTask(
         taskRuntime?.createTaskOptions(extra.taskRequestedTtl, DEFAULT_TASK_POLL_INTERVAL_MS) ?? {
@@ -271,21 +272,6 @@ function createExecuteTaskHandler(options: ExecuteToolOptions) {
           pollInterval: DEFAULT_TASK_POLL_INTERVAL_MS,
         },
       )
-      let selectedConfig: ReturnType<typeof resolveProfileConfig>
-      try {
-        selectedConfig = resolveProfileConfig(input.profile)
-      } catch (error) {
-        await safeStoreTaskResult(
-          extra,
-          task.taskId,
-          'failed',
-          buildToolErrorResult(
-            'Failed to execute execute',
-            getCodemodeErrorMessage(error, 'Unknown profile error'),
-          ),
-        )
-        return { task: (await extra.taskStore.getTask(task.taskId)) ?? task }
-      }
 
       if (request.kind === 'code') {
         const controller = new AbortController()

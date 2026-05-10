@@ -3,7 +3,7 @@
   "name": "io.github.vcode-sh/dokploy-mcp",
   "title": "Dokploy MCP",
   "description": "Dokploy MCP server with compact search/execute defaults for local stdio and hosted HTTP.",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "websiteUrl": "https://github.com/vcode-sh/dokploy-mcp#readme",
   "repository": {
     "url": "https://github.com/vcode-sh/dokploy-mcp",
@@ -21,7 +21,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@vibetools/dokploy-mcp",
-      "version": "3.0.0",
+      "version": "3.1.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
@@ -37,6 +37,12 @@
           "description": "Optional when local Dokploy credentials already exist. Otherwise provide the Dokploy API key.",
           "isSecret": true,
           "placeholder": "dokp_..."
+        },
+        {
+          "name": "DOKPLOY_PROFILES_JSON",
+          "description": "Optional JSON object of named Dokploy targets. Use this when you want explicit named profiles in addition to the local default target.",
+          "isSecret": true,
+          "placeholder": "{\"redivo\":{\"url\":\"https://redivo.example.com\",\"apiKey\":\"dokp_redivo\"}}"
         }
       ]
     }

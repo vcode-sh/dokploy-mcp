@@ -16,6 +16,7 @@ that met no tour guide.
 ## Guides
 
 - [Setup Wizard](./guides/setup-wizard.md): interactive and non-interactive setup without folklore.
+- [Profiles](./guides/profiles.md): how `default` and named Dokploy targets actually behave.
 - [Modes](./guides/modes.md): when to use Code Mode, `raw`, or `hybrid`.
 - [Compose](./guides/compose.md): the part people mess up first.
 - [Hosted HTTP](./guides/hosted-http.md): when you want the server running over HTTP instead of as a
@@ -37,8 +38,9 @@ If you are new:
 1. [Getting Started](./getting-started.md)
 2. your client page in [clients](./clients)
 3. [Setup Wizard](./guides/setup-wizard.md)
-4. [Modes](./guides/modes.md)
-5. [Live End-To-End Proof](./live-e2e-proof.md)
+4. [Profiles](./guides/profiles.md)
+5. [Modes](./guides/modes.md)
+6. [Live End-To-End Proof](./live-e2e-proof.md)
 
 If you are about to do Compose work:
 

@@ -7,6 +7,7 @@ import { searchTool } from '../../dist/codemode/tools/search.js'
 
 const MAX_CODEMODE_BYTES = 8 * 1024
 const MAX_CODEMODE_TOKENS = 2000
+const CODEMODE_TOKEN_WARN_RATIO = 0.9
 const MAX_SEARCH_DURATION_MS = 150
 const MAX_EXECUTE_DURATION_MS = 120
 const MAX_SANDBOX_STARTUP_MS = 80
@@ -15,6 +16,10 @@ const SAMPLE_COUNT = 10
 function fail(message) {
   console.error(message)
   process.exitCode = 1
+}
+
+function warn(message) {
+  console.warn(message)
 }
 
 function measureCodeModeToolsList() {
@@ -165,6 +170,10 @@ if (codeModeToolsList.bytes >= MAX_CODEMODE_BYTES) {
 if (codeModeToolsList.tokens >= MAX_CODEMODE_TOKENS) {
   fail(
     `Code Mode tools/list exceeded token budget: ${codeModeToolsList.tokens} tokens >= ${MAX_CODEMODE_TOKENS}`,
+  )
+} else if (codeModeToolsList.tokens / MAX_CODEMODE_TOKENS >= CODEMODE_TOKEN_WARN_RATIO) {
+  warn(
+    `Code Mode tools/list is using ${Math.round((codeModeToolsList.tokens / MAX_CODEMODE_TOKENS) * 100)}% of the token budget (${codeModeToolsList.tokens}/${MAX_CODEMODE_TOKENS}).`,
   )
 }
 

@@ -8,7 +8,7 @@ MCP server for [Dokploy](https://dokploy.com).
 
 The pitch is simple:
 
-- default public surface: `search` and `execute`
+- default public surface: `search`, `execute`, and `list_profiles`
 - actual Dokploy coverage underneath: generated, broad, and tested
 - less schema spam in context
 - real support for creating, updating, deploying, reading logs, and wiring domains
@@ -24,12 +24,12 @@ Need proof instead of a sales monologue? Start with [docs/live-e2e-proof.md](./d
 - Generated API procedures in the pinned catalog: `524`
 - Generated tags: `48`
 - Default public MCP tools: `3` (`search`, `execute`, `list_profiles`)
-- Default `tools/list` footprint from the current budget check: about `1,671` tokens (`6,682` bytes)
+- Default `tools/list` footprint from the current budget check: about `1,681` tokens (`6,723` bytes)
 - Reduction versus the classic endpoint-per-tool baseline (`92,354` tokens): `98.2%`
 
 | | Classic endpoint-per-tool baseline | Current Code Mode default |
 |---|---|---|
-| Tool definitions sent | about `92,354` tokens | about `1,671` tokens |
+| Tool definitions sent | about `92,354` tokens | about `1,681` tokens |
 | Public MCP tools | hundreds of endpoint schemas | `3` |
 | Context window tax | wide schema dump | compact fixed surface |
 <!-- docs-facts:readme:end -->
@@ -94,8 +94,8 @@ Keep one compact MCP server and configure profiles with `DOKPLOY_PROFILES_JSON`:
 }
 ```
 
-Use `list_profiles` to see configured profile names and normalized URLs. API keys are never
-returned. Pass `profile` to `execute` when more than one profile is configured:
+Use `list_profiles` to see the available default and named profile targets without exposing API
+keys. Pass `profile` to `execute` when you want a named profile instead of the default target:
 
 ```json
 {
@@ -106,6 +106,9 @@ returned. Pass `profile` to `execute` when more than one profile is configured:
 
 `search` also accepts an optional `profile` argument for profile-name validation while preserving
 the same compact catalog behavior.
+
+Hosted HTTP sessions keep their request-scoped remote credentials bound to the session. Named local
+profiles are not exposed there.
 
 Want the wizard path instead of manual config?
 
@@ -136,6 +139,7 @@ If you are new, use the default mode and stop overthinking it.
 ## Read These Next
 
 - [docs/getting-started.md](./docs/getting-started.md)
+- [docs/guides/profiles.md](./docs/guides/profiles.md)
 - [docs/guides/modes.md](./docs/guides/modes.md)
 - [docs/guides/compose.md](./docs/guides/compose.md)
 - [docs/guides/hosted-http.md](./docs/guides/hosted-http.md)

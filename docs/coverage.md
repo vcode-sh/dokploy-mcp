@@ -11,7 +11,7 @@ Run `npm run docs:sync:facts` after changing generated artifacts or budget-sensi
 - Generated tags: `48`
 - Default public MCP tools: `3`
 - Public tool surface: `search`, `execute`, `list_profiles`
-- Default `tools/list` footprint from the current budget check: about `1,671` tokens (`6,682` bytes)
+- Default `tools/list` footprint from the current budget check: about `1,681` tokens (`6,723` bytes)
 - Optional server modes: `raw`, `hybrid`
 - Optional HTTP transport: `Streamable HTTP`
 <!-- docs-facts:coverage-summary:end -->
@@ -29,15 +29,15 @@ The public server does not expose one MCP tool per Dokploy endpoint anymore. Ins
 - `search` can discover every procedure present in the generated catalog
 - `execute` can call any generated Dokploy procedure through the sandbox bridge
 - the generated catalog and generated schema map stay aligned through tests
-- CI enforces protocol and runtime budgets for the public v2 surface
-- default `tools/list` remains fixed at the 2-tool Code Mode surface
+- CI enforces protocol and runtime budgets for the current compact Code Mode surface
+- default `tools/list` remains fixed at the 3-tool Code Mode surface
 - raw and hybrid mode expose the generated catalog only when explicitly requested
 - newer generated procedures can fail with compatibility-aware errors on older Dokploy backends
 
 <!-- docs-facts:coverage-budget:start -->
 ## Current Budget Snapshot
 
-- Current default `tools/list`: `6,682` bytes, about `1,671` tokens
+- Current default `tools/list`: `6,723` bytes, about `1,681` tokens
 - Classic comparison baseline: about `92,354` tokens for endpoint-per-tool discovery
 - Current reduction versus that baseline: `98.2%`
 - Current `ci:budgets` status from the managed budget check: `pass`

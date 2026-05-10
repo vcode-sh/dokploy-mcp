@@ -298,6 +298,31 @@ describe('resolveConfig', () => {
     })
   })
 
+  it('prefers the config file over a single JSON profile for backward compatibility', () => {
+    configureConfigSources({
+      configFileContent: JSON.stringify({
+        url: 'https://file.example.com/api',
+        apiKey: 'file-key',
+      }),
+    })
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        personal: {
+          url: 'https://personal.example.com/api',
+          apiKey: 'personal-key',
+        },
+      }),
+    )
+
+    expect(resolveConfig()).toEqual({
+      url: 'https://file.example.com/api/trpc',
+      apiKey: 'file-key',
+      source: 'config-file',
+      timeout: 30_000,
+    })
+  })
+
   it('falls back to Dokploy CLI config when the config file is missing', () => {
     configureConfigSources({
       cliConfigContent: JSON.stringify({
@@ -425,6 +450,82 @@ describe('resolveConfig', () => {
 })
 
 describe('profile config helpers', () => {
+  it('warns once when DOKPLOY_PROFILES_JSON is not valid JSON', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    vi.stubEnv('DOKPLOY_PROFILES_JSON', '{"broken": ')
+
+    expect(listProfiles()).toEqual([])
+    expect(resolveProfileConfig()).toBeNull()
+
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Ignoring DOKPLOY_PROFILES_JSON because it is not valid JSON.'),
+    )
+  })
+
+  it('warns once without leaking secrets when DOKPLOY_PROFILES_JSON has an invalid schema', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        redivo: {
+          url: 'not-a-url',
+          apiKey: 'secret-redivo-key',
+        },
+      }),
+    )
+
+    expect(listProfiles()).toEqual([])
+    expect(resolveProfileConfig()).toBeNull()
+
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Expected { profileName: { url, apiKey } } with absolute URLs.'),
+    )
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('redivo.url'))
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('secret-redivo-key'))
+  })
+
+  it('rejects the reserved profile name default', () => {
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        default: {
+          url: 'https://default.example.com',
+          apiKey: 'default-key',
+        },
+      }),
+    )
+
+    expect(() => listProfiles()).toThrow('Dokploy profile name "default" is reserved.')
+    expect(() => resolveProfileConfig('default')).toThrow(
+      'Dokploy profile name "default" is reserved.',
+    )
+  })
+
+  it('rejects duplicate trimmed profile names', () => {
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        redivo: {
+          url: 'https://redivo.example.com',
+          apiKey: 'redivo-key',
+        },
+        ' redivo ': {
+          url: 'https://dup.example.com',
+          apiKey: 'dup-key',
+        },
+      }),
+    )
+
+    expect(() => listProfiles()).toThrow(
+      'Duplicate Dokploy profile name "redivo" found in DOKPLOY_PROFILES_JSON.',
+    )
+    expect(() => resolveProfileConfig('redivo')).toThrow(
+      'Duplicate Dokploy profile name "redivo" found in DOKPLOY_PROFILES_JSON.',
+    )
+  })
+
   it('lists JSON profiles without exposing API keys', () => {
     vi.stubEnv(
       'DOKPLOY_PROFILES_JSON',
@@ -454,7 +555,44 @@ describe('profile config helpers', () => {
         source: 'profiles-json',
       },
     ])
-    expect(JSON.stringify(profiles)).not.toContain('secret')
+    expect(JSON.stringify(profiles)).not.toContain('secret-redivo-key')
+    expect(JSON.stringify(profiles)).not.toContain('secret-personal-key')
+  })
+
+  it('lists the local default alongside named JSON profiles', () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://env.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'env-key')
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        redivo: {
+          url: 'https://redivo.example.com',
+          apiKey: 'redivo-key',
+        },
+        personal: {
+          url: 'https://personal.example.com',
+          apiKey: 'personal-key',
+        },
+      }),
+    )
+
+    expect(listProfiles()).toEqual([
+      {
+        name: 'default',
+        url: 'https://env.example.com/api/trpc',
+        source: 'env',
+      },
+      {
+        name: 'personal',
+        url: 'https://personal.example.com/api/trpc',
+        source: 'profiles-json',
+      },
+      {
+        name: 'redivo',
+        url: 'https://redivo.example.com/api/trpc',
+        source: 'profiles-json',
+      },
+    ])
   })
 
   it('selects a known JSON profile', () => {
@@ -508,6 +646,44 @@ describe('profile config helpers', () => {
     }
   })
 
+  it('uses the local default when named JSON profiles are also configured', () => {
+    vi.stubEnv('DOKPLOY_URL', 'https://env.example.com')
+    vi.stubEnv('DOKPLOY_API_KEY', 'env-key')
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        redivo: {
+          url: 'https://redivo.example.com',
+          apiKey: 'redivo-key',
+        },
+        personal: {
+          url: 'https://personal.example.com',
+          apiKey: 'personal-key',
+        },
+      }),
+    )
+
+    expect(resolveProfileConfig()).toEqual({
+      url: 'https://env.example.com/api/trpc',
+      apiKey: 'env-key',
+      source: 'env',
+      timeout: 30_000,
+    })
+    expect(resolveProfileConfig('default')).toEqual({
+      url: 'https://env.example.com/api/trpc',
+      apiKey: 'env-key',
+      source: 'env',
+      timeout: 30_000,
+    })
+    expect(resolveProfileConfig('personal')).toEqual({
+      url: 'https://personal.example.com/api/trpc',
+      apiKey: 'personal-key',
+      source: 'profiles-json',
+      timeout: 30_000,
+      profile: 'personal',
+    })
+  })
+
   it('reports unknown profiles without exposing API keys', () => {
     vi.stubEnv(
       'DOKPLOY_PROFILES_JSON',
@@ -555,6 +731,47 @@ describe('profile config helpers', () => {
       expect(error).toBeInstanceOf(Error)
       expect((error as Error).message).not.toContain('secret')
     }
+  })
+
+  it('uses request-scoped HTTP credentials as the only visible default profile', () => {
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        personal: {
+          url: 'https://personal.example.com',
+          apiKey: 'personal-key',
+        },
+      }),
+    )
+    const override = createResolvedConfig(
+      'https://remote.example.com',
+      'remote-key',
+      'http-headers',
+      45_000,
+    )
+
+    const profiles = withResolvedConfigOverride(override, () => listProfiles())
+    expect(profiles).toEqual([
+      {
+        name: 'default',
+        url: 'https://remote.example.com/api/trpc',
+        source: 'http-headers',
+      },
+    ])
+
+    const resolved = withResolvedConfigOverride(override, () => resolveProfileConfig())
+    expect(resolved).toEqual({
+      url: 'https://remote.example.com/api/trpc',
+      apiKey: 'remote-key',
+      source: 'http-headers',
+      timeout: 45_000,
+    })
+
+    expect(() =>
+      withResolvedConfigOverride(override, () => resolveProfileConfig('personal')),
+    ).toThrow(
+      'Named Dokploy profiles are unavailable when request-scoped HTTP credentials are active. Omit `profile` to use the bound session credentials.',
+    )
   })
 })
 

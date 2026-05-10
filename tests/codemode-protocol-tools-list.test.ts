@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest'
 import { codeModeTools } from '../src/codemode/tools/index.js'
 import { createServer } from '../src/server.js'
 
+const codeModeToolNames = ['search', 'execute', 'list_profiles']
+
 async function withClient(server: McpServer, run: (client: Client) => Promise<void>) {
   const client = new Client({
     name: 'tools-list-client',
@@ -31,14 +33,14 @@ async function withClient(server: McpServer, run: (client: Client) => Promise<vo
 describe('codemode tools/list contract', () => {
   it('exposes only the fixed codemode surface', () => {
     expect(codeModeTools).toHaveLength(3)
-    expect(codeModeTools.map((tool) => tool.name)).toEqual(['search', 'execute', 'list_profiles'])
+    expect(codeModeTools.map((tool) => tool.name)).toEqual(codeModeToolNames)
   })
 
   it('keeps the default MCP tools/list response fixed on the compact Code Mode surface', async () => {
     await withClient(createServer(), async (client) => {
       const { tools } = await client.listTools()
       expect(tools).toHaveLength(3)
-      expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute', 'list_profiles'])
+      expect(tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
     })
   })
 })

@@ -80,7 +80,7 @@ export const searchTool: ToolDefinition = createTool({
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async ({ input }) => {
     if (input.profile) {
-      resolveProfileConfig(input.profile)
+      void resolveProfileConfig(input.profile)
     }
 
     const execution =

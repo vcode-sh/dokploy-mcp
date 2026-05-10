@@ -30,5 +30,7 @@ Use dokploy-mcp to inspect my Dokploy project and tell me what is currently depl
 
 - Claude Code supports local stdio and remote HTTP MCP servers. For remote usage, read
   [Hosted HTTP](../guides/hosted-http.md).
+- For one default target plus named extra targets, add `DOKPLOY_PROFILES_JSON` and read
+  [Profiles](../guides/profiles.md).
 - If the `claude` executable is not in your `PATH`, fix that first. There is only so much dignity a
   config file can preserve.

@@ -9,7 +9,7 @@ export const listProfilesTool: ToolDefinition = createTool({
   name: 'list_profiles',
   title: 'List Dokploy Profiles',
   description:
-    'List configured Dokploy profiles without exposing API keys. Returns profile names, normalized Dokploy API URLs, and config sources.',
+    'List the available Dokploy profiles, including default and named targets, without exposing API keys. Returns profile names, normalized Dokploy API URLs, and config sources.',
   schema: listProfilesSchema,
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async () => ({

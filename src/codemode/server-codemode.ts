@@ -27,7 +27,7 @@ export function createCodeModeServer(options: CodeModeServerOptions = {}): McpSe
   const server = new McpServer(
     {
       name: 'dokploy-mcp-server-codemode',
-      version: '3.0.0',
+      version: '3.1.0',
     },
     {
       taskStore: taskRuntime.store,

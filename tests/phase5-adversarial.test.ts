@@ -3,7 +3,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createResolvedConfig, resolveConfig } from '../src/config/resolver.js'
+import {
+  createResolvedConfig,
+  listProfiles,
+  resolveConfig,
+  resolveProfileConfig,
+} from '../src/config/resolver.js'
 import {
   authorizeMcpRequest,
   handleMcpPreflight,
@@ -244,6 +249,50 @@ describe('phase 5 adversarial coverage', () => {
       source: 'http-headers',
       timeout: 30_000,
     })
+  })
+
+  it('does not allow request-scoped HTTP credentials to pivot into local named profiles', async () => {
+    vi.stubEnv(
+      'DOKPLOY_PROFILES_JSON',
+      JSON.stringify({
+        redivo: {
+          url: 'https://redivo.example.com',
+          apiKey: 'redivo-key',
+        },
+      }),
+    )
+
+    const req = new MockRequest({
+      method: 'POST',
+      url: '/mcp',
+      headers: createRemoteHeaders(),
+    }) as unknown as IncomingMessage
+    const res = new MockResponse() as unknown as ServerResponse
+    const config = authorizeMcpRequest(req, res, createOptions())
+
+    expect(config).not.toBeNull()
+
+    const visibleProfiles = await withHttpRequestConfig(config!, async () => listProfiles())
+    expect(visibleProfiles).toEqual([
+      {
+        name: 'default',
+        url: 'https://panel.example.com/api/trpc',
+        source: 'http-headers',
+      },
+    ])
+
+    expect(await withHttpRequestConfig(config!, async () => resolveProfileConfig())).toEqual({
+      url: 'https://panel.example.com/api/trpc',
+      apiKey: 'test-api-key',
+      source: 'http-headers',
+      timeout: 30_000,
+    })
+
+    await expect(
+      withHttpRequestConfig(config!, async () => resolveProfileConfig('redivo')),
+    ).rejects.toThrow(
+      'Named Dokploy profiles are unavailable when request-scoped HTTP credentials are active. Omit `profile` to use the bound session credentials.',
+    )
   })
 
   it('accepts non-empty array header values and appends Origin to an existing Vary header', () => {

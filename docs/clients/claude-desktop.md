@@ -31,6 +31,9 @@ Claude Desktop MCP config is separate from Claude Code MCP config.
 
 If you configure one and the other still looks confused, that is not a ghost. That is two products.
 
+If you want one default Dokploy target plus named extras, add `DOKPLOY_PROFILES_JSON` and read
+[Profiles](../guides/profiles.md).
+
 ## First Prompt
 
 ```text
