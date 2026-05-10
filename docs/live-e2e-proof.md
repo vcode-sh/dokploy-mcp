@@ -197,10 +197,11 @@ Retry after forcing `sourceType: "raw"`:
 
 ## Response Shape
 
-The default public surface still exposes only:
+The default public surface now exposes:
 
 - `search`
 - `execute`
+- `list_profiles`
 
 That does not mean the responses are vague. A typical successful `execute` result includes:
 
@@ -335,9 +336,9 @@ Because apparently “don’t leak database passwords in AI tooling” still has
 
 Current measured public footprint from `scripts/v2/check-budgets.mjs`:
 
-- default `tools/list`: `5,941` bytes, about `1,485` tokens
+- default `tools/list`: `6,682` bytes, about `1,671` tokens
 - classic endpoint-per-tool comparison baseline: about `92,354` tokens
-- reduction versus that baseline: `98.4%`
+- reduction versus that baseline: `98.2%`
 - current `ci:budgets` status: `pass`
 
 Current local benchmark snapshot from the same budget check:
@@ -360,7 +361,7 @@ The usual MCP stunt is:
 This package does the opposite:
 
 - `524` generated procedures stay discoverable
-- the default public contract stays fixed at `2` tools
+- the default public contract stays fixed at `3` tools
 - live Dokploy mutation flows still work
 - hosted HTTP still works
 

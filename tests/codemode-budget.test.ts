@@ -18,8 +18,8 @@ describe('codemode protocol budget', () => {
     const bytes = Buffer.byteLength(JSON.stringify(payload), 'utf8')
     const approxTokens = Math.round(bytes / 4)
 
-    expect(codeModeTools).toHaveLength(2)
+    expect(codeModeTools).toHaveLength(3)
     expect(bytes).toBeLessThan(8 * 1024)
-    expect(approxTokens).toBeLessThan(1500)
+    expect(approxTokens).toBeLessThan(2000)
   })
 })

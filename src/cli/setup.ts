@@ -262,6 +262,7 @@ async function promptCredentials(initial?: Partial<{ url: string; apiKey: string
 
 const sourceLabels: Record<string, string> = {
   env: 'environment variables',
+  'profiles-json': 'profiles JSON config',
   'config-file': 'config file',
   'dokploy-cli': 'Dokploy CLI config',
   'http-headers': 'HTTP headers',

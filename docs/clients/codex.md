@@ -47,3 +47,5 @@ Use dokploy-mcp to find project "my-project" and summarize what is running there
 - If you want hosted MCP instead of a local stdio process, read [Hosted HTTP](../guides/hosted-http.md).
 - If Codex is already using local Dokploy credentials through config or CLI auth, you may not need
   the env block.
+- If you want one default Dokploy target plus named extras, use `DOKPLOY_PROFILES_JSON` and read
+  [Profiles](../guides/profiles.md). The default target stays the default target. Miracles do happen.

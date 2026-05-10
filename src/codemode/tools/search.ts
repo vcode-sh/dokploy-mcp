@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { resolveProfileConfig } from '../../config/resolver.js'
 import { createTool, type ToolDefinition } from '../../mcp/tool-factory.js'
 import { createSearchCatalogView } from '../context/search-context.js'
 import { runSandboxedFunction } from '../sandbox/runner.js'
@@ -18,6 +19,11 @@ const searchSchema = z
           '`catalog.getByTag("compose")` | `catalog.get("application.one")` | `catalog.get("application.update")`. ' +
           'Methods: searchText(query), recommend(query), get(procedure), getByTag(tag), endpoints, byTag.',
       ),
+    profile: z
+      .string()
+      .min(1)
+      .optional()
+      .describe('Optional Dokploy profile name to validate before returning catalog results.'),
   })
   .strict()
 
@@ -73,6 +79,10 @@ export const searchTool: ToolDefinition = createTool({
   schema: searchSchema,
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async ({ input }) => {
+    if (input.profile) {
+      void resolveProfileConfig(input.profile)
+    }
+
     const execution =
       resolveSandboxRuntime() === 'subprocess'
         ? await runSearchInSubprocess({ code: input.code })

@@ -6,7 +6,7 @@ import { attachTaskRuntime, createTaskRuntime } from '../mcp/tasks/runtime.js'
 import type { ServerCapabilityFlags } from '../server.js'
 import { type RawModeOptions, registerRawModeTools } from './tools.js'
 
-const SERVER_VERSION = '3.0.0'
+const SERVER_VERSION = '3.1.0'
 
 interface ModeServerOptions extends RawModeOptions {
   capabilityFlags?: ServerCapabilityFlags

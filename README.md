@@ -8,7 +8,7 @@ MCP server for [Dokploy](https://dokploy.com).
 
 The pitch is simple:
 
-- default public surface: `search` and `execute`
+- default public surface: `search`, `execute`, and `list_profiles`
 - actual Dokploy coverage underneath: generated, broad, and tested
 - less schema spam in context
 - real support for creating, updating, deploying, reading logs, and wiring domains
@@ -23,14 +23,14 @@ Need proof instead of a sales monologue? Start with [docs/live-e2e-proof.md](./d
 
 - Generated API procedures in the pinned catalog: `524`
 - Generated tags: `48`
-- Default public MCP tools: `2` (`search`, `execute`)
-- Default `tools/list` footprint from the current budget check: about `1,485` tokens (`5,941` bytes)
-- Reduction versus the classic endpoint-per-tool baseline (`92,354` tokens): `98.4%`
+- Default public MCP tools: `3` (`search`, `execute`, `list_profiles`)
+- Default `tools/list` footprint from the current budget check: about `1,681` tokens (`6,723` bytes)
+- Reduction versus the classic endpoint-per-tool baseline (`92,354` tokens): `98.2%`
 
 | | Classic endpoint-per-tool baseline | Current Code Mode default |
 |---|---|---|
-| Tool definitions sent | about `92,354` tokens | about `1,485` tokens |
-| Public MCP tools | hundreds of endpoint schemas | `2` |
+| Tool definitions sent | about `92,354` tokens | about `1,681` tokens |
+| Public MCP tools | hundreds of endpoint schemas | `3` |
 | Context window tax | wide schema dump | compact fixed surface |
 <!-- docs-facts:readme:end -->
 
@@ -76,6 +76,40 @@ Already authenticated with the [Dokploy CLI](https://github.com/Dokploy/cli) or 
 
 You may not need the env block at all.
 
+Using multiple Dokploy organizations?
+
+Keep one compact MCP server and configure profiles with `DOKPLOY_PROFILES_JSON`:
+
+```json
+{
+  "mcpServers": {
+    "dokploy": {
+      "command": "npx",
+      "args": ["@vibetools/dokploy-mcp"],
+      "env": {
+        "DOKPLOY_PROFILES_JSON": "{\"redivo\":{\"url\":\"https://redivo.example.com\",\"apiKey\":\"dokp_redivo\"},\"personal\":{\"url\":\"https://personal.example.com\",\"apiKey\":\"dokp_personal\"},\"mezon\":{\"url\":\"https://mezon.example.com\",\"apiKey\":\"dokp_mezon\"}}"
+      }
+    }
+  }
+}
+```
+
+Use `list_profiles` to see the available default and named profile targets without exposing API
+keys. Pass `profile` to `execute` when you want a named profile instead of the default target:
+
+```json
+{
+  "profile": "redivo",
+  "code": "return await dokploy.project.all()"
+}
+```
+
+`search` also accepts an optional `profile` argument for profile-name validation while preserving
+the same compact catalog behavior.
+
+Hosted HTTP sessions keep their request-scoped remote credentials bound to the session. Named local
+profiles are not exposed there.
+
 Want the wizard path instead of manual config?
 
 ```bash
@@ -95,6 +129,7 @@ npx @vibetools/dokploy-mcp setup
 
 - `search`: discover Dokploy procedures and contracts
 - `execute`: run multi-step workflows in one sandboxed call
+- `list_profiles`: list configured Dokploy profile names and URLs without secrets
 - optional `raw` mode: one tool per procedure
 - optional `hybrid` mode: Code Mode plus selected raw tools
 - optional hosted HTTP path with `server.json` metadata and header-based remote auth
@@ -104,6 +139,7 @@ If you are new, use the default mode and stop overthinking it.
 ## Read These Next
 
 - [docs/getting-started.md](./docs/getting-started.md)
+- [docs/guides/profiles.md](./docs/guides/profiles.md)
 - [docs/guides/modes.md](./docs/guides/modes.md)
 - [docs/guides/compose.md](./docs/guides/compose.md)
 - [docs/guides/hosted-http.md](./docs/guides/hosted-http.md)

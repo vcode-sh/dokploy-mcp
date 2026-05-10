@@ -35,4 +35,6 @@ Use dokploy-mcp to list my Dokploy projects and show me the one named "my-projec
 
 - Cursor also supports remote MCP over HTTP. If you want that path, read
   [Hosted HTTP](../guides/hosted-http.md).
+- For one default target plus named profile targets, add `DOKPLOY_PROFILES_JSON` and read
+  [Profiles](../guides/profiles.md).
 - Keep the server name short. `dokploy` beats `my-custom-dokploy-server-production-v3-final`.

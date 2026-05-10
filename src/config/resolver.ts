@@ -5,16 +5,30 @@ import { join } from 'node:path'
 
 import { z } from 'zod'
 
-import type { ConfigFile, ConfigSource, DokployConfig, ResolvedConfig } from './types.js'
+import type {
+  ConfigFile,
+  ConfigSource,
+  DokployConfig,
+  ListedProfile,
+  ResolvedConfig,
+} from './types.js'
 import { getConfigDir, getConfigFilePath } from './types.js'
 
 const configFileSchema = z.object({
-  url: z.string().min(1),
+  url: z.string().url(),
   apiKey: z.string().min(1),
 })
 
+const profilesJsonSchema = z.record(
+  z.string().min(1),
+  z.object({
+    url: z.string().url(),
+    apiKey: z.string().min(1),
+  }),
+)
+
 const dokployCliSchema = z.object({
-  url: z.string().min(1),
+  url: z.string().url(),
   token: z.string().min(1),
 })
 
@@ -32,7 +46,9 @@ const userSchema = z
 
 const versionSchema = z.union([z.string(), z.object({ version: z.string() }).passthrough()])
 const defaultTimeoutMs = 30_000
+const defaultProfileName = 'default'
 const configOverrideStorage = new AsyncLocalStorage<ResolvedConfig | null>()
+const reportedProfilesJsonWarnings = new Set<string>()
 
 export function resolveTimeout(rawTimeout: string | undefined): number {
   if (!rawTimeout) {
@@ -63,12 +79,14 @@ export function createResolvedConfig(
   apiKey: string,
   source: ConfigSource,
   timeout: number,
+  profile?: string,
 ): ResolvedConfig {
   return {
     url: normalizeUrl(url),
     apiKey,
     source,
     timeout,
+    ...(profile ? { profile } : {}),
   }
 }
 
@@ -80,6 +98,237 @@ export function getResolvedConfigOverride() {
   return configOverrideStorage.getStore() ?? null
 }
 
+function warnProfilesJsonIssue(message: string) {
+  if (reportedProfilesJsonWarnings.has(message)) {
+    return
+  }
+
+  reportedProfilesJsonWarnings.add(message)
+  console.warn(message)
+}
+
+function describeProfilesJsonIssues(error: z.ZodError<Record<string, DokployConfig>>) {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.length > 0 ? issue.path.join('.') : 'root'
+      return `${path}: ${issue.message}`
+    })
+    .join('; ')
+}
+
+function readProfilesJson(): Record<string, DokployConfig> | null {
+  const rawProfiles = process.env.DOKPLOY_PROFILES_JSON
+  if (!rawProfiles) {
+    return null
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(rawProfiles)
+    const result = profilesJsonSchema.safeParse(parsed)
+    if (result.success) {
+      return result.data
+    }
+
+    warnProfilesJsonIssue(
+      `Ignoring DOKPLOY_PROFILES_JSON because it is invalid. Expected { profileName: { url, apiKey } } with absolute URLs. Details: ${describeProfilesJsonIssues(result.error)}`,
+    )
+    return null
+  } catch (error) {
+    warnProfilesJsonIssue(
+      `Ignoring DOKPLOY_PROFILES_JSON because it is not valid JSON. ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    )
+    return null
+  }
+}
+
+function buildNamedProfiles(timeout: number): ResolvedConfig[] {
+  const profilesJson = readProfilesJson()
+  if (!profilesJson) {
+    return []
+  }
+
+  const seenNames = new Set<string>()
+
+  return Object.entries(profilesJson).flatMap(([name, profile]) => {
+    const normalizedName = name.trim()
+    if (normalizedName.length === 0) {
+      return []
+    }
+
+    if (normalizedName === defaultProfileName) {
+      throw new Error(`Dokploy profile name "${defaultProfileName}" is reserved.`)
+    }
+
+    if (seenNames.has(normalizedName)) {
+      throw new Error(
+        `Duplicate Dokploy profile name "${normalizedName}" found in DOKPLOY_PROFILES_JSON.`,
+      )
+    }
+
+    seenNames.add(normalizedName)
+
+    return [
+      createResolvedConfig(profile.url, profile.apiKey, 'profiles-json', timeout, normalizedName),
+    ]
+  })
+}
+
+function sortProfileNames(names: Iterable<string>) {
+  return [...new Set(names)].sort((left, right) => {
+    if (left === defaultProfileName) {
+      return -1
+    }
+
+    if (right === defaultProfileName) {
+      return 1
+    }
+
+    return left.localeCompare(right)
+  })
+}
+
+function formatProfileNames(
+  namedProfiles: Pick<ResolvedConfig, 'profile'>[],
+  localDefault: ResolvedConfig | null,
+) {
+  const names = namedProfiles
+    .map((profile) => profile.profile)
+    .filter((name): name is string => Boolean(name))
+
+  if (localDefault) {
+    names.push(defaultProfileName)
+  }
+
+  return sortProfileNames(names).join(', ')
+}
+
+function toListedProfile(
+  name: string,
+  config: Pick<ResolvedConfig, 'url' | 'source'>,
+): ListedProfile {
+  return {
+    name,
+    url: config.url,
+    source: config.source,
+  }
+}
+
+function resolveLocalDefaultConfig(timeout: number): ResolvedConfig | null {
+  const envUrl = process.env.DOKPLOY_URL
+  const envApiKey = process.env.DOKPLOY_API_KEY
+
+  if (envUrl && envApiKey) {
+    return createResolvedConfig(envUrl, envApiKey, 'env', timeout)
+  }
+
+  const configFromFile = readConfigFile()
+  if (configFromFile) {
+    return createResolvedConfig(configFromFile.url, configFromFile.apiKey, 'config-file', timeout)
+  }
+
+  const configFromCli = readDokployCliConfig()
+  if (configFromCli) {
+    return createResolvedConfig(configFromCli.url, configFromCli.apiKey, 'dokploy-cli', timeout)
+  }
+
+  return null
+}
+
+export function listProfiles(): ListedProfile[] {
+  const override = getResolvedConfigOverride()
+  if (override?.source === 'http-headers') {
+    return [toListedProfile(defaultProfileName, override)]
+  }
+
+  const timeout = resolveTimeout(process.env.DOKPLOY_TIMEOUT)
+  const profiles: ListedProfile[] = []
+  const localDefault = resolveLocalDefaultConfig(timeout)
+  const namedProfiles = buildNamedProfiles(timeout)
+
+  if (localDefault) {
+    profiles.push(toListedProfile(defaultProfileName, localDefault))
+  }
+
+  for (const profile of namedProfiles) {
+    profiles.push(toListedProfile(profile.profile ?? '', profile))
+  }
+
+  return profiles.sort((left, right) => {
+    if (left.name === defaultProfileName) {
+      return -1
+    }
+
+    if (right.name === defaultProfileName) {
+      return 1
+    }
+
+    return left.name.localeCompare(right.name)
+  })
+}
+
+export function resolveProfileConfig(profile?: string): ResolvedConfig | null {
+  const normalizedProfile = profile?.trim()
+  const override = getResolvedConfigOverride()
+
+  if (override?.source === 'http-headers') {
+    if (!normalizedProfile || normalizedProfile === defaultProfileName) {
+      return override
+    }
+
+    throw new Error(
+      'Named Dokploy profiles are unavailable when request-scoped HTTP credentials are active. Omit `profile` to use the bound session credentials.',
+    )
+  }
+
+  const timeout = resolveTimeout(process.env.DOKPLOY_TIMEOUT)
+  const localDefault = resolveLocalDefaultConfig(timeout)
+  const namedProfiles = buildNamedProfiles(timeout)
+
+  if (normalizedProfile) {
+    if (normalizedProfile === defaultProfileName) {
+      if (localDefault) {
+        return localDefault
+      }
+
+      const available = formatProfileNames(namedProfiles, localDefault) || 'none'
+      throw new Error(
+        `Unknown Dokploy profile "${normalizedProfile}". Available profiles: ${available}.`,
+      )
+    }
+
+    const match = namedProfiles.find((entry) => entry.profile === normalizedProfile)
+    if (match) {
+      return match
+    }
+
+    const available = formatProfileNames(namedProfiles, localDefault) || 'none'
+    throw new Error(
+      `Unknown Dokploy profile "${normalizedProfile}". Available profiles: ${available}.`,
+    )
+  }
+
+  if (localDefault) {
+    return localDefault
+  }
+
+  if (namedProfiles.length === 1) {
+    return namedProfiles[0] ?? null
+  }
+
+  if (namedProfiles.length === 0) {
+    return null
+  }
+
+  throw new Error(
+    `Dokploy profile is required when multiple profiles are configured. Available profiles: ${formatProfileNames(
+      namedProfiles,
+      localDefault,
+    )}.`,
+  )
+}
+
 export interface ResolveConfigOptions {
   includeOverride?: boolean
 }
@@ -89,6 +338,7 @@ export interface ResolveConfigOptions {
  * 1. Environment variables (DOKPLOY_URL + DOKPLOY_API_KEY)
  * 2. Config file (~/.config/dokploy-mcp/config.json)
  * 3. Dokploy CLI config (@dokploy/cli global install)
+ * 4. DOKPLOY_PROFILES_JSON when no legacy default config exists and it contains exactly one profile
  *
  * URLs are automatically normalized to the tRPC API base path.
  * Returns null if no configuration is found.
@@ -103,24 +353,14 @@ export function resolveConfig(options: ResolveConfigOptions = {}): ResolvedConfi
     }
   }
 
-  // 1. Environment variables (highest priority)
-  const envUrl = process.env.DOKPLOY_URL
-  const envApiKey = process.env.DOKPLOY_API_KEY
-
-  if (envUrl && envApiKey) {
-    return createResolvedConfig(envUrl, envApiKey, 'env', timeout)
+  const localDefault = resolveLocalDefaultConfig(timeout)
+  if (localDefault) {
+    return localDefault
   }
 
-  // 2. Config file
-  const configFromFile = readConfigFile()
-  if (configFromFile) {
-    return createResolvedConfig(configFromFile.url, configFromFile.apiKey, 'config-file', timeout)
-  }
-
-  // 3. Dokploy CLI config
-  const configFromCli = readDokployCliConfig()
-  if (configFromCli) {
-    return createResolvedConfig(configFromCli.url, configFromCli.apiKey, 'dokploy-cli', timeout)
+  const namedProfiles = buildNamedProfiles(timeout)
+  if (namedProfiles.length === 1) {
+    return namedProfiles[0] ?? null
   }
 
   return null

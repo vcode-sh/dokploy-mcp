@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { createExecuteTool } from '../../codemode/tools/execute.js'
+import { listProfilesTool } from '../../codemode/tools/list-profiles.js'
 import { searchTool } from '../../codemode/tools/search.js'
 import type { McpCapabilityRegistrationOptions } from '../registration/types.js'
 import { createCapabilityRegistration } from '../registration/types.js'
@@ -15,6 +16,7 @@ function getCodeModeRuntimeTools(
       server,
       capabilityFlags: options.capabilityFlags,
     }),
+    listProfilesTool,
   ]
 }
 

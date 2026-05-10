@@ -11,6 +11,8 @@ import {
   resolveServerOptionsFromEnv,
 } from '../src/server.js'
 
+const codeModeToolNames = ['search', 'execute', 'list_profiles']
+
 async function withClient(server: McpServer, run: (client: Client) => Promise<void>) {
   const client = new Client({
     name: 'server-test-client',
@@ -103,7 +105,7 @@ describe('createServer', () => {
     })
   })
 
-  it('keeps explicit codemode mode on the legacy two-tool surface', async () => {
+  it('keeps explicit codemode mode on the compact Code Mode surface', async () => {
     await withClient(
       createServer({
         mode: 'codemode',
@@ -112,7 +114,7 @@ describe('createServer', () => {
       async (client) => {
         const { tools } = await client.listTools()
 
-        expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
         expect(getCapabilityKeys(client)).toEqual(['tools'])
       },
     )
@@ -130,7 +132,7 @@ describe('createServer', () => {
         const { tools } = await client.listTools()
         const { resourceTemplates } = await client.listResourceTemplates()
 
-        expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
         expect(getCapabilityKeys(client)).toEqual(['resources', 'tools'])
         expect(resourceTemplates.map((entry) => entry.uriTemplate).sort()).toEqual([
           'dokploy://application/{applicationId}/summary',
@@ -182,7 +184,7 @@ describe('createServer', () => {
       async (client) => {
         const { tools } = await client.listTools()
 
-        expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
         expect(getCapabilityKeys(client)).toEqual(['tools'])
       },
     )
@@ -199,7 +201,7 @@ describe('createServer', () => {
       async (client) => {
         const { tools } = await client.listTools()
 
-        expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+        expect(tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
         expect(getCapabilityKeys(client)).toEqual(['tasks', 'tools'])
       },
     )

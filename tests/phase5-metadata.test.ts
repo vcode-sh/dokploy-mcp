@@ -115,6 +115,28 @@ describe('phase 5 metadata', () => {
       url: 'https://github.com/vcode-sh/dokploy-mcp',
       source: 'github',
     })
+    expect(serverJson.packages[0]?.environmentVariables).toEqual([
+      {
+        name: 'DOKPLOY_URL',
+        description:
+          'Optional when local Dokploy credentials already exist. Otherwise provide the Dokploy panel URL.',
+        placeholder: 'https://panel.example.com',
+      },
+      {
+        name: 'DOKPLOY_API_KEY',
+        description:
+          'Optional when local Dokploy credentials already exist. Otherwise provide the Dokploy API key.',
+        isSecret: true,
+        placeholder: 'dokp_...',
+      },
+      {
+        name: 'DOKPLOY_PROFILES_JSON',
+        description:
+          'Optional JSON object of named Dokploy targets. Use this when you want explicit named profiles in addition to the local default target.',
+        isSecret: true,
+        placeholder: '{"redivo":{"url":"https://redivo.example.com","apiKey":"dokp_redivo"}}',
+      },
+    ])
   })
 
   it('declares the remote HTTP contract expected by the phase 5 runtime', () => {

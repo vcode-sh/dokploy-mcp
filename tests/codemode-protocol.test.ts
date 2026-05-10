@@ -7,6 +7,8 @@ import { createCodeModeServer } from '../src/codemode/server-codemode.js'
 import { codeModeTools } from '../src/codemode/tools/index.js'
 import { createServer } from '../src/server.js'
 
+const codeModeToolNames = ['search', 'execute', 'list_profiles']
+
 async function withClient(server: McpServer, run: (client: Client) => Promise<void>) {
   const client = new Client({
     name: 'protocol-test-client',
@@ -52,7 +54,7 @@ async function inspectSurface(server: McpServer) {
 
 describe('protocol surfaces', () => {
   it('codemode surface is intentionally tiny', () => {
-    expect(codeModeTools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+    expect(codeModeTools.map((tool) => tool.name)).toEqual(codeModeToolNames)
   })
 
   it('creates the codemode server instance', () => {
@@ -66,7 +68,7 @@ describe('protocol surfaces', () => {
 
     await withClient(server, async (client) => {
       const { tools } = await client.listTools()
-      expect(tools.map((tool) => tool.name)).toEqual(['search', 'execute'])
+      expect(tools.map((tool) => tool.name)).toEqual(codeModeToolNames)
     })
   })
 
@@ -76,7 +78,7 @@ describe('protocol surfaces', () => {
     const directSurface = await inspectSurface(createCodeModeServer())
 
     expect(defaultSurface).toEqual({
-      tools: ['search', 'execute'],
+      tools: codeModeToolNames,
       capabilityKeys: ['tools'],
     })
     expect(explicitSurface).toEqual(defaultSurface)
@@ -102,7 +104,7 @@ describe('protocol surfaces', () => {
     )
 
     expect(surface).toEqual({
-      tools: ['search', 'execute'],
+      tools: codeModeToolNames,
       capabilityKeys: ['resources', 'tools'],
     })
   })
@@ -119,7 +121,7 @@ describe('protocol surfaces', () => {
     )
 
     expect(surface).toEqual({
-      tools: ['search', 'execute'],
+      tools: codeModeToolNames,
       capabilityKeys: ['completions', 'prompts', 'tools'],
     })
   })
@@ -135,7 +137,7 @@ describe('protocol surfaces', () => {
     )
 
     expect(surface).toEqual({
-      tools: ['search', 'execute'],
+      tools: codeModeToolNames,
       capabilityKeys: ['tasks', 'tools'],
     })
   })

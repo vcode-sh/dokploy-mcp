@@ -14,7 +14,7 @@ const readmePath = resolve(repoRoot, 'README.md')
 const coveragePath = resolve(repoRoot, 'docs/coverage.md')
 
 const classicEndpointPerToolBaselineTokens = 92354
-const defaultPublicTools = ['search', 'execute']
+const defaultPublicTools = ['search', 'execute', 'list_profiles']
 const checkMode = process.argv.includes('--check')
 
 function readJson(path) {
