@@ -68,8 +68,9 @@ That means:
 - local named profiles are not exposed inside that session
 - `profile` switching is for local config targets, not for escaping a remote session boundary
 
-If you deliberately enable local fallback for single-tenant hosted use, the local `default` plus
-named profiles remain available there.
+If you deliberately enable local fallback for single-tenant hosted use, meaning the hosted server
+is allowed to use its own local Dokploy config when remote headers are missing, the local
+`default` plus named profiles remain available there.
 
 ## Guard Rails
 
