@@ -4,17 +4,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org/)
 
-MCP server for [Dokploy](https://dokploy.com).
+MCP server for [Dokploy](https://dokploy.com) that works cleanly with Codex, Cursor, Claude Code,
+and Claude Desktop.
 
-The pitch is simple:
+Three tools up front. Hundreds of Dokploy procedures underneath. Less schema tax, more actual
+deploys.
 
-- default public surface: `search`, `execute`, and `list_profiles`
-- actual Dokploy coverage underneath: generated, broad, and tested
-- less schema spam in context
-- real support for creating, updating, deploying, reading logs, and wiring domains
+Most MCP servers treat your context window like free landfill. This one starts with
+`search`, `execute`, and `list_profiles`, then earns the rest.
 
-Most MCP servers dump a warehouse of tool schemas into your context window and call it product.
-This one tries not to be embarrassing.
+What that buys you:
+
+- compact default surface instead of hundreds of raw endpoint tools
+- generated, broad Dokploy coverage underneath
+- real workflows for deploys, compose, logs, domains, databases, and profiles
+- local `stdio` plus hosted HTTP metadata in the same package
 
 Need proof instead of a sales monologue? Start with [docs/live-e2e-proof.md](./docs/live-e2e-proof.md).
 
@@ -48,7 +52,7 @@ If your client uses a JSON-style MCP config, this is the whole block:
       "args": ["@vibetools/dokploy-mcp"],
       "env": {
         "DOKPLOY_URL": "https://panel.example.com",
-        "DOKPLOY_API_KEY": "your-api-key"
+        "DOKPLOY_API_KEY": "dokp_..."
       }
     }
   }
@@ -134,7 +138,8 @@ npx @vibetools/dokploy-mcp setup
 - optional `hybrid` mode: Code Mode plus selected raw tools
 - optional hosted HTTP path with `server.json` metadata and header-based remote auth
 
-If you are new, use the default mode and stop overthinking it.
+If you are new, use the default mode and stop trying to outsmart a problem that already has a
+working shape.
 
 ## Read These Next
 

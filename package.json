@@ -1,7 +1,8 @@
 {
   "name": "@vibetools/dokploy-mcp",
-  "version": "3.1.0",
-  "description": "Dokploy MCP server with Code Mode by default",
+  "version": "3.1.1",
+  "description": "Dokploy MCP server for Codex, Cursor, and Claude with compact stdio and hosted HTTP modes",
+  "mcpName": "io.github.vcode-sh/dokploy-mcp",
   "type": "module",
   "exports": {
     ".": {
@@ -81,17 +82,26 @@
     "type": "git",
     "url": "git+https://github.com/vcode-sh/dokploy-mcp.git"
   },
-  "homepage": "https://github.com/vcode-sh/dokploy-mcp#readme",
+  "homepage": "https://github.com/vcode-sh/dokploy-mcp",
   "bugs": {
     "url": "https://github.com/vcode-sh/dokploy-mcp/issues"
   },
   "keywords": [
     "mcp",
+    "mcp-server",
     "dokploy",
     "model-context-protocol",
+    "codex",
+    "cursor",
+    "claude-code",
+    "claude-desktop",
     "devops",
     "deployment",
-    "docker"
+    "docker",
+    "docker-compose",
+    "self-hosted",
+    "infrastructure",
+    "typescript"
   ],
   "publishConfig": {
     "access": "public"

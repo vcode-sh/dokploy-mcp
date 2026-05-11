@@ -38,11 +38,39 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Docs facts check
+        run: npm run docs:check:facts
+
       - name: Budget checks
         run: npm run ci:budgets
 
       - name: MCP smoke test
         run: npm run smoke:mcp
+
+      - name: Verify release metadata matches the tag
+        run: |
+          export EXPECTED_VERSION="${GITHUB_REF_NAME#v}"
+          node -e "
+            const fs = require('node:fs')
+            const expectedVersion = process.env.EXPECTED_VERSION
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+            const server = JSON.parse(fs.readFileSync('server.json', 'utf8'))
+            const publishedPackage = server.packages?.[0]
+
+            const failures = []
+
+            if (pkg.version !== expectedVersion) failures.push(\`package.json version \${pkg.version} != tag \${expectedVersion}\`)
+            if (server.version !== expectedVersion) failures.push(\`server.json version \${server.version} != tag \${expectedVersion}\`)
+            if (pkg.mcpName !== server.name) failures.push(\`package.json mcpName \${pkg.mcpName} != server.json name \${server.name}\`)
+            if (!publishedPackage) failures.push('server.json packages[0] is missing')
+            if (publishedPackage?.identifier !== pkg.name) failures.push(\`server.json package identifier \${publishedPackage?.identifier} != package.json name \${pkg.name}\`)
+            if (publishedPackage?.version !== pkg.version) failures.push(\`server.json package version \${publishedPackage?.version} != package.json version \${pkg.version}\`)
+
+            if (failures.length > 0) {
+              console.error(failures.join('\\n'))
+              process.exit(1)
+            }
+          "
 
       - name: Verify dist/index.js exists
         run: |
@@ -52,7 +80,7 @@ jobs:
           fi
 
   publish:
-    name: Publish to npm
+    name: Publish to npm and MCP Registry
     runs-on: [self-hosted, linux, x64, vps]
     needs: validate
     steps:
@@ -73,6 +101,54 @@ jobs:
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Wait for npm package availability
+        run: |
+          EXPECTED_VERSION="${GITHUB_REF_NAME#v}"
+          for attempt in $(seq 1 30); do
+            PUBLISHED_VERSION="$(npm view @vibetools/dokploy-mcp version 2>/dev/null || true)"
+            if [ "$PUBLISHED_VERSION" = "$EXPECTED_VERSION" ]; then
+              exit 0
+            fi
+            echo "npm version is '$PUBLISHED_VERSION', waiting for '$EXPECTED_VERSION' (attempt $attempt/30)"
+            sleep 10
+          done
+          echo "::error::Package version $EXPECTED_VERSION did not appear on npm in time"
+          exit 1
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        run: ./mcp-publisher publish
+
+      - name: Verify MCP Registry entry
+        run: |
+          export EXPECTED_VERSION="${GITHUB_REF_NAME#v}"
+          for attempt in $(seq 1 30); do
+            RESPONSE="$(curl -fsSL 'https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.vcode-sh/dokploy-mcp')"
+            MATCHED="$(printf '%s' "$RESPONSE" | node -e "
+              const fs = require('node:fs')
+              const payload = JSON.parse(fs.readFileSync(0, 'utf8'))
+              const expectedVersion = process.env.EXPECTED_VERSION
+              const matched = payload.servers?.some((entry) => {
+                const server = entry?.server
+                return server?.name === 'io.github.vcode-sh/dokploy-mcp' && server?.version === expectedVersion
+              })
+              if (matched) process.stdout.write('yes')
+            ")"
+            if [ "$MATCHED" = "yes" ]; then
+              exit 0
+            fi
+            echo "Registry entry not visible yet for version $EXPECTED_VERSION (attempt $attempt/30)"
+            sleep 10
+          done
+          echo "::error::Registry entry for io.github.vcode-sh/dokploy-mcp@$EXPECTED_VERSION did not appear in time"
+          exit 1
 
   github-release:
     name: GitHub Release

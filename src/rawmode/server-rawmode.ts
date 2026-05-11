@@ -4,9 +4,8 @@ import { registerCodeModeServerCapabilities } from '../codemode/server-codemode.
 import { registerCodeModeSharedCapabilities } from '../mcp/registration/register-codemode-capabilities.js'
 import { attachTaskRuntime, createTaskRuntime } from '../mcp/tasks/runtime.js'
 import type { ServerCapabilityFlags } from '../server.js'
+import { SERVER_VERSION } from '../version.js'
 import { type RawModeOptions, registerRawModeTools } from './tools.js'
-
-const SERVER_VERSION = '3.1.0'
 
 interface ModeServerOptions extends RawModeOptions {
   capabilityFlags?: ServerCapabilityFlags
