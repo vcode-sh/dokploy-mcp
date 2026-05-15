@@ -49,6 +49,7 @@ const STOP_WORDS = new Set([
   'for',
   'from',
   'in',
+  'inspect',
   'into',
   'mcp',
   'of',
@@ -56,6 +57,7 @@ const STOP_WORDS = new Set([
   'or',
   'please',
   'procedure',
+  'read',
   'show',
   'the',
   'to',
@@ -338,6 +340,10 @@ function addReason(reasons: string[], reason: string) {
   reasons.push(reason)
 }
 
+function getExactTokenMatchCount(tokens: string[], candidates: Set<string>) {
+  return tokens.filter((token) => candidates.has(token)).length
+}
+
 function applyIntentScore(
   document: SearchDocument,
   descriptor: QueryDescriptor,
@@ -370,6 +376,24 @@ function applyIntentScore(
   }
 
   return score
+}
+
+function applyExactTokenScore(
+  document: SearchDocument,
+  descriptor: QueryDescriptor,
+  score: number,
+  reasons: string[],
+) {
+  const exactPrimaryMatches = getExactTokenMatchCount(descriptor.tokens, document.primaryTokens)
+  const exactSecondaryMatches = getExactTokenMatchCount(descriptor.tokens, document.secondaryTokens)
+  const tagIndex = descriptor.tokens.indexOf(document.endpoint.tag)
+  const explicitTagBonus = tagIndex < 0 ? 0 : tagIndex === 0 ? 24 : 6
+
+  if (exactPrimaryMatches > 0 || explicitTagBonus > 0) {
+    addReason(reasons, 'matches exact procedure or tag terms')
+  }
+
+  return score + explicitTagBonus + exactPrimaryMatches * 12 + exactSecondaryMatches * 3
 }
 
 function scoreSearchDocument(
@@ -426,6 +450,8 @@ function scoreSearchDocument(
 
   score += primaryMatches * 18
   score += secondaryMatches * 9
+
+  score = applyExactTokenScore(document, descriptor, score, reasons)
 
   if (matchedGroups === descriptor.groups.length && descriptor.groups.length > 1) {
     score += 18

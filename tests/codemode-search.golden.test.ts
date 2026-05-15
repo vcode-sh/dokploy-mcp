@@ -70,6 +70,31 @@ describe('codemode search golden', () => {
     expect(payload.result).toEqual(expect.arrayContaining(['project.allForPermissions']))
   })
 
+  it('distinguishes project-level and environment-level shared env updates', async () => {
+    const projectResult = await searchTool.handler({
+      code: 'catalog.recommend("project shared env update").recommended.map((entry) => entry.procedure)',
+    })
+    const environmentResult = await searchTool.handler({
+      code: 'catalog.recommend("environment shared env update").recommended.map((entry) => entry.procedure)',
+    })
+    const projectReadResult = await searchTool.handler({
+      code: 'catalog.recommend("project shared environment variables").recommended.map((entry) => entry.procedure)',
+    })
+    const environmentReadResult = await searchTool.handler({
+      code: 'catalog.recommend("environment shared environment variables").recommended.map((entry) => entry.procedure)',
+    })
+
+    const projectPayload = projectResult.structuredContent as { result?: unknown }
+    const environmentPayload = environmentResult.structuredContent as { result?: unknown }
+    const projectReadPayload = projectReadResult.structuredContent as { result?: unknown }
+    const environmentReadPayload = environmentReadResult.structuredContent as { result?: unknown }
+
+    expect((projectPayload.result as string[])[0]).toBe('project.update')
+    expect((environmentPayload.result as string[])[0]).toBe('environment.update')
+    expect((projectReadPayload.result as string[])[0]).toBe('project.one')
+    expect((environmentReadPayload.result as string[])[0]).toBe('environment.one')
+  })
+
   it('finds log read procedures by tail log workflow hints', async () => {
     const result = await searchTool.handler({
       code: 'catalog.searchText("tail application logs").map((entry) => entry.procedure)',

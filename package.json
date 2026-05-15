@@ -1,6 +1,6 @@
 {
   "name": "@vibetools/dokploy-mcp",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "description": "Dokploy MCP server for Codex, Cursor, and Claude with compact stdio and hosted HTTP modes",
   "mcpName": "io.github.vcode-sh/dokploy-mcp",
   "type": "module",

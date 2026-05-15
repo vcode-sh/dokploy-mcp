@@ -145,6 +145,53 @@ describe('codemode gateway validation', () => {
     expect(result.data).toEqual({ ok: true })
   })
 
+  it('forwards project.env and environment.env updates to their distinct Dokploy procedures', async () => {
+    const calls: Array<{ path: string; input?: Record<string, unknown> }> = []
+    const fakeApi = {
+      async get() {
+        throw new Error('Unexpected GET call')
+      },
+      async post(path: string, input?: Record<string, unknown>) {
+        calls.push({ path, input })
+        return { ok: true }
+      },
+    }
+
+    await invokeProcedureWithApi(
+      'project.update',
+      {
+        projectId: 'project-1',
+        env: 'PROJECT_KEY=value',
+      },
+      fakeApi,
+    )
+    await invokeProcedureWithApi(
+      'environment.update',
+      {
+        environmentId: 'env-1',
+        env: 'ENVIRONMENT_KEY=value',
+      },
+      fakeApi,
+    )
+
+    expect(calls).toEqual([
+      {
+        path: '/project.update',
+        input: {
+          projectId: 'project-1',
+          env: 'PROJECT_KEY=value',
+        },
+      },
+      {
+        path: '/environment.update',
+        input: {
+          environmentId: 'env-1',
+          env: 'ENVIRONMENT_KEY=value',
+        },
+      },
+    ])
+  })
+
   it('rejects Dokploy memory shorthand for resource update procedures before calling the API', async () => {
     const fakeApi = {
       async get() {

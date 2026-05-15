@@ -55,10 +55,58 @@ export const coreCatalogResponseHints: Record<string, CatalogResponseHints> = {
     ],
   },
   'project.one': {
-    commonResponseFields: ['projectId', 'name', 'description', 'environments'],
-    responseHints: ['Project detail endpoint used to inspect one project and its environments.'],
+    commonResponseFields: ['projectId', 'name', 'description', 'env', 'environments'],
+    responseHints: [
+      'Project detail endpoint used to inspect one project, its project-level shared environment variables, and its environments.',
+      'The env field is project.env, the shared project environment shown on the project-level UI surface.',
+      'Project-level env is separate from environment.env; use environment.one for the environment-level shared env.',
+    ],
+    examples: [
+      'const project = await dokploy.project.one({ projectId: "project-1" })',
+      'const projectEnv = project.env',
+    ],
     notes: [
       'Generated OpenAPI output schema is currently incomplete for this endpoint, so nested service details may not be visible from the schema alone.',
+      'Do not confuse project.env with per-application env or environment.env.',
+    ],
+  },
+  'project.update': {
+    commonResponseFields: ['projectId', 'name', 'description', 'env'],
+    responseHints: [
+      'Updates project-level shared environment variables stored in project.env.',
+      'Use this endpoint when the Dokploy UI surface is the project shared environment, not a specific environment tab or app env.',
+      'Project-level shared env is a full string replacement through the env input; read project.one first and preserve existing lines when editing one key.',
+    ],
+    examples: ['await dokploy.project.update({ projectId: "project-1", env: nextProjectEnv })'],
+    notes: [
+      'project.update targets project.env. environment.update targets environment.env.',
+      'Passing an empty env string can clear the project shared env; prefer read-modify-write for edits.',
+    ],
+  },
+  'environment.one': {
+    commonResponseFields: ['environmentId', 'projectId', 'name', 'description', 'env'],
+    responseHints: [
+      'Environment detail endpoint used to inspect environment-level shared environment variables stored in environment.env.',
+      'Environment-level env is separate from project.env; use project.one for the project-level shared env shown on the project UI surface.',
+    ],
+    examples: [
+      'const environment = await dokploy.environment.one({ environmentId: "env-1" })',
+      'const environmentEnv = environment.env',
+    ],
+  },
+  'environment.update': {
+    commonResponseFields: ['environmentId', 'projectId', 'name', 'description', 'env'],
+    responseHints: [
+      'Updates environment-level shared environment variables stored in environment.env.',
+      'Use this endpoint only when the intended Dokploy UI surface is the environment shared env, not project.env.',
+      'Environment-level shared env is a full string replacement through the env input; read environment.one first and preserve existing lines when editing one key.',
+    ],
+    examples: [
+      'await dokploy.environment.update({ environmentId: "env-1", env: nextEnvironmentEnv })',
+    ],
+    notes: [
+      'environment.update targets environment.env. project.update targets project.env.',
+      'Passing an empty env string can clear the environment shared env; prefer read-modify-write for edits.',
     ],
   },
   'deployment.all': {
