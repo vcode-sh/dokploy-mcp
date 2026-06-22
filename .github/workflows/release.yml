@@ -15,7 +15,7 @@ jobs:
     name: Validate
     runs-on: [self-hosted, linux, x64, vps]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -84,7 +84,7 @@ jobs:
     runs-on: [self-hosted, linux, x64, vps]
     needs: validate
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
@@ -155,7 +155,7 @@ jobs:
     runs-on: [self-hosted, linux, x64, vps]
     needs: publish
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
