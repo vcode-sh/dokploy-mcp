@@ -50,3 +50,5 @@ temp
 .claude/
 src/.env
 voice.md
+.codex/config.toml
+plans/
