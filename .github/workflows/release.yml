@@ -96,8 +96,15 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
-      - name: Update npm (trusted publishing needs >= 11.5.1)
-        run: npm install -g npm@latest
+      # In-place `npm install -g npm` self-upgrades are unreliable (can drop
+      # bundled deps like sigstore); Node 24's bundled npm is recent enough.
+      - name: Assert npm supports trusted publishing (>= 11.5.1)
+        run: |
+          node -e "
+            const [maj, min, pat] = require('child_process').execSync('npm --version').toString().trim().split('.').map(Number)
+            const ok = maj > 11 || (maj === 11 && (min > 5 || (min === 5 && pat >= 1)))
+            if (!ok) { console.error('npm ' + maj + '.' + min + '.' + pat + ' is too old for trusted publishing (need >= 11.5.1)'); process.exit(1) }
+          "
 
       - run: npm ci
 
