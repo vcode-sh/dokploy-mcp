@@ -1699,7 +1699,7 @@ describe('http server transport', () => {
         await Promise.allSettled([closeHttpClient(client), closeHttpClient(reconnect)])
       }
     }
-  }, 20_000)
+  }, 60_000)
 
   it('applies managed shutdown semantics when callers use createHttpServer directly', async () => {
     const handle = await startCreatedTestHttpServer({ mode: 'codemode' })

@@ -122,6 +122,26 @@ describe('codemode runtime', () => {
     )
   })
 
+  it('search catalog get marks deployment.readLogs as bounded and redacted log output', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('deployment.readLogs')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('deployment.readLogs')
+    expect(contract.commonResponseFields).toEqual(
+      expect.arrayContaining(['logs', 'timestamp', 'message', 'stream']),
+    )
+    expect(contract.responseHints).toEqual(
+      expect.arrayContaining([expect.stringContaining('recent stdout')]),
+    )
+    expect(contract.notes).toEqual(
+      expect.arrayContaining([expect.stringContaining('redacting common secret patterns')]),
+    )
+  })
+
   it('search catalog get explains safe mount creation for mounts.create', async () => {
     const result = await searchTool.handler({
       code: "async ({ catalog }) => catalog.get('mounts.create')",
@@ -642,6 +662,9 @@ describe('codemode runtime', () => {
     })
     expectTypeOf(context.dokploy.logs.tailMany).toBeCallableWith({
       requests: [{ kind: 'application', applicationId: 'app-1', tail: 20 }],
+    })
+    expectTypeOf(context.dokploy.logs.tailMany).toBeCallableWith({
+      requests: [{ kind: 'deployment', deploymentId: 'deployment-1', tail: 20 }],
     })
     expectTypeOf(context.dokploy.libsql.many).toBeCallableWith({
       libsqlIds: ['libsql-1'],
@@ -1287,6 +1310,38 @@ describe('codemode runtime', () => {
         },
       }),
     ).rejects.toThrow('requests[0].containerId is required')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
+  it('validates virtual logs.tailMany deployment requests before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.logs.tailMany({
+              requests: [{ kind: 'deployment', tail: 10 }],
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('requests[0].deploymentId is required')
 
     expect(context.getCalls()).toHaveLength(0)
   })

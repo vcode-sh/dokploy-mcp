@@ -2973,16 +2973,6 @@
                       }
                     ]
                   },
-                  "branch": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
                   "owner": {
                     "anyOf": [
                       {
@@ -3013,6 +3003,11 @@
                       }
                     ]
                   },
+                  "branch": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-zA-Z0-9._\\-/#]+$"
+                  },
                   "triggerType": {
                     "default": "push",
                     "type": "string",
@@ -3041,10 +3036,10 @@
                 "required": [
                   "applicationId",
                   "repository",
-                  "branch",
                   "owner",
                   "buildPath",
                   "githubId",
+                  "branch",
                   "triggerType"
                 ]
               }
@@ -3293,16 +3288,6 @@
                   "applicationId": {
                     "type": "string"
                   },
-                  "gitlabBranch": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
                   "gitlabBuildPath": {
                     "anyOf": [
                       {
@@ -3363,6 +3348,11 @@
                       }
                     ]
                   },
+                  "gitlabBranch": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-zA-Z0-9._\\-/#]+$"
+                  },
                   "enableSubmodules": {
                     "type": "boolean"
                   },
@@ -3382,13 +3372,13 @@
                 },
                 "required": [
                   "applicationId",
-                  "gitlabBranch",
                   "gitlabBuildPath",
                   "gitlabOwner",
                   "gitlabRepository",
                   "gitlabId",
                   "gitlabProjectId",
-                  "gitlabPathNamespace"
+                  "gitlabPathNamespace",
+                  "gitlabBranch"
                 ]
               }
             }
@@ -3633,16 +3623,6 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "bitbucketBranch": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
                   "bitbucketBuildPath": {
                     "anyOf": [
                       {
@@ -3696,6 +3676,11 @@
                   "applicationId": {
                     "type": "string"
                   },
+                  "bitbucketBranch": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-zA-Z0-9._\\-/#]+$"
+                  },
                   "enableSubmodules": {
                     "type": "boolean"
                   },
@@ -3714,13 +3699,13 @@
                   }
                 },
                 "required": [
-                  "bitbucketBranch",
                   "bitbucketBuildPath",
                   "bitbucketOwner",
                   "bitbucketRepository",
                   "bitbucketRepositorySlug",
                   "bitbucketId",
-                  "applicationId"
+                  "applicationId",
+                  "bitbucketBranch"
                 ]
               }
             }
@@ -3968,16 +3953,6 @@
                   "applicationId": {
                     "type": "string"
                   },
-                  "giteaBranch": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
                   "giteaBuildPath": {
                     "anyOf": [
                       {
@@ -4018,6 +3993,11 @@
                       }
                     ]
                   },
+                  "giteaBranch": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-zA-Z0-9._\\-/#]+$"
+                  },
                   "enableSubmodules": {
                     "type": "boolean"
                   },
@@ -4037,11 +4017,11 @@
                 },
                 "required": [
                   "applicationId",
-                  "giteaBranch",
                   "giteaBuildPath",
                   "giteaOwner",
                   "giteaRepository",
-                  "giteaId"
+                  "giteaId",
+                  "giteaBranch"
                 ]
               }
             }
@@ -4580,16 +4560,6 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "customGitBranch": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
                   "applicationId": {
                     "type": "string"
                   },
@@ -4629,6 +4599,11 @@
                   "enableSubmodules": {
                     "type": "boolean"
                   },
+                  "customGitBranch": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-zA-Z0-9._\\-/#]+$"
+                  },
                   "customGitSSHKeyId": {
                     "anyOf": [
                       {
@@ -4641,11 +4616,11 @@
                   }
                 },
                 "required": [
-                  "customGitBranch",
                   "applicationId",
                   "customGitBuildPath",
                   "customGitUrl",
-                  "watchPaths"
+                  "watchPaths",
+                  "customGitBranch"
                 ]
               }
             }
@@ -25551,6 +25526,263 @@
         }
       }
     },
+    "/compose.previewTemplate": {
+      "post": {
+        "operationId": "compose-previewTemplate",
+        "tags": [
+          "compose"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "base64": {
+                    "type": "string"
+                  },
+                  "appName": {
+                    "type": "string"
+                  },
+                  "serverId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "base64",
+                  "appName"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/compose.import": {
       "post": {
         "operationId": "compose-import",
@@ -28927,6 +29159,309 @@
                   "example": {
                     "code": "FORBIDDEN",
                     "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deployment.readLogs": {
+      "get": {
+        "operationId": "deployment-readLogs",
+        "tags": [
+          "deployment"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "deploymentId",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "tail",
+            "schema": {
+              "default": 100,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Not found"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "NOT_FOUND"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Not found error (404)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "NOT_FOUND",
+                    "message": "Not found",
                     "issues": []
                   }
                 }
@@ -33843,7 +34378,8 @@
                   },
                   "destinationPath": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "pattern": "^[a-zA-Z0-9.\\-_/]+$"
                   },
                   "serverId": {
                     "type": "string"
@@ -34235,6 +34771,9 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "forwardAuthEnabled": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -35722,6 +36261,9 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "forwardAuthEnabled": {
+                    "type": "boolean"
                   },
                   "domainId": {
                     "type": "string"
@@ -95049,6 +95591,10 @@
                       "deploy",
                       "build"
                     ]
+                  },
+                  "enableDockerCleanup": {
+                    "default": true,
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -98776,6 +99322,10 @@
                       "build"
                     ]
                   },
+                  "enableDockerCleanup": {
+                    "default": true,
+                    "type": "boolean"
+                  },
                   "command": {
                     "type": "string"
                   }
@@ -98789,6 +99339,263 @@
                   "username",
                   "sshKeyId",
                   "serverType"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/server.updateBuildsConcurrency": {
+      "post": {
+        "operationId": "server-updateBuildsConcurrency",
+        "tags": [
+          "server"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serverId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "buildsConcurrency": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "serverId",
+                  "buildsConcurrency"
                 ]
               }
             }
@@ -104375,6 +105182,758 @@
                 },
                 "required": [
                   "enableDockerCleanup"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings.updateRemoteServersOnly": {
+      "post": {
+        "operationId": "settings-updateRemoteServersOnly",
+        "tags": [
+          "settings"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "remoteServersOnly": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "remoteServersOnly"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings.updateBuildsConcurrency": {
+      "post": {
+        "operationId": "settings-updateBuildsConcurrency",
+        "tags": [
+          "settings"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "buildsConcurrency": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "buildsConcurrency"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings.updateEnforceSSO": {
+      "post": {
+        "operationId": "settings-updateEnforceSSO",
+        "tags": [
+          "settings"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enforceSSO": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enforceSSO"
                 ]
               }
             }
@@ -133104,6 +134663,288 @@
         }
       }
     },
+    "/sso.enforceSSO": {
+      "get": {
+        "operationId": "sso-enforceSSO",
+        "tags": [
+          "sso"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Not found"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "NOT_FOUND"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Not found error (404)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "NOT_FOUND",
+                    "message": "Not found",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/sso.listProviders": {
       "get": {
         "operationId": "sso-listProviders",
@@ -135769,6 +137610,3505 @@
                 "required": [
                   "oldOrigin",
                   "newOrigin"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scim.listProviders": {
+      "get": {
+        "operationId": "scim-listProviders",
+        "tags": [
+          "scim"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Not found"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "NOT_FOUND"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Not found error (404)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "NOT_FOUND",
+                    "message": "Not found",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scim.generateToken": {
+      "post": {
+        "operationId": "scim-generateToken",
+        "tags": [
+          "scim"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "providerId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-z0-9][a-z0-9-]*$"
+                  }
+                },
+                "required": [
+                  "providerId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scim.deleteProvider": {
+      "post": {
+        "operationId": "scim-deleteProvider",
+        "tags": [
+          "scim"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "providerId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-z0-9][a-z0-9-]*$"
+                  }
+                },
+                "required": [
+                  "providerId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forwardAuth.getAuthDomain": {
+      "get": {
+        "operationId": "forwardAuth-getAuthDomain",
+        "tags": [
+          "forwardAuth"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "serverId",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Not found"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "NOT_FOUND"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Not found error (404)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "NOT_FOUND",
+                    "message": "Not found",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forwardAuth.setAuthDomain": {
+      "post": {
+        "operationId": "forwardAuth-setAuthDomain",
+        "tags": [
+          "forwardAuth"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serverId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "authDomain": {
+                    "type": "string"
+                  },
+                  "https": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "certificateType": {
+                    "default": "letsencrypt",
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "letsencrypt",
+                      "custom"
+                    ]
+                  },
+                  "customCertResolver": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "serverId",
+                  "authDomain"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forwardAuth.removeAuthDomain": {
+      "post": {
+        "operationId": "forwardAuth-removeAuthDomain",
+        "tags": [
+          "forwardAuth"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serverId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "serverId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forwardAuth.listProviders": {
+      "get": {
+        "operationId": "forwardAuth-listProviders",
+        "tags": [
+          "forwardAuth"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Not found"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "NOT_FOUND"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Not found error (404)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "NOT_FOUND",
+                    "message": "Not found",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forwardAuth.serverStatus": {
+      "get": {
+        "operationId": "forwardAuth-serverStatus",
+        "tags": [
+          "forwardAuth"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Not found"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "NOT_FOUND"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Not found error (404)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "NOT_FOUND",
+                    "message": "Not found",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forwardAuth.deployOnServer": {
+      "post": {
+        "operationId": "forwardAuth-deployOnServer",
+        "tags": [
+          "forwardAuth"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serverId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "providerId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "serverId",
+                  "providerId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forwardAuth.removeOnServer": {
+      "post": {
+        "operationId": "forwardAuth-removeOnServer",
+        "tags": [
+          "forwardAuth"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serverId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "serverId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forwardAuth.status": {
+      "get": {
+        "operationId": "forwardAuth-status",
+        "tags": [
+          "forwardAuth"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "domainId",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Not found"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "NOT_FOUND"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Not found error (404)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "NOT_FOUND",
+                    "message": "Not found",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forwardAuth.enable": {
+      "post": {
+        "operationId": "forwardAuth-enable",
+        "tags": [
+          "forwardAuth"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "domainId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "domainId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Invalid input data"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "BAD_REQUEST"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Invalid input data error (400)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "BAD_REQUEST",
+                    "message": "Invalid input data",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Authorization not provided"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Authorization not provided error (401)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authorization not provided",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Insufficient access"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "FORBIDDEN"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Insufficient access error (403)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "FORBIDDEN",
+                    "message": "Insufficient access",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "The error message",
+                      "example": "Internal server error"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "The error code",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "issues": {
+                      "description": "An array of issues that were responsible for the error",
+                      "example": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "title": "Internal server error error (500)",
+                  "description": "The error information",
+                  "example": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Internal server error",
+                    "issues": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forwardAuth.disable": {
+      "post": {
+        "operationId": "forwardAuth-disable",
+        "tags": [
+          "forwardAuth"
+        ],
+        "security": [
+          {
+            "Authorization": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "domainId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "domainId"
                 ]
               }
             }
@@ -139221,6 +144561,16 @@
                   "name": {
                     "type": "string"
                   },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "cronExpression": {
                     "type": "string"
                   },
@@ -139296,7 +144646,7 @@
                       }
                     ]
                   },
-                  "userId": {
+                  "organizationId": {
                     "anyOf": [
                       {
                         "type": "string"
@@ -139578,6 +144928,16 @@
                   "name": {
                     "type": "string"
                   },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "cronExpression": {
                     "type": "string"
                   },
@@ -139653,7 +145013,7 @@
                       }
                     ]
                   },
-                  "userId": {
+                  "organizationId": {
                     "anyOf": [
                       {
                         "type": "string"

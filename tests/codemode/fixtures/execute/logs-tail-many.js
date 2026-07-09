@@ -9,6 +9,13 @@
         tail: 10,
       },
       { kind: 'libsql', libsqlId: 'libsql-1', tail: 5 },
+      {
+        kind: 'deployment',
+        deploymentId: 'deployment-1',
+        tail: 15,
+        since: '1h',
+        search: 'error',
+      },
     ],
   })
 }

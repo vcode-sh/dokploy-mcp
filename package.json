@@ -25,6 +25,7 @@
     "bench:execute": "node scripts/v2/bench-execute.mjs",
     "bench:sandbox-startup": "node scripts/v2/bench-sandbox-startup.mjs",
     "ci:budgets": "node scripts/v2/check-budgets.mjs",
+    "check:openapi-drift": "node scripts/v2/check-openapi-drift.mjs",
     "ci:full": "npm test && npm run lint && npm run build && npm run ci:budgets && npm run docs:check:facts && npm run smoke:mcp && npm run smoke:search && npm run smoke:execute",
     "clean:dist": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "tsc --watch",

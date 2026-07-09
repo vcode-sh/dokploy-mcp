@@ -1,13 +1,16 @@
-const logRequestKinds = new Set([
-  'application',
-  'compose',
-  'libsql',
-  'mariadb',
-  'mongo',
-  'mysql',
-  'postgres',
-  'redis',
-])
+const logRequestIdFields: Record<string, string[]> = {
+  application: ['applicationId'],
+  compose: ['composeId', 'containerId'],
+  deployment: ['deploymentId'],
+  libsql: ['libsqlId'],
+  mariadb: ['mariadbId'],
+  mongo: ['mongoId'],
+  mysql: ['mysqlId'],
+  postgres: ['postgresId'],
+  redis: ['redisId'],
+}
+
+const logRequestKinds = new Set(Object.keys(logRequestIdFields))
 
 export const DATABASE_KINDS = [
   {
@@ -174,50 +177,10 @@ export function validateLogRequestRequiredIds(
 ) {
   const errors: string[] = []
 
-  switch (kind) {
-    case 'application':
-      if (!getStringOrNull(request.applicationId)) {
-        errors.push(`requests[${index}].applicationId is required`)
-      }
-      break
-    case 'compose':
-      if (!getStringOrNull(request.composeId)) {
-        errors.push(`requests[${index}].composeId is required`)
-      }
-      if (!getStringOrNull(request.containerId)) {
-        errors.push(`requests[${index}].containerId is required`)
-      }
-      break
-    case 'libsql':
-      if (!getStringOrNull(request.libsqlId)) {
-        errors.push(`requests[${index}].libsqlId is required`)
-      }
-      break
-    case 'mariadb':
-      if (!getStringOrNull(request.mariadbId)) {
-        errors.push(`requests[${index}].mariadbId is required`)
-      }
-      break
-    case 'mongo':
-      if (!getStringOrNull(request.mongoId)) {
-        errors.push(`requests[${index}].mongoId is required`)
-      }
-      break
-    case 'mysql':
-      if (!getStringOrNull(request.mysqlId)) {
-        errors.push(`requests[${index}].mysqlId is required`)
-      }
-      break
-    case 'postgres':
-      if (!getStringOrNull(request.postgresId)) {
-        errors.push(`requests[${index}].postgresId is required`)
-      }
-      break
-    case 'redis':
-      if (!getStringOrNull(request.redisId)) {
-        errors.push(`requests[${index}].redisId is required`)
-      }
-      break
+  for (const idField of logRequestIdFields[kind] ?? []) {
+    if (!getStringOrNull(request[idField])) {
+      errors.push(`requests[${index}].${idField} is required`)
+    }
   }
 
   return errors
@@ -266,6 +229,15 @@ export function buildLogRequestProcedure(request: Record<string, unknown>) {
           tail: request.tail,
           since: request.since,
           search: request.search,
+        },
+      }
+    case 'deployment':
+      // deployment.readLogs only accepts deploymentId and tail; since/search are not forwarded.
+      return {
+        procedure: 'deployment.readLogs',
+        input: {
+          deploymentId: String(request.deploymentId),
+          tail: request.tail,
         },
       }
     case 'libsql':

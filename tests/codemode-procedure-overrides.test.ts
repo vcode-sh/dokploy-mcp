@@ -342,6 +342,16 @@ describe('codemode procedure overrides', () => {
       containerId: 'container-1',
       tail: 20,
     })
+
+    expect(
+      mapProcedureInput('deployment.readLogs', {
+        deploymentId: 'deployment-1',
+        tail: 10000,
+      }),
+    ).toEqual({
+      deploymentId: 'deployment-1',
+      tail: 200,
+    })
   })
 
   it('bounds multiline log text and redacts common secret patterns', () => {
@@ -394,6 +404,34 @@ describe('codemode procedure overrides', () => {
     expect(shaped.logs).not.toContain('top-secret-token')
     expect(shaped.logs).not.toContain('super-secret@')
     expect(shaped.logs).not.toContain('key-material')
+  })
+
+  it('bounds and redacts deployment log output', () => {
+    const logText = [
+      ...Array.from({ length: 240 }, (_value, index) => `deploy line ${index + 1}`),
+      'ACCESS_TOKEN=deploy-token',
+      'image pulled',
+      'https://deploy:super-secret@registry.example.com/v2/app',
+    ].join('\n')
+
+    const shaped = transformProcedureResponse(
+      'deployment.readLogs',
+      {},
+      {
+        deploymentId: 'd1',
+        logs: logText,
+      },
+    ) as { deploymentId: string; logs: string }
+
+    expect(shaped.deploymentId).toBe('d1')
+    expect(shaped.logs).toContain('[TRUNCATED TO LAST 200 LINES]')
+    expect(shaped.logs).toContain('deploy line 240')
+    expect(shaped.logs).not.toContain('\ndeploy line 43\n')
+    expect(shaped.logs).toContain('ACCESS_TOKEN=[REDACTED]')
+    expect(shaped.logs).toContain('https://deploy:[REDACTED]@registry.example.com/v2/app')
+    expect(shaped.logs).toContain('image pulled')
+    expect(shaped.logs).not.toContain('deploy-token')
+    expect(shaped.logs).not.toContain('super-secret')
   })
 
   it('redacts broader env and URI credential log patterns without over-redacting prose', () => {

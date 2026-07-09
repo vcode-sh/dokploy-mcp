@@ -188,6 +188,7 @@ function createTailManyInputSchema() {
             applicationId: { type: 'string' },
             composeId: { type: 'string' },
             containerId: { type: 'string' },
+            deploymentId: { type: 'string' },
             libsqlId: { type: 'string' },
             mariadbId: { type: 'string' },
             mongoId: { type: 'string' },

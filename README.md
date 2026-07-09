@@ -25,8 +25,8 @@ Need proof instead of a sales monologue? Start with [docs/live-e2e-proof.md](./d
 <!-- docs-facts:readme:start -->
 ## Current Fact Snapshot
 
-- Generated API procedures in the pinned catalog: `524`
-- Generated tags: `48`
+- Generated API procedures in the pinned catalog: `544`
+- Generated tags: `50`
 - Default public MCP tools: `3` (`search`, `execute`, `list_profiles`)
 - Default `tools/list` footprint from the current budget check: about `1,681` tokens (`6,723` bytes)
 - Reduction versus the classic endpoint-per-tool baseline (`92,354` tokens): `98.2%`

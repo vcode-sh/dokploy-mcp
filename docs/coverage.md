@@ -7,8 +7,8 @@ Run `npm run docs:sync:facts` after changing generated artifacts or budget-sensi
 <!-- docs-facts:coverage-summary:start -->
 ## Summary
 
-- Generated procedures in the pinned snapshot-backed catalog: `524`
-- Generated tags: `48`
+- Generated procedures in the pinned snapshot-backed catalog: `544`
+- Generated tags: `50`
 - Default public MCP tools: `3`
 - Public tool surface: `search`, `execute`, `list_profiles`
 - Default `tools/list` footprint from the current budget check: about `1,681` tokens (`6,723` bytes)

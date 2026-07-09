@@ -10,6 +10,7 @@ const LOG_OUTPUT_BYTE_CAP = 16 * 1024
 export const logProcedureNames = [
   'application.readLogs',
   'compose.readLogs',
+  'deployment.readLogs',
   'libsql.readLogs',
   'mariadb.readLogs',
   'mongo.readLogs',

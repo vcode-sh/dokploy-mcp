@@ -1235,6 +1235,11 @@ describe('codemode execute integration', () => {
             data: { lines: ['libsql-line'], truncated: false },
             trace: trace(procedure, 2),
           }
+        case 'deployment.readLogs':
+          return {
+            data: { lines: ['deployment-line'], truncated: false },
+            trace: trace(procedure, 3),
+          }
         default:
           throw new Error(`Unexpected procedure ${procedure}`)
       }
@@ -1270,15 +1275,25 @@ describe('codemode execute integration', () => {
           procedure: 'libsql.readLogs',
           result: { lines: ['libsql-line'], truncated: false },
         },
+        {
+          kind: 'deployment',
+          deploymentId: 'deployment-1',
+          tail: 15,
+          since: '1h',
+          search: 'error',
+          procedure: 'deployment.readLogs',
+          result: { lines: ['deployment-line'], truncated: false },
+        },
       ],
-      total: 3,
+      total: 4,
     })
     expect(calls).toEqual([
       'application.readLogs:{"applicationId":"app-1","tail":20,"search":"error"}',
       'compose.readLogs:{"composeId":"compose-1","containerId":"web","tail":10}',
       'libsql.readLogs:{"libsqlId":"libsql-1","tail":5}',
+      'deployment.readLogs:{"deploymentId":"deployment-1","tail":15}',
     ])
-    expect(context.getCalls()).toHaveLength(3)
+    expect(context.getCalls()).toHaveLength(4)
   })
 
   it('can execute virtual libsql.many while preserving input order', async () => {

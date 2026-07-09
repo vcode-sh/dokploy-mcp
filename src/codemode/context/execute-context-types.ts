@@ -46,6 +46,11 @@ export type TailManyRequest =
       search?: string
     }
   | {
+      kind: 'deployment'
+      deploymentId: string
+      tail?: number
+    }
+  | {
       kind: 'libsql'
       libsqlId: string
       tail?: number
