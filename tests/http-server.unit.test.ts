@@ -124,8 +124,10 @@ async function loadHttpServerModule(
     requestHandlerError?: unknown
     closeError?: unknown
     addressValue?: FakeServer['addressValue']
+    sandboxRuntime?: 'local' | 'subprocess'
   } = {},
 ): Promise<LoadModuleResult> {
+  vi.stubEnv('DOKPLOY_MCP_SANDBOX_RUNTIME', options.sandboxRuntime ?? 'subprocess')
   vi.resetModules()
 
   const fakeServer = new FakeServer()
@@ -200,6 +202,7 @@ async function loadHttpServerModule(
 afterEach(() => {
   vi.resetModules()
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
 })
 
 describe('http server unit', () => {
@@ -304,6 +307,25 @@ describe('http server unit', () => {
     expect(handle.url).toBe('http://127.0.0.1:4321')
     expect(handle.mcpUrl).toBe('http://127.0.0.1:4321/mcp')
     expect(handle.healthUrl).toBe('http://127.0.0.1:4321/health')
+  })
+
+  it('rejects startup when hosted HTTP is configured with the local sandbox runtime', async () => {
+    const { module, fakeServer } = await loadHttpServerModule({
+      sandboxRuntime: 'local',
+    })
+
+    await expect(module.startHttpServer()).rejects.toThrow(
+      'DOKPLOY_MCP_SANDBOX_RUNTIME=local is not supported with serve-http; unset it or use subprocess.',
+    )
+    expect(fakeServer.listen).not.toHaveBeenCalled()
+  })
+
+  it('starts hosted HTTP when sandbox runtime is left on the subprocess default', async () => {
+    const { module } = await loadHttpServerModule()
+
+    const handle = await module.startHttpServer()
+
+    expect(handle.url).toBe('http://127.0.0.1:3210')
   })
 
   it('rejects startup when the server address is not TCP', async () => {

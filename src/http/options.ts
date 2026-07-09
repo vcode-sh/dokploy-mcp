@@ -42,6 +42,15 @@ function normalizePath(pathname: string | undefined, fallback: string) {
 }
 
 export function resolveHttpOptions(options: HttpServerOptions = {}): ResolvedHttpServerOptions {
+  const allowedOrigins =
+    options.allowedOrigins ?? parseAllowedOrigins(process.env.DOKPLOY_MCP_ALLOWED_ORIGINS) ?? []
+
+  if (allowedOrigins.includes('*')) {
+    console.error(
+      'dokploy-mcp: DOKPLOY_MCP_ALLOWED_ORIGINS=* reflects any Origin. Use an explicit allowlist for hosted deployments.',
+    )
+  }
+
   return {
     mode: options.mode ?? 'codemode',
     enabledTags: options.enabledTags,
@@ -54,8 +63,7 @@ export function resolveHttpOptions(options: HttpServerOptions = {}): ResolvedHtt
       options.healthPath ?? process.env.DOKPLOY_MCP_HEALTH_PATH,
       DEFAULT_HEALTH_PATH,
     ),
-    allowedOrigins:
-      options.allowedOrigins ?? parseAllowedOrigins(process.env.DOKPLOY_MCP_ALLOWED_ORIGINS) ?? [],
+    allowedOrigins,
     allowConfigFallback:
       options.allowConfigFallback ??
       parseBoolean(process.env.DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK) ??

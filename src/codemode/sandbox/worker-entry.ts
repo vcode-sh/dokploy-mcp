@@ -14,7 +14,7 @@ const pendingCalls = new Map<
 >()
 
 let requestIdCounter = 0
-let workerRunState: 'idle' | 'running' | 'completed' = 'idle'
+let workerRunState: 'idle' | 'running' = 'idle'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -152,11 +152,7 @@ async function reportWorkerFailure(error: string) {
 }
 
 async function handleUnexpectedWorkerMessageError(error: unknown) {
-  if (workerRunState === 'completed') {
-    return
-  }
-
-  workerRunState = 'completed'
+  workerRunState = 'idle'
   rejectPendingCalls(normalizeWorkerError(error))
   await reportWorkerFailure(`Sandbox worker message handling failed: ${formatWorkerError(error)}`)
 }
@@ -205,19 +201,18 @@ async function handleRunMessage(payload: Record<string, unknown>) {
   }
 
   if (!isValidRunPayload(payload)) {
-    workerRunState = 'completed'
     await reportWorkerFailure('Invalid sandbox worker run payload.')
     return
   }
 
   const limits = resolveRunLimits(payload)
   if (!limits) {
-    workerRunState = 'completed'
     await reportWorkerFailure(buildInvalidLimitsError())
     return
   }
 
   workerRunState = 'running'
+  requestIdCounter = 0
 
   try {
     const context = createRunContext(payload, limits.maxCalls)
@@ -234,7 +229,7 @@ async function handleRunMessage(payload: Record<string, unknown>) {
   } catch (error) {
     await reportWorkerFailure(getCodemodeErrorMessage(error, 'Sandbox worker execution failed'))
   } finally {
-    workerRunState = 'completed'
+    workerRunState = 'idle'
   }
 }
 

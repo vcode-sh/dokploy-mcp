@@ -1,5 +1,24 @@
-import { getStringOrNull, isRecord, validateBooleanFlag } from './shared.js'
+import { DATABASE_KINDS, getStringOrNull, isRecord, validateBooleanFlag } from './shared.js'
 import type { VirtualProcedureContext, VirtualProcedureDefinition } from './types.js'
+
+const databaseKindList = DATABASE_KINDS.map((descriptor) => descriptor.kind).join(', ')
+const passwordTypeKindList = DATABASE_KINDS.filter((descriptor) => descriptor.supportsPasswordType)
+  .map((descriptor) => descriptor.kind)
+  .join(' and ')
+
+function createDatabaseIdSchemaProperties() {
+  return Object.fromEntries(
+    DATABASE_KINDS.map((descriptor) => [descriptor.idField, { type: 'string' }]),
+  )
+}
+
+function getDatabaseDescriptor(kind: string) {
+  return DATABASE_KINDS.find((descriptor) => descriptor.kind === kind)
+}
+
+function supportsPasswordType(kind: string) {
+  return getDatabaseDescriptor(kind)?.supportsPasswordType === true
+}
 
 function createDatabaseManyInputSchema() {
   return {
@@ -12,11 +31,7 @@ function createDatabaseManyInputSchema() {
           additionalProperties: false,
           properties: {
             kind: { type: 'string' },
-            mariadbId: { type: 'string' },
-            mongoId: { type: 'string' },
-            mysqlId: { type: 'string' },
-            postgresId: { type: 'string' },
-            redisId: { type: 'string' },
+            ...createDatabaseIdSchemaProperties(),
             passwordType: { enum: ['user', 'root'] },
           },
           required: ['kind'],
@@ -94,35 +109,14 @@ function validateDatabaseManyRequest(request: Record<string, unknown>, index: nu
   }
 
   const errors: string[] = []
+  const descriptor = getDatabaseDescriptor(kind)
 
-  switch (kind) {
-    case 'mariadb':
-      if (!getStringOrNull(request.mariadbId)) {
-        errors.push(`requests[${index}].mariadbId is required`)
-      }
-      break
-    case 'mongo':
-      if (!getStringOrNull(request.mongoId)) {
-        errors.push(`requests[${index}].mongoId is required`)
-      }
-      break
-    case 'mysql':
-      if (!getStringOrNull(request.mysqlId)) {
-        errors.push(`requests[${index}].mysqlId is required`)
-      }
-      break
-    case 'postgres':
-      if (!getStringOrNull(request.postgresId)) {
-        errors.push(`requests[${index}].postgresId is required`)
-      }
-      break
-    case 'redis':
-      if (!getStringOrNull(request.redisId)) {
-        errors.push(`requests[${index}].redisId is required`)
-      }
-      break
-    default:
-      errors.push(`requests[${index}].kind must be one of mariadb, mongo, mysql, postgres, redis`)
+  if (descriptor) {
+    if (!getStringOrNull(request[descriptor.idField])) {
+      errors.push(`requests[${index}].${descriptor.idField} is required`)
+    }
+  } else {
+    errors.push(`requests[${index}].kind must be one of ${databaseKindList}`)
   }
 
   if (
@@ -137,10 +131,9 @@ function validateDatabaseManyRequest(request: Record<string, unknown>, index: nu
   if (
     'passwordType' in request &&
     request.passwordType !== undefined &&
-    kind !== 'mariadb' &&
-    kind !== 'mysql'
+    !supportsPasswordType(kind)
   ) {
-    errors.push(`requests[${index}].passwordType is only supported for mariadb and mysql`)
+    errors.push(`requests[${index}].passwordType is only supported for ${passwordTypeKindList}`)
   }
 
   return errors
@@ -178,11 +171,7 @@ function createDatabaseRotatePasswordPreviewInputSchema() {
     type: 'object',
     properties: {
       kind: { type: 'string' },
-      mariadbId: { type: 'string' },
-      mongoId: { type: 'string' },
-      mysqlId: { type: 'string' },
-      postgresId: { type: 'string' },
-      redisId: { type: 'string' },
+      ...createDatabaseIdSchemaProperties(),
       type: { enum: ['user', 'root'] },
     },
     required: ['kind'],
@@ -233,34 +222,13 @@ function validateDatabaseRotatePasswordPreviewInput(input: Record<string, unknow
     return ['kind must be a non-empty string']
   }
 
-  switch (kind) {
-    case 'mariadb':
-      if (!getStringOrNull(input.mariadbId)) {
-        return ['mariadbId is required']
-      }
-      break
-    case 'mongo':
-      if (!getStringOrNull(input.mongoId)) {
-        return ['mongoId is required']
-      }
-      break
-    case 'mysql':
-      if (!getStringOrNull(input.mysqlId)) {
-        return ['mysqlId is required']
-      }
-      break
-    case 'postgres':
-      if (!getStringOrNull(input.postgresId)) {
-        return ['postgresId is required']
-      }
-      break
-    case 'redis':
-      if (!getStringOrNull(input.redisId)) {
-        return ['redisId is required']
-      }
-      break
-    default:
-      return ['kind must be one of mariadb, mongo, mysql, postgres, redis']
+  const descriptor = getDatabaseDescriptor(kind)
+  if (!descriptor) {
+    return [`kind must be one of ${databaseKindList}`]
+  }
+
+  if (!getStringOrNull(input[descriptor.idField])) {
+    return [`${descriptor.idField} is required`]
   }
 
   if (
@@ -277,90 +245,39 @@ function validateDatabaseRotatePasswordPreviewInput(input: Record<string, unknow
 
 function resolveDatabasePreviewTarget(input: Record<string, unknown>) {
   const kind = String(input.kind)
+  const descriptor = getDatabaseDescriptor(kind)
 
-  switch (kind) {
-    case 'mariadb':
-      return {
-        procedure: 'mariadb.one',
-        previewProcedure: 'mariadb.changePassword' as const,
-        resourceId: String(input.mariadbId),
-        readInput: { mariadbId: String(input.mariadbId) },
-        inputTemplate: {
-          mariadbId: String(input.mariadbId),
-          ...(input.type ? { type: input.type } : {}),
-        },
-      }
-    case 'mongo':
-      return {
-        procedure: 'mongo.one',
-        previewProcedure: 'mongo.changePassword' as const,
-        resourceId: String(input.mongoId),
-        readInput: { mongoId: String(input.mongoId) },
-        inputTemplate: { mongoId: String(input.mongoId) },
-      }
-    case 'mysql':
-      return {
-        procedure: 'mysql.one',
-        previewProcedure: 'mysql.changePassword' as const,
-        resourceId: String(input.mysqlId),
-        readInput: { mysqlId: String(input.mysqlId) },
-        inputTemplate: {
-          mysqlId: String(input.mysqlId),
-          ...(input.type ? { type: input.type } : {}),
-        },
-      }
-    case 'postgres':
-      return {
-        procedure: 'postgres.one',
-        previewProcedure: 'postgres.changePassword' as const,
-        resourceId: String(input.postgresId),
-        readInput: { postgresId: String(input.postgresId) },
-        inputTemplate: { postgresId: String(input.postgresId) },
-      }
-    case 'redis':
-      return {
-        procedure: 'redis.one',
-        previewProcedure: 'redis.changePassword' as const,
-        resourceId: String(input.redisId),
-        readInput: { redisId: String(input.redisId) },
-        inputTemplate: { redisId: String(input.redisId) },
-      }
-    default:
-      throw new Error(`Unsupported database preview kind: ${kind}`)
+  if (!descriptor) {
+    throw new Error(`Unsupported database preview kind: ${kind}`)
+  }
+
+  const resourceId = String(input[descriptor.idField])
+  return {
+    procedure: descriptor.readProcedure,
+    previewProcedure: descriptor.previewProcedure,
+    resourceId,
+    readInput: { [descriptor.idField]: resourceId },
+    inputTemplate: {
+      [descriptor.idField]: resourceId,
+      ...(descriptor.supportsPasswordType && input.type ? { type: input.type } : {}),
+    },
   }
 }
 
 function toDatabasePreviewInput(request: Record<string, unknown>) {
-  switch (String(request.kind)) {
-    case 'mariadb':
-      return {
-        kind: 'mariadb' as const,
-        mariadbId: String(request.mariadbId),
-        ...(request.passwordType ? { type: request.passwordType } : {}),
-      }
-    case 'mongo':
-      return {
-        kind: 'mongo' as const,
-        mongoId: String(request.mongoId),
-      }
-    case 'mysql':
-      return {
-        kind: 'mysql' as const,
-        mysqlId: String(request.mysqlId),
-        ...(request.passwordType ? { type: request.passwordType } : {}),
-      }
-    case 'postgres':
-      return {
-        kind: 'postgres' as const,
-        postgresId: String(request.postgresId),
-      }
-    case 'redis':
-      return {
-        kind: 'redis' as const,
-        redisId: String(request.redisId),
-      }
-    default:
-      throw new Error(`Unsupported database request kind: ${String(request.kind)}`)
+  const kind = String(request.kind)
+  const descriptor = getDatabaseDescriptor(kind)
+
+  if (!descriptor) {
+    throw new Error(`Unsupported database request kind: ${kind}`)
+  }
+
+  return {
+    kind: descriptor.kind,
+    [descriptor.idField]: String(request[descriptor.idField]),
+    ...(descriptor.supportsPasswordType && request.passwordType
+      ? { type: request.passwordType }
+      : {}),
   }
 }
 
@@ -467,7 +384,7 @@ export const databaseProcedureDefinitions: Record<string, VirtualProcedureDefini
         'MCP-only virtual helper that resolves one database resource and returns the exact changePassword operation template without including a password.',
       inputKind: 'body',
       requiredInputs: ['kind'],
-      optionalInputs: ['mariadbId', 'mongoId', 'mysqlId', 'postgresId', 'redisId', 'type'],
+      optionalInputs: [...DATABASE_KINDS.map((descriptor) => descriptor.idField), 'type'],
       response: {
         type: 'object',
         keys: [

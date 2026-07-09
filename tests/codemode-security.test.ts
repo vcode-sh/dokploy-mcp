@@ -39,6 +39,52 @@ describe('codemode sandbox security', () => {
     expect(result.result).toBe('undefined')
   })
 
+  it('blocks dynamic code generation via async function constructor chains', async () => {
+    await expect(
+      runSandboxedFunction({
+        code: "async () => (async () => {}).constructor('return typeof process')()",
+        context: {},
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('blocks dynamic code generation via object constructor chains', async () => {
+    await expect(
+      runSandboxedFunction({
+        code: "async () => ({}).constructor.constructor('return 1')()",
+        context: {},
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('contains prototype pollution inside the sandbox context', async () => {
+    const result = await runSandboxedFunction({
+      code: "async () => { Object.prototype.__codemodePolluted = 'yes'; return 'done' }",
+      context: {},
+    })
+
+    expect(result.result).toBe('done')
+    expect(({} as Record<string, unknown>).__codemodePolluted).toBeUndefined()
+  })
+
+  it('freezes nested context values before exposing them to sandbox code', async () => {
+    const result = await runSandboxedFunction({
+      code: 'async (ctx) => { try { ctx.marker.value = 2 } catch {} ; return ctx.marker.value }',
+      context: { marker: { value: 1 } },
+    })
+
+    expect(result.result).toBe(1)
+  })
+
+  it('does not expose async timers', async () => {
+    const result = await runSandboxedFunction({
+      code: 'async () => typeof setTimeout',
+      context: {},
+    })
+
+    expect(result.result).toBe('undefined')
+  })
+
   it('blocks dynamic import', async () => {
     await expect(
       runSandboxedFunction({

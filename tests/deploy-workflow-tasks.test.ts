@@ -20,6 +20,8 @@ import { createServer } from '../src/server.js'
 
 afterEach(() => {
   invokeProcedureMock.mockReset()
+  vi.unstubAllEnvs()
+  vi.useRealTimers()
 })
 
 function createGatewayResult(procedure: string, data: unknown) {
@@ -297,6 +299,230 @@ describe('phase 4 execute task integration', () => {
         })
       },
     )
+  })
+
+  it('does not fail the applied deploy when rollout polling exceeds the main call budget', async () => {
+    invokeProcedureMock.mockImplementation(
+      async (procedure: string, input: Record<string, unknown>) => {
+        if (procedure === 'application.one') {
+          return createGatewayResult(procedure, {
+            applicationId: 'app-1',
+            name: 'Frontend',
+            appName: 'frontend',
+            applicationStatus: 'running',
+            projectId: 'project-1',
+            environmentId: 'env-1',
+            serverId: 'server-1',
+            deployments: [{ deploymentId: 'dep-1', status: 'done' }],
+          })
+        }
+
+        if (procedure === 'application.deploy') {
+          return createGatewayResult(procedure, {
+            deploymentId: 'dep-2',
+            applicationId: 'app-1',
+            status: 'queued',
+          })
+        }
+
+        if (procedure === 'deployment.allByType') {
+          return createGatewayResult(procedure, {
+            items: [
+              {
+                deploymentId: 'dep-2',
+                status: 'queued',
+              },
+            ],
+            total: 1,
+          })
+        }
+
+        throw new Error(`Unexpected procedure ${procedure}:${JSON.stringify(input)}`)
+      },
+    )
+
+    const client = new Client({
+      name: 'phase4-rollout-budget-client',
+      version: '1.0.0',
+    })
+
+    await withClient(createServer({ mode: 'codemode' }), client, async (connectedClient) => {
+      vi.useFakeTimers()
+      const call = connectedClient.callTool({
+        name: 'execute',
+        arguments: {
+          workflow: {
+            kind: 'deploy-application',
+            applicationId: 'app-1',
+            intent: 'Deploy with long rollout polling.',
+            action: 'apply',
+            rollout: {
+              includeProjectLogs: false,
+              tailLines: 0,
+              waitForRollout: true,
+              pollIntervalMs: 250,
+              maxPolls: 30,
+            },
+          },
+        },
+      })
+      await vi.advanceTimersByTimeAsync(30 * 250)
+      const result = await call
+      vi.useRealTimers()
+
+      expect(result.structuredContent).toMatchObject({
+        result: {
+          outcome: 'applied',
+          rolloutStatus: {
+            status: 'timeout',
+            attempts: 30,
+          },
+          deployment: {
+            deploymentId: 'dep-2',
+          },
+        },
+      })
+    })
+  })
+
+  it('still enforces the main deploy workflow API-call budget', async () => {
+    vi.stubEnv('DOKPLOY_MCP_SANDBOX_MAX_CALLS', '1')
+    invokeProcedureMock.mockImplementation(
+      async (procedure: string, input: Record<string, unknown>) => {
+        if (procedure === 'application.one') {
+          return createGatewayResult(procedure, {
+            applicationId: 'app-1',
+            name: 'Frontend',
+            appName: 'frontend',
+            applicationStatus: 'running',
+            projectId: 'project-1',
+            environmentId: 'env-1',
+            serverId: 'server-1',
+            deployments: [{ deploymentId: 'dep-1', status: 'done' }],
+          })
+        }
+
+        if (procedure === 'application.deploy') {
+          return createGatewayResult(procedure, {
+            deploymentId: 'dep-2',
+            applicationId: 'app-1',
+            status: 'queued',
+          })
+        }
+
+        throw new Error(`Unexpected procedure ${procedure}:${JSON.stringify(input)}`)
+      },
+    )
+
+    const client = new Client({
+      name: 'phase4-main-budget-client',
+      version: '1.0.0',
+    })
+
+    await withClient(createServer({ mode: 'codemode' }), client, async (connectedClient) => {
+      const result = await connectedClient.callTool({
+        name: 'execute',
+        arguments: {
+          workflow: {
+            kind: 'deploy-application',
+            applicationId: 'app-1',
+            intent: 'Deploy with strict main budget.',
+            action: 'apply',
+            rollout: {
+              includeProjectLogs: false,
+              waitForRollout: false,
+            },
+          },
+        },
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.structuredContent).toMatchObject({
+        details: 'Code Mode execute exceeded 1 API calls.',
+        error: 'Failed to execute execute',
+      })
+    })
+  })
+
+  it('uses the rollout loop bound instead of the polling budget as the terminal condition', async () => {
+    invokeProcedureMock.mockImplementation(
+      async (procedure: string, input: Record<string, unknown>) => {
+        if (procedure === 'application.one') {
+          return createGatewayResult(procedure, {
+            applicationId: 'app-1',
+            name: 'Frontend',
+            appName: 'frontend',
+            applicationStatus: 'running',
+            projectId: 'project-1',
+            environmentId: 'env-1',
+            serverId: 'server-1',
+            deployments: [{ deploymentId: 'dep-1', status: 'done' }],
+          })
+        }
+
+        if (procedure === 'application.deploy') {
+          return createGatewayResult(procedure, {
+            deploymentId: 'dep-2',
+            applicationId: 'app-1',
+            status: 'queued',
+          })
+        }
+
+        if (procedure === 'deployment.allByType') {
+          return createGatewayResult(procedure, {
+            items: [
+              {
+                deploymentId: 'dep-2',
+                status: 'queued',
+              },
+            ],
+            total: 1,
+          })
+        }
+
+        throw new Error(`Unexpected procedure ${procedure}:${JSON.stringify(input)}`)
+      },
+    )
+
+    const client = new Client({
+      name: 'phase4-poll-cap-client',
+      version: '1.0.0',
+    })
+
+    await withClient(createServer({ mode: 'codemode' }), client, async (connectedClient) => {
+      vi.useFakeTimers()
+      const call = connectedClient.callTool({
+        name: 'execute',
+        arguments: {
+          workflow: {
+            kind: 'deploy-application',
+            applicationId: 'app-1',
+            intent: 'Deploy with max rollout polling.',
+            action: 'apply',
+            rollout: {
+              includeProjectLogs: false,
+              tailLines: 0,
+              waitForRollout: true,
+              pollIntervalMs: 250,
+              maxPolls: 120,
+            },
+          },
+        },
+      })
+      await vi.advanceTimersByTimeAsync(120 * 250)
+      const result = await call
+      vi.useRealTimers()
+
+      expect(result.structuredContent).toMatchObject({
+        result: {
+          outcome: 'applied',
+          rolloutStatus: {
+            status: 'timeout',
+            attempts: 120,
+          },
+        },
+      })
+    })
   })
 
   it('supports task-enabled deploy workflow preflight with elicitation and sampling before completion', async () => {

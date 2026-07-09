@@ -62,6 +62,9 @@ describe('codemode subprocess runner', () => {
       code: 'catalog.searchText("project")',
       limits: createLimits(),
     })
+    await vi.waitFor(() => {
+      expect(forkMock).toHaveBeenCalled()
+    })
 
     worker.emit('message', { type: 'unexpected' })
 
@@ -78,6 +81,9 @@ describe('codemode subprocess runner', () => {
     const execution = runSearchInSubprocess({
       code: 'catalog.searchText("project")',
       limits: createLimits(),
+    })
+    await vi.waitFor(() => {
+      expect(forkMock).toHaveBeenCalled()
     })
 
     worker.emit('message', {
@@ -100,6 +106,9 @@ describe('codemode subprocess runner', () => {
     const execution = runSearchInSubprocess({
       code: 'catalog.searchText("project")',
       limits: createLimits(),
+    })
+    await vi.waitFor(() => {
+      expect(forkMock).toHaveBeenCalled()
     })
 
     worker.emit('exit', 9, null)
@@ -153,6 +162,9 @@ describe('codemode subprocess runner', () => {
       code: 'await dokploy.project.one({ projectId: "project-1" })',
       limits: createLimits(),
       onCall: async () => ({ projectId: 'project-1', name: 'Example' }),
+    })
+    await vi.waitFor(() => {
+      expect(forkMock).toHaveBeenCalled()
     })
 
     worker.emit('message', {

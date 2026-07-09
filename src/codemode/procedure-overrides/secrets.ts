@@ -67,28 +67,18 @@ const dataServiceSecretKeys = createCaseInsensitiveKeySet([
 // Top-level keys on an application object that contain nested git-provider data
 const gitProviderNestingKeys = new Set(['github', 'gitea', 'gitlab', 'bitbucket'])
 
-function redactRecord(value: Record<string, unknown>): Record<string, unknown> {
-  const redacted: Record<string, unknown> = {}
-
-  for (const [key, val] of Object.entries(value)) {
-    if (hasSecretKey(gitProviderSecretKeys, key)) {
-      redacted[key] = '[REDACTED]'
-    } else if (isRecord(val)) {
-      redacted[key] = redactRecord(val)
-    } else {
-      redacted[key] = val
-    }
-  }
-
-  return redacted
-}
-
-export function redactGitProviderSecrets(data: unknown): unknown {
-  if (!isRecord(data)) {
-    return data
-  }
-
+function redactRecord(data: unknown): unknown {
   if (Array.isArray(data)) {
+    let changed = false
+    const result = data.map((item) => {
+      const next = redactRecord(item)
+      changed ||= next !== item
+      return next
+    })
+    return changed ? result : data
+  }
+
+  if (!isRecord(data)) {
     return data
   }
 
@@ -99,11 +89,43 @@ export function redactGitProviderSecrets(data: unknown): unknown {
     if (hasSecretKey(gitProviderSecretKeys, key)) {
       result[key] = '[REDACTED]'
       changed = true
-    } else if (gitProviderNestingKeys.has(key) && isRecord(value)) {
-      result[key] = redactRecord(value)
+      continue
+    }
+
+    const next = redactRecord(value)
+    result[key] = next
+    changed ||= next !== value
+  }
+
+  return changed ? result : data
+}
+
+export function redactGitProviderSecrets(data: unknown): unknown {
+  if (Array.isArray(data)) {
+    let changed = false
+    const result = data.map((item) => {
+      const next = redactGitProviderSecrets(item)
+      changed ||= next !== item
+      return next
+    })
+    return changed ? result : data
+  }
+
+  if (!isRecord(data)) {
+    return data
+  }
+
+  let changed = false
+  const result: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(data)) {
+    if (hasSecretKey(gitProviderSecretKeys, key)) {
+      result[key] = '[REDACTED]'
       changed = true
     } else {
-      result[key] = value
+      const next = gitProviderNestingKeys.has(key) ? redactRecord(value) : value
+      result[key] = next
+      changed ||= next !== value
     }
   }
 

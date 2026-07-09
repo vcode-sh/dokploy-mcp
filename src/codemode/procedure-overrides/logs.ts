@@ -10,6 +10,7 @@ const LOG_OUTPUT_BYTE_CAP = 16 * 1024
 export const logProcedureNames = [
   'application.readLogs',
   'compose.readLogs',
+  'deployment.readLogs',
   'libsql.readLogs',
   'mariadb.readLogs',
   'mongo.readLogs',
@@ -82,13 +83,10 @@ function redactLogSecrets(value: string) {
       '$1[REDACTED]',
     )
     .replace(
-      /(\b[A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASS|PRIVATE_KEY|API_KEY)[A-Z0-9_]*=)([^\s]+)/g,
+      /(\b(?:[A-Z0-9]+_)*(?:TOKEN|SECRET|PASSWORD|PASSWD|PASS|PRIVATE_KEY|API_KEY|ACCESS_KEY|SIGNING_KEY|ENCRYPTION_KEY|CREDENTIALS|DSN|CONNECTION_STRING|AUTH)(?:_[A-Z0-9]+)*=)([^\s]+)/g,
       '$1[REDACTED]',
     )
-    .replace(
-      /((?:mongodb(?:\+srv)?|postgres(?:ql)?|mysql|redis|https?):\/\/[^:\s/@]+:)([^@\s/]+)@/gi,
-      '$1[REDACTED]@',
-    )
+    .replace(/(\b[a-z][a-z0-9+.-]*:\/\/[^:\s/@]+:)([^@\s/]+)@/gi, '$1[REDACTED]@')
 }
 
 function shapeLogText(value: string) {

@@ -6,6 +6,7 @@ export const runtimeCatalogResponseHints: Record<string, CatalogResponseHints> =
     [
       'application.readLogs',
       'compose.readLogs',
+      'deployment.readLogs',
       'libsql.readLogs',
       'mariadb.readLogs',
       'mongo.readLogs',

@@ -101,7 +101,7 @@ export type application_refreshToken_Output = Record<string, unknown>
 export type application_reload_Input = { "appName": string; "applicationId": string }
 export type application_reload_Output = Record<string, unknown>
 
-export type application_saveBitbucketProvider_Input = { "bitbucketBranch": string | null; "bitbucketBuildPath": string | null; "bitbucketOwner": string | null; "bitbucketRepository": string | null; "bitbucketRepositorySlug": string | null; "bitbucketId": string | null; "applicationId": string; "enableSubmodules"?: boolean; "watchPaths"?: Array<string> | null }
+export type application_saveBitbucketProvider_Input = { "bitbucketBuildPath": string | null; "bitbucketOwner": string | null; "bitbucketRepository": string | null; "bitbucketRepositorySlug": string | null; "bitbucketId": string | null; "applicationId": string; "bitbucketBranch": string; "enableSubmodules"?: boolean; "watchPaths"?: Array<string> | null }
 export type application_saveBitbucketProvider_Output = Record<string, unknown>
 
 export type application_saveBuildType_Input = { "applicationId": string; "buildType": "dockerfile" | "heroku_buildpacks" | "paketo_buildpacks" | "nixpacks" | "static" | "railpack"; "dockerfile": string | null; "dockerContextPath": string | null; "dockerBuildStage": string | null; "herokuVersion": string | null; "railpackVersion": string | null; "publishDirectory"?: string | null; "isStaticSpa"?: boolean | null }
@@ -113,16 +113,16 @@ export type application_saveDockerProvider_Output = Record<string, unknown>
 export type application_saveEnvironment_Input = { "applicationId": string; "env": string | null; "buildArgs": string | null; "buildSecrets": string | null; "createEnvFile": boolean }
 export type application_saveEnvironment_Output = Record<string, unknown>
 
-export type application_saveGitProvider_Input = { "customGitBranch": string | null; "applicationId": string; "customGitBuildPath": string | null; "customGitUrl": string | null; "watchPaths": Array<string> | null; "enableSubmodules"?: boolean; "customGitSSHKeyId"?: string | null }
+export type application_saveGitProvider_Input = { "applicationId": string; "customGitBuildPath": string | null; "customGitUrl": string | null; "watchPaths": Array<string> | null; "enableSubmodules"?: boolean; "customGitBranch": string; "customGitSSHKeyId"?: string | null }
 export type application_saveGitProvider_Output = Record<string, unknown>
 
-export type application_saveGiteaProvider_Input = { "applicationId": string; "giteaBranch": string | null; "giteaBuildPath": string | null; "giteaOwner": string | null; "giteaRepository": string | null; "giteaId": string | null; "enableSubmodules"?: boolean; "watchPaths"?: Array<string> | null }
+export type application_saveGiteaProvider_Input = { "applicationId": string; "giteaBuildPath": string | null; "giteaOwner": string | null; "giteaRepository": string | null; "giteaId": string | null; "giteaBranch": string; "enableSubmodules"?: boolean; "watchPaths"?: Array<string> | null }
 export type application_saveGiteaProvider_Output = Record<string, unknown>
 
-export type application_saveGithubProvider_Input = { "applicationId": string; "repository": string | null; "branch": string | null; "owner": string | null; "buildPath": string | null; "githubId": string | null; "triggerType": "push" | "tag"; "enableSubmodules"?: boolean; "watchPaths"?: Array<string> | null }
+export type application_saveGithubProvider_Input = { "applicationId": string; "repository": string | null; "owner": string | null; "buildPath": string | null; "githubId": string | null; "branch": string; "triggerType": "push" | "tag"; "enableSubmodules"?: boolean; "watchPaths"?: Array<string> | null }
 export type application_saveGithubProvider_Output = Record<string, unknown>
 
-export type application_saveGitlabProvider_Input = { "applicationId": string; "gitlabBranch": string | null; "gitlabBuildPath": string | null; "gitlabOwner": string | null; "gitlabRepository": string | null; "gitlabId": string | null; "gitlabProjectId": number | null; "gitlabPathNamespace": string | null; "enableSubmodules"?: boolean; "watchPaths"?: Array<string> | null }
+export type application_saveGitlabProvider_Input = { "applicationId": string; "gitlabBuildPath": string | null; "gitlabOwner": string | null; "gitlabRepository": string | null; "gitlabId": string | null; "gitlabProjectId": number | null; "gitlabPathNamespace": string | null; "gitlabBranch": string; "enableSubmodules"?: boolean; "watchPaths"?: Array<string> | null }
 export type application_saveGitlabProvider_Output = Record<string, unknown>
 
 export type application_search_Input = { "q"?: string; "name"?: string; "appName"?: string; "description"?: string; "repository"?: string; "owner"?: string; "dockerImage"?: string; "projectId"?: string; "environmentId"?: string; "limit"?: number; "offset"?: number }
@@ -284,6 +284,9 @@ export type compose_move_Output = Record<string, unknown>
 export type compose_one_Input = { "composeId": string }
 export type compose_one_Output = Record<string, unknown>
 
+export type compose_previewTemplate_Input = { "base64": string; "appName": string; "serverId"?: string }
+export type compose_previewTemplate_Output = Record<string, unknown>
+
 export type compose_processTemplate_Input = { "base64": string; "composeId": string }
 export type compose_processTemplate_Output = Record<string, unknown>
 
@@ -356,6 +359,9 @@ export type deployment_killProcess_Output = Record<string, unknown>
 export type deployment_queueList_Input = Record<string, unknown>
 export type deployment_queueList_Output = Record<string, unknown>
 
+export type deployment_readLogs_Input = { "deploymentId": string; "tail"?: number }
+export type deployment_readLogs_Output = Record<string, unknown>
+
 export type deployment_removeDeployment_Input = { "deploymentId": string }
 export type deployment_removeDeployment_Output = Record<string, unknown>
 
@@ -422,7 +428,7 @@ export type domain_byComposeId_Output = Record<string, unknown>
 export type domain_canGenerateTraefikMeDomains_Input = { "serverId": string }
 export type domain_canGenerateTraefikMeDomains_Output = Record<string, unknown>
 
-export type domain_create_Input = { "host": string; "path"?: string | null; "port"?: number | null; "customEntrypoint"?: string | null; "https"?: boolean; "applicationId"?: string | null; "certificateType"?: "letsencrypt" | "none" | "custom"; "customCertResolver"?: string | null; "composeId"?: string | null; "serviceName"?: string | null; "domainType"?: "compose" | "application" | "preview" | null; "previewDeploymentId"?: string | null; "internalPath"?: string | null; "stripPath"?: boolean; "middlewares"?: Array<string> | null }
+export type domain_create_Input = { "host": string; "path"?: string | null; "port"?: number | null; "customEntrypoint"?: string | null; "https"?: boolean; "applicationId"?: string | null; "certificateType"?: "letsencrypt" | "none" | "custom"; "customCertResolver"?: string | null; "composeId"?: string | null; "serviceName"?: string | null; "domainType"?: "compose" | "application" | "preview" | null; "previewDeploymentId"?: string | null; "internalPath"?: string | null; "stripPath"?: boolean; "middlewares"?: Array<string> | null; "forwardAuthEnabled"?: boolean }
 export type domain_create_Output = Record<string, unknown>
 
 export type domain_delete_Input = { "domainId": string }
@@ -434,7 +440,7 @@ export type domain_generateDomain_Output = Record<string, unknown>
 export type domain_one_Input = { "domainId": string }
 export type domain_one_Output = Record<string, unknown>
 
-export type domain_update_Input = { "host": string; "path"?: string | null; "port"?: number | null; "customEntrypoint"?: string | null; "https"?: boolean; "certificateType"?: "letsencrypt" | "none" | "custom"; "customCertResolver"?: string | null; "serviceName"?: string | null; "domainType"?: "compose" | "application" | "preview" | null; "internalPath"?: string | null; "stripPath"?: boolean; "middlewares"?: Array<string> | null; "domainId": string }
+export type domain_update_Input = { "host": string; "path"?: string | null; "port"?: number | null; "customEntrypoint"?: string | null; "https"?: boolean; "certificateType"?: "letsencrypt" | "none" | "custom"; "customCertResolver"?: string | null; "serviceName"?: string | null; "domainType"?: "compose" | "application" | "preview" | null; "internalPath"?: string | null; "stripPath"?: boolean; "middlewares"?: Array<string> | null; "forwardAuthEnabled"?: boolean; "domainId": string }
 export type domain_update_Output = Record<string, unknown>
 
 export type domain_validateDomain_Input = { "domain": string; "serverIp"?: string }
@@ -460,6 +466,36 @@ export type environment_search_Output = Record<string, unknown>
 
 export type environment_update_Input = { "environmentId": string; "name"?: string; "description"?: string; "projectId"?: string; "env"?: string }
 export type environment_update_Output = Record<string, unknown>
+
+export type forwardAuth_deployOnServer_Input = { "serverId": string | null; "providerId": string }
+export type forwardAuth_deployOnServer_Output = Record<string, unknown>
+
+export type forwardAuth_disable_Input = { "domainId": string }
+export type forwardAuth_disable_Output = Record<string, unknown>
+
+export type forwardAuth_enable_Input = { "domainId": string }
+export type forwardAuth_enable_Output = Record<string, unknown>
+
+export type forwardAuth_getAuthDomain_Input = { "serverId": string | null }
+export type forwardAuth_getAuthDomain_Output = Record<string, unknown>
+
+export type forwardAuth_listProviders_Input = Record<string, unknown>
+export type forwardAuth_listProviders_Output = Record<string, unknown>
+
+export type forwardAuth_removeAuthDomain_Input = { "serverId": string | null }
+export type forwardAuth_removeAuthDomain_Output = Record<string, unknown>
+
+export type forwardAuth_removeOnServer_Input = { "serverId": string | null }
+export type forwardAuth_removeOnServer_Output = Record<string, unknown>
+
+export type forwardAuth_serverStatus_Input = Record<string, unknown>
+export type forwardAuth_serverStatus_Output = Record<string, unknown>
+
+export type forwardAuth_setAuthDomain_Input = { "serverId": string | null; "authDomain": string; "https"?: boolean; "certificateType"?: "none" | "letsencrypt" | "custom"; "customCertResolver"?: string }
+export type forwardAuth_setAuthDomain_Output = Record<string, unknown>
+
+export type forwardAuth_status_Input = { "domainId": string }
+export type forwardAuth_status_Output = Record<string, unknown>
 
 export type gitProvider_allForPermissions_Input = Record<string, unknown>
 export type gitProvider_allForPermissions_Output = Record<string, unknown>
@@ -1136,7 +1172,7 @@ export type rollback_delete_Output = Record<string, unknown>
 export type rollback_rollback_Input = { "rollbackId": string }
 export type rollback_rollback_Output = Record<string, unknown>
 
-export type schedule_create_Input = { "scheduleId"?: string; "name": string; "cronExpression": string; "appName"?: string; "serviceName"?: string | null; "shellType"?: "bash" | "sh"; "scheduleType"?: "application" | "compose" | "server" | "dokploy-server"; "command": string; "script"?: string | null; "applicationId"?: string | null; "composeId"?: string | null; "serverId"?: string | null; "userId"?: string | null; "enabled"?: boolean; "timezone"?: string | null; "createdAt"?: string }
+export type schedule_create_Input = { "scheduleId"?: string; "name": string; "description"?: string | null; "cronExpression": string; "appName"?: string; "serviceName"?: string | null; "shellType"?: "bash" | "sh"; "scheduleType"?: "application" | "compose" | "server" | "dokploy-server"; "command": string; "script"?: string | null; "applicationId"?: string | null; "composeId"?: string | null; "serverId"?: string | null; "organizationId"?: string | null; "enabled"?: boolean; "timezone"?: string | null; "createdAt"?: string }
 export type schedule_create_Output = Record<string, unknown>
 
 export type schedule_delete_Input = { "scheduleId": string }
@@ -1151,8 +1187,17 @@ export type schedule_one_Output = Record<string, unknown>
 export type schedule_runManually_Input = { "scheduleId": string }
 export type schedule_runManually_Output = Record<string, unknown>
 
-export type schedule_update_Input = { "scheduleId": string; "name": string; "cronExpression": string; "appName"?: string; "serviceName"?: string | null; "shellType"?: "bash" | "sh"; "scheduleType"?: "application" | "compose" | "server" | "dokploy-server"; "command": string; "script"?: string | null; "applicationId"?: string | null; "composeId"?: string | null; "serverId"?: string | null; "userId"?: string | null; "enabled"?: boolean; "timezone"?: string | null; "createdAt"?: string }
+export type schedule_update_Input = { "scheduleId": string; "name": string; "description"?: string | null; "cronExpression": string; "appName"?: string; "serviceName"?: string | null; "shellType"?: "bash" | "sh"; "scheduleType"?: "application" | "compose" | "server" | "dokploy-server"; "command": string; "script"?: string | null; "applicationId"?: string | null; "composeId"?: string | null; "serverId"?: string | null; "organizationId"?: string | null; "enabled"?: boolean; "timezone"?: string | null; "createdAt"?: string }
 export type schedule_update_Output = Record<string, unknown>
+
+export type scim_deleteProvider_Input = { "providerId": string }
+export type scim_deleteProvider_Output = Record<string, unknown>
+
+export type scim_generateToken_Input = { "providerId": string }
+export type scim_generateToken_Output = Record<string, unknown>
+
+export type scim_listProviders_Input = Record<string, unknown>
+export type scim_listProviders_Output = Record<string, unknown>
 
 export type security_create_Input = { "applicationId": string; "username": string; "password": string }
 export type security_create_Output = Record<string, unknown>
@@ -1178,7 +1223,7 @@ export type server_buildServers_Output = Record<string, unknown>
 export type server_count_Input = Record<string, unknown>
 export type server_count_Output = Record<string, unknown>
 
-export type server_create_Input = { "name": string; "description": string | null; "ipAddress": string; "port": number; "username": string; "sshKeyId": string | null; "serverType": "deploy" | "build" }
+export type server_create_Input = { "name": string; "description": string | null; "ipAddress": string; "port": number; "username": string; "sshKeyId": string | null; "serverType": "deploy" | "build"; "enableDockerCleanup"?: boolean }
 export type server_create_Output = Record<string, unknown>
 
 export type server_getDefaultCommand_Input = { "serverId": string }
@@ -1208,8 +1253,11 @@ export type server_setup_Output = Record<string, unknown>
 export type server_setupMonitoring_Input = { "serverId": string; "metricsConfig": { "server": { "refreshRate": number; "port": number; "token": string; "urlCallback": string; "retentionDays": number; "cronJob": string; "thresholds": { "cpu": number; "memory": number } }; "containers": { "refreshRate": number; "services": { "include"?: Array<unknown>; "exclude"?: Array<unknown> } } } }
 export type server_setupMonitoring_Output = Record<string, unknown>
 
-export type server_update_Input = { "name": string; "description": string | null; "serverId": string; "ipAddress": string; "port": number; "username": string; "sshKeyId": string | null; "serverType": "deploy" | "build"; "command"?: string }
+export type server_update_Input = { "name": string; "description": string | null; "serverId": string; "ipAddress": string; "port": number; "username": string; "sshKeyId": string | null; "serverType": "deploy" | "build"; "enableDockerCleanup"?: boolean; "command"?: string }
 export type server_update_Output = Record<string, unknown>
+
+export type server_updateBuildsConcurrency_Input = { "serverId": string; "buildsConcurrency": number }
+export type server_updateBuildsConcurrency_Output = Record<string, unknown>
 
 export type server_validate_Input = { "serverId": string }
 export type server_validate_Output = Record<string, unknown>
@@ -1340,14 +1388,23 @@ export type settings_toggleDashboard_Output = Record<string, unknown>
 export type settings_toggleRequests_Input = { "enable": boolean }
 export type settings_toggleRequests_Output = Record<string, unknown>
 
+export type settings_updateBuildsConcurrency_Input = { "buildsConcurrency": number }
+export type settings_updateBuildsConcurrency_Output = Record<string, unknown>
+
 export type settings_updateDockerCleanup_Input = { "enableDockerCleanup": boolean; "serverId"?: string }
 export type settings_updateDockerCleanup_Output = Record<string, unknown>
+
+export type settings_updateEnforceSSO_Input = { "enforceSSO": boolean }
+export type settings_updateEnforceSSO_Output = Record<string, unknown>
 
 export type settings_updateLogCleanup_Input = { "cronExpression": string | null }
 export type settings_updateLogCleanup_Output = Record<string, unknown>
 
 export type settings_updateMiddlewareTraefikConfig_Input = { "traefikConfig": string }
 export type settings_updateMiddlewareTraefikConfig_Output = Record<string, unknown>
+
+export type settings_updateRemoteServersOnly_Input = { "remoteServersOnly": boolean }
+export type settings_updateRemoteServersOnly_Output = Record<string, unknown>
 
 export type settings_updateServer_Input = Record<string, unknown>
 export type settings_updateServer_Output = Record<string, unknown>
@@ -1396,6 +1453,9 @@ export type sso_addTrustedOrigin_Output = Record<string, unknown>
 
 export type sso_deleteProvider_Input = { "providerId": string }
 export type sso_deleteProvider_Output = Record<string, unknown>
+
+export type sso_enforceSSO_Input = Record<string, unknown>
+export type sso_enforceSSO_Output = Record<string, unknown>
 
 export type sso_getTrustedOrigins_Input = Record<string, unknown>
 export type sso_getTrustedOrigins_Output = Record<string, unknown>
@@ -1673,6 +1733,7 @@ export interface DokployProcedureMap {
   "compose.loadServices": { input: compose_loadServices_Input; output: compose_loadServices_Output }
   "compose.move": { input: compose_move_Input; output: compose_move_Output }
   "compose.one": { input: compose_one_Input; output: compose_one_Output }
+  "compose.previewTemplate": { input: compose_previewTemplate_Input; output: compose_previewTemplate_Output }
   "compose.processTemplate": { input: compose_processTemplate_Input; output: compose_processTemplate_Output }
   "compose.randomizeCompose": { input: compose_randomizeCompose_Input; output: compose_randomizeCompose_Output }
   "compose.readLogs": { input: compose_readLogs_Input; output: compose_readLogs_Output }
@@ -1697,6 +1758,7 @@ export interface DokployProcedureMap {
   "deployment.allCentralized": { input: deployment_allCentralized_Input; output: deployment_allCentralized_Output }
   "deployment.killProcess": { input: deployment_killProcess_Input; output: deployment_killProcess_Output }
   "deployment.queueList": { input: deployment_queueList_Input; output: deployment_queueList_Output }
+  "deployment.readLogs": { input: deployment_readLogs_Input; output: deployment_readLogs_Output }
   "deployment.removeDeployment": { input: deployment_removeDeployment_Input; output: deployment_removeDeployment_Output }
   "destination.all": { input: destination_all_Input; output: destination_all_Output }
   "destination.create": { input: destination_create_Input; output: destination_create_Output }
@@ -1732,6 +1794,16 @@ export interface DokployProcedureMap {
   "environment.remove": { input: environment_remove_Input; output: environment_remove_Output }
   "environment.search": { input: environment_search_Input; output: environment_search_Output }
   "environment.update": { input: environment_update_Input; output: environment_update_Output }
+  "forwardAuth.deployOnServer": { input: forwardAuth_deployOnServer_Input; output: forwardAuth_deployOnServer_Output }
+  "forwardAuth.disable": { input: forwardAuth_disable_Input; output: forwardAuth_disable_Output }
+  "forwardAuth.enable": { input: forwardAuth_enable_Input; output: forwardAuth_enable_Output }
+  "forwardAuth.getAuthDomain": { input: forwardAuth_getAuthDomain_Input; output: forwardAuth_getAuthDomain_Output }
+  "forwardAuth.listProviders": { input: forwardAuth_listProviders_Input; output: forwardAuth_listProviders_Output }
+  "forwardAuth.removeAuthDomain": { input: forwardAuth_removeAuthDomain_Input; output: forwardAuth_removeAuthDomain_Output }
+  "forwardAuth.removeOnServer": { input: forwardAuth_removeOnServer_Input; output: forwardAuth_removeOnServer_Output }
+  "forwardAuth.serverStatus": { input: forwardAuth_serverStatus_Input; output: forwardAuth_serverStatus_Output }
+  "forwardAuth.setAuthDomain": { input: forwardAuth_setAuthDomain_Input; output: forwardAuth_setAuthDomain_Output }
+  "forwardAuth.status": { input: forwardAuth_status_Input; output: forwardAuth_status_Output }
   "gitProvider.allForPermissions": { input: gitProvider_allForPermissions_Input; output: gitProvider_allForPermissions_Output }
   "gitProvider.getAll": { input: gitProvider_getAll_Input; output: gitProvider_getAll_Output }
   "gitProvider.remove": { input: gitProvider_remove_Input; output: gitProvider_remove_Output }
@@ -1963,6 +2035,9 @@ export interface DokployProcedureMap {
   "schedule.one": { input: schedule_one_Input; output: schedule_one_Output }
   "schedule.runManually": { input: schedule_runManually_Input; output: schedule_runManually_Output }
   "schedule.update": { input: schedule_update_Input; output: schedule_update_Output }
+  "scim.deleteProvider": { input: scim_deleteProvider_Input; output: scim_deleteProvider_Output }
+  "scim.generateToken": { input: scim_generateToken_Input; output: scim_generateToken_Output }
+  "scim.listProviders": { input: scim_listProviders_Input; output: scim_listProviders_Output }
   "security.create": { input: security_create_Input; output: security_create_Output }
   "security.delete": { input: security_delete_Input; output: security_delete_Output }
   "security.one": { input: security_one_Input; output: security_one_Output }
@@ -1982,6 +2057,7 @@ export interface DokployProcedureMap {
   "server.setup": { input: server_setup_Input; output: server_setup_Output }
   "server.setupMonitoring": { input: server_setupMonitoring_Input; output: server_setupMonitoring_Output }
   "server.update": { input: server_update_Input; output: server_update_Output }
+  "server.updateBuildsConcurrency": { input: server_updateBuildsConcurrency_Input; output: server_updateBuildsConcurrency_Output }
   "server.validate": { input: server_validate_Input; output: server_validate_Output }
   "server.withSSHKey": { input: server_withSSHKey_Input; output: server_withSSHKey_Output }
   "settings.assignDomainServer": { input: settings_assignDomainServer_Input; output: settings_assignDomainServer_Output }
@@ -2025,9 +2101,12 @@ export interface DokployProcedureMap {
   "settings.setupGPU": { input: settings_setupGPU_Input; output: settings_setupGPU_Output }
   "settings.toggleDashboard": { input: settings_toggleDashboard_Input; output: settings_toggleDashboard_Output }
   "settings.toggleRequests": { input: settings_toggleRequests_Input; output: settings_toggleRequests_Output }
+  "settings.updateBuildsConcurrency": { input: settings_updateBuildsConcurrency_Input; output: settings_updateBuildsConcurrency_Output }
   "settings.updateDockerCleanup": { input: settings_updateDockerCleanup_Input; output: settings_updateDockerCleanup_Output }
+  "settings.updateEnforceSSO": { input: settings_updateEnforceSSO_Input; output: settings_updateEnforceSSO_Output }
   "settings.updateLogCleanup": { input: settings_updateLogCleanup_Input; output: settings_updateLogCleanup_Output }
   "settings.updateMiddlewareTraefikConfig": { input: settings_updateMiddlewareTraefikConfig_Input; output: settings_updateMiddlewareTraefikConfig_Output }
+  "settings.updateRemoteServersOnly": { input: settings_updateRemoteServersOnly_Input; output: settings_updateRemoteServersOnly_Output }
   "settings.updateServer": { input: settings_updateServer_Input; output: settings_updateServer_Output }
   "settings.updateServerIp": { input: settings_updateServerIp_Input; output: settings_updateServerIp_Output }
   "settings.updateTraefikConfig": { input: settings_updateTraefikConfig_Input; output: settings_updateTraefikConfig_Output }
@@ -2044,6 +2123,7 @@ export interface DokployProcedureMap {
   "sshKey.update": { input: sshKey_update_Input; output: sshKey_update_Output }
   "sso.addTrustedOrigin": { input: sso_addTrustedOrigin_Input; output: sso_addTrustedOrigin_Output }
   "sso.deleteProvider": { input: sso_deleteProvider_Input; output: sso_deleteProvider_Output }
+  "sso.enforceSSO": { input: sso_enforceSSO_Input; output: sso_enforceSSO_Output }
   "sso.getTrustedOrigins": { input: sso_getTrustedOrigins_Input; output: sso_getTrustedOrigins_Output }
   "sso.listProviders": { input: sso_listProviders_Input; output: sso_listProviders_Output }
   "sso.one": { input: sso_one_Input; output: sso_one_Output }
@@ -2218,6 +2298,7 @@ export interface DokploySdk {
     loadServices(input: compose_loadServices_Input): Promise<compose_loadServices_Output>
     move(input: compose_move_Input): Promise<compose_move_Output>
     one(input: compose_one_Input): Promise<compose_one_Output>
+    previewTemplate(input: compose_previewTemplate_Input): Promise<compose_previewTemplate_Output>
     processTemplate(input: compose_processTemplate_Input): Promise<compose_processTemplate_Output>
     randomizeCompose(input: compose_randomizeCompose_Input): Promise<compose_randomizeCompose_Output>
     readLogs(input: compose_readLogs_Input): Promise<compose_readLogs_Output>
@@ -2246,6 +2327,7 @@ export interface DokploySdk {
     allCentralized(input: deployment_allCentralized_Input): Promise<deployment_allCentralized_Output>
     killProcess(input: deployment_killProcess_Input): Promise<deployment_killProcess_Output>
     queueList(input: deployment_queueList_Input): Promise<deployment_queueList_Output>
+    readLogs(input: deployment_readLogs_Input): Promise<deployment_readLogs_Output>
     removeDeployment(input: deployment_removeDeployment_Input): Promise<deployment_removeDeployment_Output>
   }
   destination: {
@@ -2289,6 +2371,18 @@ export interface DokploySdk {
     remove(input: environment_remove_Input): Promise<environment_remove_Output>
     search(input: environment_search_Input): Promise<environment_search_Output>
     update(input: environment_update_Input): Promise<environment_update_Output>
+  }
+  forwardAuth: {
+    deployOnServer(input: forwardAuth_deployOnServer_Input): Promise<forwardAuth_deployOnServer_Output>
+    disable(input: forwardAuth_disable_Input): Promise<forwardAuth_disable_Output>
+    enable(input: forwardAuth_enable_Input): Promise<forwardAuth_enable_Output>
+    getAuthDomain(input: forwardAuth_getAuthDomain_Input): Promise<forwardAuth_getAuthDomain_Output>
+    listProviders(input: forwardAuth_listProviders_Input): Promise<forwardAuth_listProviders_Output>
+    removeAuthDomain(input: forwardAuth_removeAuthDomain_Input): Promise<forwardAuth_removeAuthDomain_Output>
+    removeOnServer(input: forwardAuth_removeOnServer_Input): Promise<forwardAuth_removeOnServer_Output>
+    serverStatus(input: forwardAuth_serverStatus_Input): Promise<forwardAuth_serverStatus_Output>
+    setAuthDomain(input: forwardAuth_setAuthDomain_Input): Promise<forwardAuth_setAuthDomain_Output>
+    status(input: forwardAuth_status_Input): Promise<forwardAuth_status_Output>
   }
   gitea: {
     create(input: gitea_create_Input): Promise<gitea_create_Output>
@@ -2565,6 +2659,11 @@ export interface DokploySdk {
     runManually(input: schedule_runManually_Input): Promise<schedule_runManually_Output>
     update(input: schedule_update_Input): Promise<schedule_update_Output>
   }
+  scim: {
+    deleteProvider(input: scim_deleteProvider_Input): Promise<scim_deleteProvider_Output>
+    generateToken(input: scim_generateToken_Input): Promise<scim_generateToken_Output>
+    listProviders(input: scim_listProviders_Input): Promise<scim_listProviders_Output>
+  }
   security: {
     create(input: security_create_Input): Promise<security_create_Output>
     delete(input: security_delete_Input): Promise<security_delete_Output>
@@ -2587,6 +2686,7 @@ export interface DokploySdk {
     setup(input: server_setup_Input): Promise<server_setup_Output>
     setupMonitoring(input: server_setupMonitoring_Input): Promise<server_setupMonitoring_Output>
     update(input: server_update_Input): Promise<server_update_Output>
+    updateBuildsConcurrency(input: server_updateBuildsConcurrency_Input): Promise<server_updateBuildsConcurrency_Output>
     validate(input: server_validate_Input): Promise<server_validate_Output>
     withSSHKey(input: server_withSSHKey_Input): Promise<server_withSSHKey_Output>
   }
@@ -2632,9 +2732,12 @@ export interface DokploySdk {
     setupGPU(input: settings_setupGPU_Input): Promise<settings_setupGPU_Output>
     toggleDashboard(input: settings_toggleDashboard_Input): Promise<settings_toggleDashboard_Output>
     toggleRequests(input: settings_toggleRequests_Input): Promise<settings_toggleRequests_Output>
+    updateBuildsConcurrency(input: settings_updateBuildsConcurrency_Input): Promise<settings_updateBuildsConcurrency_Output>
     updateDockerCleanup(input: settings_updateDockerCleanup_Input): Promise<settings_updateDockerCleanup_Output>
+    updateEnforceSSO(input: settings_updateEnforceSSO_Input): Promise<settings_updateEnforceSSO_Output>
     updateLogCleanup(input: settings_updateLogCleanup_Input): Promise<settings_updateLogCleanup_Output>
     updateMiddlewareTraefikConfig(input: settings_updateMiddlewareTraefikConfig_Input): Promise<settings_updateMiddlewareTraefikConfig_Output>
+    updateRemoteServersOnly(input: settings_updateRemoteServersOnly_Input): Promise<settings_updateRemoteServersOnly_Output>
     updateServer(input: settings_updateServer_Input): Promise<settings_updateServer_Output>
     updateServerIp(input: settings_updateServerIp_Input): Promise<settings_updateServerIp_Output>
     updateTraefikConfig(input: settings_updateTraefikConfig_Input): Promise<settings_updateTraefikConfig_Output>
@@ -2655,6 +2758,7 @@ export interface DokploySdk {
   sso: {
     addTrustedOrigin(input: sso_addTrustedOrigin_Input): Promise<sso_addTrustedOrigin_Output>
     deleteProvider(input: sso_deleteProvider_Input): Promise<sso_deleteProvider_Output>
+    enforceSSO(input: sso_enforceSSO_Input): Promise<sso_enforceSSO_Output>
     getTrustedOrigins(input: sso_getTrustedOrigins_Input): Promise<sso_getTrustedOrigins_Output>
     listProviders(input: sso_listProviders_Input): Promise<sso_listProviders_Output>
     one(input: sso_one_Input): Promise<sso_one_Output>

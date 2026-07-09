@@ -3,12 +3,14 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getCodemodeErrorMessage, normalizeCodemodeError } from '../error-message.js'
+import { acquireSandboxSlot } from './concurrency.js'
 import { normalizeSandboxLimits, resolveSandboxLimits } from './limits.js'
 import type { SandboxExecutionResult, SandboxLimits } from './types.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const defaultWorkerPath = resolve(__dirname, '../../../dist/codemode/sandbox/worker-entry.js')
 const testWorkerModeEnvName = 'DOKPLOY_MCP_SANDBOX_TEST_WORKER_MODE'
+const workerMemoryMbEnvName = 'DOKPLOY_MCP_SANDBOX_WORKER_MEMORY_MB'
 
 interface WorkerDoneMessage {
   type: 'done'
@@ -31,6 +33,11 @@ interface WorkerLaunchOptions {
 }
 
 const SUBPROCESS_TIMEOUT_GRACE_MS = 100
+const DEFAULT_WORKER_MAX_OLD_SPACE_MB = 256
+const workerReuseEnvName = 'DOKPLOY_MCP_SANDBOX_WORKER_REUSE'
+type WorkerMode = 'search' | 'execute'
+type WorkerProcess = ReturnType<typeof createWorker>
+const reusableWorkers = new Map<WorkerMode, WorkerProcess>()
 
 function resolveWorkerPath(workerPath?: string) {
   const overridePath = workerPath?.trim() || process.env.DOKPLOY_MCP_SANDBOX_WORKER_PATH?.trim()
@@ -45,8 +52,56 @@ function createWorker(options: WorkerLaunchOptions = {}) {
   return fork(resolveWorkerPath(options.workerPath), {
     stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     env: resolveWorkerEnv(options.workerEnv),
-    execArgv: [],
+    execArgv: [`--max-old-space-size=${resolveWorkerMaxOldSpaceMb()}`],
   })
+}
+
+function createWorkerForMode(mode: WorkerMode, options: WorkerLaunchOptions = {}) {
+  if (!isWorkerReuseEnabled()) {
+    return createWorker(options)
+  }
+
+  const reusableWorker = reusableWorkers.get(mode)
+  reusableWorkers.delete(mode)
+
+  if (!reusableWorker?.connected) {
+    return createWorker(options)
+  }
+
+  reusableWorker.removeAllListeners()
+  return reusableWorker
+}
+
+function isWorkerReuseEnabled() {
+  const value = process.env[workerReuseEnvName]?.trim().toLowerCase()
+  return value === '1' || value === 'true'
+}
+
+function cacheReusableWorker(mode: WorkerMode, worker: WorkerProcess) {
+  if (!(isWorkerReuseEnabled() && worker.connected)) {
+    terminateWorker(worker)
+    return
+  }
+
+  const previous = reusableWorkers.get(mode)
+  if (previous && previous !== worker) {
+    terminateWorker(previous)
+  }
+
+  reusableWorkers.set(mode, worker)
+  const removeCachedWorker = () => {
+    if (reusableWorkers.get(mode) === worker) {
+      reusableWorkers.delete(mode)
+    }
+  }
+  worker.once('disconnect', removeCachedWorker)
+  worker.once('exit', removeCachedWorker)
+  worker.once('error', removeCachedWorker)
+}
+
+function resolveWorkerMaxOldSpaceMb() {
+  const parsed = Number.parseInt(process.env[workerMemoryMbEnvName] ?? '', 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_WORKER_MAX_OLD_SPACE_MB
 }
 
 function resolveWorkerEnv(workerEnv?: NodeJS.ProcessEnv) {
@@ -211,6 +266,7 @@ function createSettlers(
   resolvePromise: (value: SandboxExecutionResult) => void,
   rejectPromise: (reason?: unknown) => void,
   timeoutId: NodeJS.Timeout | undefined,
+  reuseMode?: WorkerMode,
 ) {
   let settled = false
 
@@ -224,7 +280,10 @@ function createSettlers(
       }
 
       settled = true
-      cleanupWorker(worker, timeoutId, true)
+      cleanupWorker(worker, timeoutId, reuseMode === undefined)
+      if (reuseMode !== undefined) {
+        cacheReusableWorker(reuseMode, worker)
+      }
       resolvePromise({
         result: payload.result,
         logs: payload.logs ?? [],
@@ -372,17 +431,31 @@ export async function runSearchInSubprocess(options: {
   workerPath?: string
   workerEnv?: NodeJS.ProcessEnv
 }): Promise<SandboxExecutionResult> {
+  const slot = await acquireSandboxSlot()
+  try {
+    return await runSearchInSubprocessUnbounded(options)
+  } finally {
+    slot.release()
+  }
+}
+
+async function runSearchInSubprocessUnbounded(options: {
+  code: string
+  limits?: SandboxLimits
+  workerPath?: string
+  workerEnv?: NodeJS.ProcessEnv
+}): Promise<SandboxExecutionResult> {
   const limits = resolveLimits(options.limits)
 
   return new Promise((resolvePromise, rejectPromise) => {
-    const worker = createWorker({
+    const worker = createWorkerForMode('search', {
       workerPath: options.workerPath,
       workerEnv: options.workerEnv,
     })
     const timeoutId = setTimeout(() => {
       settle.reject(buildTimeoutError(limits.timeoutMs))
     }, limits.timeoutMs + SUBPROCESS_TIMEOUT_GRACE_MS)
-    const settle = createSettlers(worker, resolvePromise, rejectPromise, timeoutId)
+    const settle = createSettlers(worker, resolvePromise, rejectPromise, timeoutId, 'search')
 
     timeoutId.unref?.()
 
@@ -420,14 +493,31 @@ export async function runExecuteInSubprocess(options: {
   workerPath?: string
   workerEnv?: NodeJS.ProcessEnv
 }): Promise<SandboxExecutionResult> {
+  const slot = await acquireSandboxSlot(options.signal)
+  try {
+    return await runExecuteInSubprocessUnbounded(options)
+  } finally {
+    slot.release()
+  }
+}
+
+async function runExecuteInSubprocessUnbounded(options: {
+  code: string
+  limits?: SandboxLimits
+  onCall: (procedure: string, input?: Record<string, unknown>) => Promise<unknown>
+  signal?: AbortSignal
+  workerPath?: string
+  workerEnv?: NodeJS.ProcessEnv
+}): Promise<SandboxExecutionResult> {
   const limits = resolveLimits(options.limits)
 
   return new Promise((resolvePromise, rejectPromise) => {
-    const worker = createWorker({
+    const worker = createWorkerForMode('execute', {
       workerPath: options.workerPath,
       workerEnv: options.workerEnv,
     })
     let pendingCallResults = 0
+    let receivedCallMessage = false
     let cleanupAbortListener: (() => void) | undefined
     const resolveWithCleanup = (value: SandboxExecutionResult) => {
       cleanupAbortListener?.()
@@ -440,7 +530,13 @@ export async function runExecuteInSubprocess(options: {
     const timeoutId = setTimeout(() => {
       settle.reject(buildTimeoutError(limits.timeoutMs))
     }, limits.timeoutMs + SUBPROCESS_TIMEOUT_GRACE_MS)
-    const settle = createSettlers(worker, resolveWithCleanup, rejectWithCleanup, timeoutId)
+    const settle = createSettlers(
+      worker,
+      resolveWithCleanup,
+      rejectWithCleanup,
+      timeoutId,
+      'execute',
+    )
 
     if (options.signal) {
       const onAbort = () => {
@@ -462,6 +558,7 @@ export async function runExecuteInSubprocess(options: {
     worker.on('message', (message: unknown) => {
       const tracksCallResult = isWorkerCallMessage(message)
       if (tracksCallResult) {
+        receivedCallMessage = true
         pendingCallResults += 1
       }
 
@@ -479,7 +576,7 @@ export async function runExecuteInSubprocess(options: {
     worker.on('error', (error) => settle.reject(normalizeError(error)))
     worker.on('disconnect', () =>
       settle.reject(
-        pendingCallResults > 0
+        pendingCallResults > 0 || receivedCallMessage
           ? buildCallResultTransportError(new Error(buildDisconnectError().message))
           : buildDisconnectError(),
       ),

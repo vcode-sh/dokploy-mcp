@@ -17,7 +17,7 @@ import type { SandboxHost } from '../sandbox/host.js'
 import { createSandboxHost } from '../sandbox/host.js'
 import { resolveSandboxLimits } from '../sandbox/limits.js'
 import { runSandboxedFunction } from '../sandbox/runner.js'
-import { resolveSandboxRuntime } from '../sandbox/runtime.js'
+import { resolveSandboxRuntime, warnIfLocalRuntime } from '../sandbox/runtime.js'
 import { runExecuteInSubprocess } from '../sandbox/subprocess-runner.js'
 import {
   type DeployApplicationWorkflowInput,
@@ -107,8 +107,9 @@ export async function runExecuteWithHost(
   host: SandboxHost,
   options: RunExecuteWithHostOptions = {},
 ) {
+  const runtime = resolveSandboxRuntime()
   const execution =
-    options.forceSubprocess === true || resolveSandboxRuntime() === 'subprocess'
+    options.forceSubprocess === true || runtime === 'subprocess'
       ? await runExecuteInSubprocess({
           code,
           signal: options.signal,
@@ -117,18 +118,7 @@ export async function runExecuteWithHost(
             return result.data
           },
         })
-      : await runSandboxedFunction({
-          code,
-          context: (() => {
-            const context = buildExecuteContext((procedure, payload) =>
-              host.call(procedure, payload),
-            )
-            return {
-              dokploy: context.dokploy,
-              helpers: context.helpers,
-            }
-          })(),
-        })
+      : await runExecuteLocally(code, host)
 
   const resourceLinks = listResourceLinks(execution.result)
 
@@ -138,6 +128,33 @@ export async function runExecuteWithHost(
     calls: host.getCalls(),
     ...(resourceLinks.length > 0 ? { resourceLinks } : {}),
   }
+}
+
+async function runExecuteLocally(code: string, host: SandboxHost) {
+  warnIfLocalRuntime()
+  const localAbort = new AbortController()
+  const context = buildExecuteContext((procedure, payload) => {
+    if (localAbort.signal.aborted) {
+      throw createAbortError()
+    }
+
+    return host.call(procedure, payload)
+  })
+
+  return await runSandboxedFunction({
+    code,
+    context: {
+      dokploy: context.dokploy,
+      helpers: context.helpers,
+    },
+    onTimeout: () => localAbort.abort(),
+  })
+}
+
+function createAbortError() {
+  const error = new Error('Sandbox execution was aborted.')
+  error.name = 'AbortError'
+  return error
 }
 
 function isNonEmptyString(value: string | undefined): value is string {

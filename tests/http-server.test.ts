@@ -6,7 +6,7 @@ import net from 'node:net'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { remoteDokployHeaders } from '../src/http/security.js'
 import {
   createHttpServer,
@@ -21,6 +21,11 @@ const ORIGINAL_ENV = { ...process.env }
 const defaultRemoteDokployUrl = 'https://panel.example.com'
 const defaultRemoteDokployApiKey = 'test-api-key'
 const codeModeToolNames = ['search', 'execute', 'list_profiles']
+
+beforeEach(() => {
+  vi.stubEnv('DOKPLOY_MCP_SANDBOX_RUNTIME', 'subprocess')
+  vi.stubEnv('DOKPLOY_MCP_SANDBOX_MAX_CONCURRENT', '32')
+})
 
 afterEach(async () => {
   while (startedServers.length > 0) {
@@ -1567,21 +1572,31 @@ describe('http server transport', () => {
 
     expect(sessionId).toEqual(expect.any(String))
 
-    const reconnectClients = await Promise.all(
-      Array.from({ length: 5 }, () => createReconnectHttpClient(handle, sessionId!)),
+    const reconnectClients = await settleWithin(
+      Promise.all(Array.from({ length: 5 }, () => createReconnectHttpClient(handle, sessionId!))),
+      'concurrent reconnect clients',
+      5_000,
     )
 
     try {
       const firstWave = await Promise.all(
         [primary, ...reconnectClients].map(async (client, index) => {
           const [tools, callResult] = await Promise.all([
-            client.client.listTools(),
-            client.client.callTool({
-              name: 'search',
-              arguments: {
-                code: `catalog.getByTag("project").length + ${index}`,
-              },
-            }),
+            settleWithin(
+              client.client.listTools(),
+              `first reconnect wave client ${index} listTools`,
+              10_000,
+            ),
+            settleWithin(
+              client.client.callTool({
+                name: 'search',
+                arguments: {
+                  code: `catalog.getByTag("project").length + ${index}`,
+                },
+              }),
+              `first reconnect wave client ${index} search`,
+              10_000,
+            ),
           ])
 
           return { tools, callResult }
@@ -1595,15 +1610,19 @@ describe('http server transport', () => {
 
       await closeHttpClient(primary)
 
-      const reconnectWave = await Promise.all(
-        reconnectClients.map((client, index) =>
-          client.client.callTool({
-            name: 'search',
-            arguments: {
-              code: `catalog.getByTag("project").length + ${index + 10}`,
-            },
-          }),
+      const reconnectWave = await settleWithin(
+        Promise.all(
+          reconnectClients.map((client, index) =>
+            client.client.callTool({
+              name: 'search',
+              arguments: {
+                code: `catalog.getByTag("project").length + ${index + 10}`,
+              },
+            }),
+          ),
         ),
+        'second reconnect wave',
+        10_000,
       )
 
       for (const result of reconnectWave) {
@@ -1680,7 +1699,7 @@ describe('http server transport', () => {
         await Promise.allSettled([closeHttpClient(client), closeHttpClient(reconnect)])
       }
     }
-  })
+  }, 60_000)
 
   it('applies managed shutdown semantics when callers use createHttpServer directly', async () => {
     const handle = await startCreatedTestHttpServer({ mode: 'codemode' })

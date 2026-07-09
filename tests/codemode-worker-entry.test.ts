@@ -148,6 +148,55 @@ describe('codemode worker entry', () => {
     process.send = originalSend
   })
 
+  it('accepts sequential run messages after a completed run', async () => {
+    const { sendCalls, restore } = mockProcessSend()
+    createSearchCatalogViewMock
+      .mockReturnValueOnce({ marker: 'first-catalog' })
+      .mockReturnValueOnce({ marker: 'second-catalog' })
+    runSandboxedFunctionMock
+      .mockResolvedValueOnce({
+        result: 'first',
+        logs: [],
+      } satisfies SandboxExecutionResult)
+      .mockResolvedValueOnce({
+        result: 'second',
+        logs: [],
+      } satisfies SandboxExecutionResult)
+
+    const cleanup = await loadWorkerEntry()
+    process.emit('message', {
+      type: 'run',
+      mode: 'search',
+      code: 'globalThis.leak = 1; return "first"',
+      limits: createLimits(),
+    })
+    await flushMicrotasks()
+    process.emit('message', {
+      type: 'run',
+      mode: 'search',
+      code: 'return typeof leak',
+      limits: createLimits(),
+    })
+    await flushMicrotasks()
+
+    expect(runSandboxedFunctionMock).toHaveBeenCalledTimes(2)
+    expect(runSandboxedFunctionMock.mock.calls[0]?.[0]).toMatchObject({
+      context: { catalog: { marker: 'first-catalog' } },
+    })
+    expect(runSandboxedFunctionMock.mock.calls[1]?.[0]).toMatchObject({
+      context: { catalog: { marker: 'second-catalog' } },
+    })
+    expect(sendCalls).toEqual(
+      expect.arrayContaining([
+        { type: 'done', ok: true, result: 'first', logs: [] },
+        { type: 'done', ok: true, result: 'second', logs: [] },
+      ]),
+    )
+
+    cleanup()
+    restore()
+  })
+
   it('handles execute-mode RPC calls through process messages', async () => {
     const sendCalls: unknown[] = []
     const originalSend = process.send

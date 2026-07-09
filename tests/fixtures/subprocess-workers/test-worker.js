@@ -98,6 +98,11 @@ const modeHandlers = {
   }),
   'disconnect-after-call': createDisconnectAfterCallMode({ projectId: 'p1' }),
   'disconnect-immediately': createImmediateDisconnectMode(),
+  'env-report': createDoneMode({
+    ok: true,
+    result: Object.keys(process.env).sort(),
+    logs: [],
+  }),
 }
 
 process.on('message', (message) => {

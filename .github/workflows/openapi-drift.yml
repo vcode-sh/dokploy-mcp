@@ -1,0 +1,32 @@
+name: OpenAPI Drift
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-openapi-drift:
+    name: Check OpenAPI drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Check OpenAPI drift
+        run: |
+          set +e
+          node scripts/v2/check-openapi-drift.mjs
+          code=$?
+          if [ "$code" -eq 2 ]; then
+            echo "::warning::OpenAPI drift check could not complete (network/local error, exit 2) — not confirmed drift."
+          elif [ "$code" -ne 0 ]; then
+            echo "::error::OpenAPI drift detected against the vendored snapshot (exit $code)."
+          fi
+          exit $code

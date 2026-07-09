@@ -122,6 +122,26 @@ describe('codemode runtime', () => {
     )
   })
 
+  it('search catalog get marks deployment.readLogs as bounded and redacted log output', async () => {
+    const result = await searchTool.handler({
+      code: "async ({ catalog }) => catalog.get('deployment.readLogs')",
+    })
+
+    const payload = result.structuredContent as { result?: unknown }
+    const contract = payload.result as Record<string, unknown>
+
+    expect(contract.procedure).toBe('deployment.readLogs')
+    expect(contract.commonResponseFields).toEqual(
+      expect.arrayContaining(['logs', 'timestamp', 'message', 'stream']),
+    )
+    expect(contract.responseHints).toEqual(
+      expect.arrayContaining([expect.stringContaining('recent stdout')]),
+    )
+    expect(contract.notes).toEqual(
+      expect.arrayContaining([expect.stringContaining('redacting common secret patterns')]),
+    )
+  })
+
   it('search catalog get explains safe mount creation for mounts.create', async () => {
     const result = await searchTool.handler({
       code: "async ({ catalog }) => catalog.get('mounts.create')",
@@ -643,6 +663,9 @@ describe('codemode runtime', () => {
     expectTypeOf(context.dokploy.logs.tailMany).toBeCallableWith({
       requests: [{ kind: 'application', applicationId: 'app-1', tail: 20 }],
     })
+    expectTypeOf(context.dokploy.logs.tailMany).toBeCallableWith({
+      requests: [{ kind: 'deployment', deploymentId: 'deployment-1', tail: 20 }],
+    })
     expectTypeOf(context.dokploy.libsql.many).toBeCallableWith({
       libsqlIds: ['libsql-1'],
     })
@@ -992,6 +1015,64 @@ describe('codemode runtime', () => {
     expect(context.getCalls()).toHaveLength(3)
   })
 
+  it('can execute virtual database.many for every supported database kind', async () => {
+    const calls: string[] = []
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      calls.push(`${procedure}:${JSON.stringify(input)}`)
+
+      return {
+        data: {
+          ...input,
+          name: `${procedure} resource`,
+        },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: calls.length,
+          finishedAt: calls.length + 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    const execution = await runSandboxedFunction({
+      code: `
+        async ({ dokploy }) => {
+          return await dokploy.database.many({
+            requests: [
+              { kind: 'mariadb', mariadbId: 'mariadb-1' },
+              { kind: 'mongo', mongoId: 'mongo-1' },
+              { kind: 'mysql', mysqlId: 'mysql-1' },
+              { kind: 'postgres', postgresId: 'postgres-1' },
+              { kind: 'redis', redisId: 'redis-1' },
+            ],
+          })
+        }
+      `,
+      context: {
+        dokploy: context.dokploy,
+      },
+    })
+
+    expect(execution.result).toMatchObject({
+      items: [
+        { kind: 'mariadb', resourceId: 'mariadb-1' },
+        { kind: 'mongo', resourceId: 'mongo-1' },
+        { kind: 'mysql', resourceId: 'mysql-1' },
+        { kind: 'postgres', resourceId: 'postgres-1' },
+        { kind: 'redis', resourceId: 'redis-1' },
+      ],
+      total: 5,
+    })
+    expect(calls).toEqual([
+      'mariadb.one:{"mariadbId":"mariadb-1"}',
+      'mongo.one:{"mongoId":"mongo-1"}',
+      'mysql.one:{"mysqlId":"mysql-1"}',
+      'postgres.one:{"postgresId":"postgres-1"}',
+      'redis.one:{"redisId":"redis-1"}',
+    ])
+  })
+
   it('enforces the execute max call budget for virtual application.many fan-out', async () => {
     const context = buildExecuteContext(async (procedure, input = {}) => {
       return {
@@ -1233,6 +1314,38 @@ describe('codemode runtime', () => {
     expect(context.getCalls()).toHaveLength(0)
   })
 
+  it('validates virtual logs.tailMany deployment requests before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.logs.tailMany({
+              requests: [{ kind: 'deployment', tail: 10 }],
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('requests[0].deploymentId is required')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
   it('keeps project.logsOverview usable when one log source errors', async () => {
     const context = buildExecuteContext(async (procedure, input = {}) => {
       if (procedure === 'project.one') {
@@ -1426,6 +1539,44 @@ describe('codemode runtime', () => {
     expect(context.getCalls()).toHaveLength(0)
   })
 
+  it('validates virtual database.many required IDs and known kinds before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.database.many({
+              requests: [
+                { kind: 'mariadb' },
+                { kind: 'mongo' },
+                { kind: 'sqlite', sqliteId: 'sqlite-1' },
+              ],
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow(
+      'requests[0].mariadbId is required; requests[1].mongoId is required; requests[2].kind must be one of mariadb, mongo, mysql, postgres, redis',
+    )
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
   it('validates virtual tag.bulkAssignPreview input before issuing upstream calls', async () => {
     const context = buildExecuteContext(async (procedure, input = {}) => {
       return {
@@ -1487,6 +1638,56 @@ describe('codemode runtime', () => {
         },
       }),
     ).rejects.toThrow('mysqlId is required')
+
+    expect(context.getCalls()).toHaveLength(0)
+  })
+
+  it('validates virtual database.rotatePasswordPreview kind and type before issuing upstream calls', async () => {
+    const context = buildExecuteContext(async (procedure, input = {}) => {
+      return {
+        data: { procedure, input },
+        trace: {
+          procedure,
+          method: 'GET',
+          startedAt: 0,
+          finishedAt: 1,
+          durationMs: 1,
+        },
+      }
+    }, 5)
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.database.rotatePasswordPreview({
+              kind: 'sqlite',
+              sqliteId: 'sqlite-1',
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('kind must be one of mariadb, mongo, mysql, postgres, redis')
+
+    await expect(
+      runSandboxedFunction({
+        code: `
+          async ({ dokploy }) => {
+            return await dokploy.database.rotatePasswordPreview({
+              kind: 'postgres',
+              postgresId: 'postgres-1',
+              type: 'admin',
+            })
+          }
+        `,
+        context: {
+          dokploy: context.dokploy,
+        },
+      }),
+    ).rejects.toThrow('type must be one of user, root')
 
     expect(context.getCalls()).toHaveLength(0)
   })

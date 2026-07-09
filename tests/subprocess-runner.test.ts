@@ -76,10 +76,106 @@ async function startExecuteRun(options?: {
 afterEach(() => {
   queuedWorkers.length = 0
   vi.clearAllMocks()
+  vi.unstubAllEnvs()
   vi.useRealTimers()
 })
 
 describe('sandbox subprocess runner', () => {
+  describe('worker launch isolation', () => {
+    it('launches workers with an empty environment by default', async () => {
+      vi.stubEnv('DOKPLOY_API_KEY', 'test-placeholder-not-a-real-key')
+      const { worker, promise } = await startSearchRun()
+
+      const [, options] = forkMock.mock.calls[0]
+
+      expect(options).toEqual(
+        expect.objectContaining({
+          env: {},
+          execArgv: ['--max-old-space-size=256'],
+          stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+        }),
+      )
+      expect(options?.env).not.toHaveProperty('DOKPLOY_API_KEY')
+      expect(options?.execArgv).not.toContain('--inspect')
+      expect(options?.execArgv).not.toEqual(process.execArgv)
+
+      worker.emit('message', {
+        type: 'done',
+        ok: true,
+        result: 1,
+        logs: [],
+      })
+      await expect(promise).resolves.toEqual({ result: 1, logs: [] })
+    })
+
+    it('passes only the explicit test worker mode through the environment', async () => {
+      vi.stubEnv('DOKPLOY_API_KEY', 'test-placeholder-not-a-real-key')
+      vi.stubEnv('DOKPLOY_MCP_SANDBOX_TEST_WORKER_MODE', 'echo')
+      const { worker, promise } = await startSearchRun()
+
+      const [, options] = forkMock.mock.calls[0]
+
+      expect(options).toEqual(
+        expect.objectContaining({
+          env: {
+            DOKPLOY_MCP_SANDBOX_TEST_WORKER_MODE: 'echo',
+          },
+        }),
+      )
+      expect(options?.env).not.toHaveProperty('DOKPLOY_API_KEY')
+
+      worker.emit('message', {
+        type: 'done',
+        ok: true,
+        result: 1,
+        logs: [],
+      })
+      await expect(promise).resolves.toEqual({ result: 1, logs: [] })
+    })
+
+    it('uses a configured worker memory ceiling when launching workers', async () => {
+      vi.stubEnv('DOKPLOY_MCP_SANDBOX_WORKER_MEMORY_MB', '64')
+      const { worker, promise } = await startSearchRun()
+
+      const [, options] = forkMock.mock.calls[0]
+
+      expect(options).toEqual(
+        expect.objectContaining({
+          execArgv: ['--max-old-space-size=64'],
+        }),
+      )
+
+      worker.emit('message', {
+        type: 'done',
+        ok: true,
+        result: 1,
+        logs: [],
+      })
+      await expect(promise).resolves.toEqual({ result: 1, logs: [] })
+    })
+
+    it('falls back to the default worker memory ceiling for invalid values', async () => {
+      vi.stubEnv('DOKPLOY_MCP_SANDBOX_WORKER_MEMORY_MB', '0')
+      const { worker, promise } = await startSearchRun()
+
+      const [, options] = forkMock.mock.calls[0]
+
+      expect(options).toEqual(
+        expect.objectContaining({
+          execArgv: ['--max-old-space-size=256'],
+        }),
+      )
+
+      worker.emit('message', {
+        type: 'done',
+        ok: true,
+        result: 1,
+        logs: [],
+      })
+      await expect(promise).resolves.toEqual({ result: 1, logs: [] })
+    })
+  })
+
   it('rejects when the initial run payload cannot be sent over IPC', async () => {
     const worker = queueWorker()
     worker.send = vi.fn((_message: unknown, callback?: (error: Error | null) => void) => {
@@ -419,5 +515,169 @@ describe('sandbox subprocess runner', () => {
     await vi.advanceTimersByTimeAsync(110)
 
     await expectation
+  })
+
+  it('serializes subprocess starts through the sandbox concurrency cap', async () => {
+    vi.stubEnv('DOKPLOY_MCP_SANDBOX_MAX_CONCURRENT', '1')
+    const { runExecuteInSubprocess } = await loadSubprocessRunner()
+    const firstWorker = queueWorker()
+    const firstPromise = runExecuteInSubprocess({
+      code: defaultExecuteCode,
+      limits: createSubprocessLimits(),
+      onCall: async () => ({ ok: true }),
+    })
+    await vi.waitFor(() => {
+      expect(forkMock).toHaveBeenCalledTimes(1)
+    })
+
+    const secondWorker = queueWorker()
+    const secondPromise = runExecuteInSubprocess({
+      code: defaultExecuteCode,
+      limits: createSubprocessLimits(),
+      onCall: async () => ({ ok: true }),
+    })
+
+    expect(forkMock).toHaveBeenCalledTimes(1)
+
+    firstWorker.emit('message', {
+      type: 'done',
+      ok: true,
+      result: 'first',
+      logs: [],
+    })
+
+    await expect(firstPromise).resolves.toEqual({ result: 'first', logs: [] })
+    await vi.waitFor(() => {
+      expect(forkMock).toHaveBeenCalledTimes(2)
+    })
+
+    secondWorker.emit('message', {
+      type: 'done',
+      ok: true,
+      result: 'second',
+      logs: [],
+    })
+
+    await expect(secondPromise).resolves.toEqual({ result: 'second', logs: [] })
+  })
+
+  it('keeps fork-per-call behavior when worker reuse is not enabled', async () => {
+    const { runSearchInSubprocess } = await loadSubprocessRunner()
+    const firstWorker = queueWorker()
+    const firstPromise = runSearchInSubprocess({
+      code: defaultSearchCode,
+      limits: createSubprocessLimits(),
+    })
+    await vi.waitFor(() => {
+      expect(firstWorker.send).toHaveBeenCalledOnce()
+    })
+
+    firstWorker.emit('message', {
+      type: 'done',
+      ok: true,
+      result: 'first',
+      logs: [],
+    })
+    await expect(firstPromise).resolves.toEqual({ result: 'first', logs: [] })
+
+    const secondWorker = queueWorker()
+    const secondPromise = runSearchInSubprocess({
+      code: defaultSearchCode,
+      limits: createSubprocessLimits(),
+    })
+    await vi.waitFor(() => {
+      expect(secondWorker.send).toHaveBeenCalledOnce()
+    })
+
+    secondWorker.emit('message', {
+      type: 'done',
+      ok: true,
+      result: 'second',
+      logs: [],
+    })
+
+    await expect(secondPromise).resolves.toEqual({ result: 'second', logs: [] })
+    expect(forkMock).toHaveBeenCalledTimes(2)
+    expect(firstWorker.disconnect).toHaveBeenCalledOnce()
+    expect(firstWorker.kill).toHaveBeenCalledOnce()
+  })
+
+  it('reuses one successful worker for sequential runs when explicitly enabled', async () => {
+    vi.stubEnv('DOKPLOY_MCP_SANDBOX_WORKER_REUSE', '1')
+    const { runSearchInSubprocess } = await loadSubprocessRunner()
+    const worker = queueWorker()
+    const firstPromise = runSearchInSubprocess({
+      code: defaultSearchCode,
+      limits: createSubprocessLimits(),
+    })
+    await vi.waitFor(() => {
+      expect(worker.send).toHaveBeenCalledOnce()
+    })
+
+    worker.emit('message', {
+      type: 'done',
+      ok: true,
+      result: 'first',
+      logs: [],
+    })
+    await expect(firstPromise).resolves.toEqual({ result: 'first', logs: [] })
+
+    const secondPromise = runSearchInSubprocess({
+      code: defaultSearchCode,
+      limits: createSubprocessLimits(),
+    })
+    await vi.waitFor(() => {
+      expect(worker.send).toHaveBeenCalledTimes(2)
+    })
+
+    worker.emit('message', {
+      type: 'done',
+      ok: true,
+      result: 'second',
+      logs: [],
+    })
+
+    await expect(secondPromise).resolves.toEqual({ result: 'second', logs: [] })
+    expect(forkMock).toHaveBeenCalledOnce()
+    expect(worker.disconnect).not.toHaveBeenCalled()
+    expect(worker.kill).not.toHaveBeenCalled()
+    expect(worker.send).toHaveBeenCalledTimes(2)
+  })
+
+  it('discards a reusable worker after an error run', async () => {
+    vi.stubEnv('DOKPLOY_MCP_SANDBOX_WORKER_REUSE', '1')
+    const { runSearchInSubprocess } = await loadSubprocessRunner()
+    const failedWorker = queueWorker()
+    const failedPromise = runSearchInSubprocess({
+      code: defaultSearchCode,
+      limits: createSubprocessLimits(),
+    })
+    await vi.waitFor(() => {
+      expect(failedWorker.send).toHaveBeenCalledOnce()
+    })
+
+    failedWorker.emit('message', { type: 'unexpected' })
+    await expect(failedPromise).rejects.toThrow('Sandbox worker sent an invalid message.')
+
+    const nextWorker = queueWorker()
+    const nextPromise = runSearchInSubprocess({
+      code: defaultSearchCode,
+      limits: createSubprocessLimits(),
+    })
+    await vi.waitFor(() => {
+      expect(nextWorker.send).toHaveBeenCalledOnce()
+    })
+
+    nextWorker.emit('message', {
+      type: 'done',
+      ok: true,
+      result: 'next',
+      logs: [],
+    })
+
+    await expect(nextPromise).resolves.toEqual({ result: 'next', logs: [] })
+    expect(forkMock).toHaveBeenCalledTimes(2)
+    expect(failedWorker.disconnect).toHaveBeenCalledOnce()
+    expect(failedWorker.kill).toHaveBeenCalledOnce()
   })
 })

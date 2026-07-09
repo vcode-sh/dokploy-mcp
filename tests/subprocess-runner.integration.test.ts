@@ -129,4 +129,19 @@ describe('sandbox subprocess runner integration', () => {
       }),
     ).rejects.toThrow('Sandbox worker IPC channel disconnected before completing.')
   })
+
+  it('runs real fixture workers without inheriting parent Dokploy environment', async () => {
+    vi.stubEnv('DOKPLOY_API_KEY', 'test-placeholder-not-a-real-key')
+
+    const result = await runRealSearchWithTestWorker({
+      mode: 'env-report',
+    })
+
+    expect(result.result).toEqual(expect.arrayContaining(['DOKPLOY_MCP_SANDBOX_TEST_WORKER_MODE']))
+    expect(
+      (result.result as string[]).filter(
+        (key) => key.startsWith('DOKPLOY_') && key !== 'DOKPLOY_MCP_SANDBOX_TEST_WORKER_MODE',
+      ),
+    ).toEqual([])
+  })
 })

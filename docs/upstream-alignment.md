@@ -27,6 +27,9 @@ These improve model cost and workflow ergonomics, but they do not give true serv
 
 ### 1. `application.one` server-side shaping
 
+Status: see the detailed issue-first recommendation in
+[`docs/proposals/upstream-application-one.md`](./proposals/upstream-application-one.md).
+
 **Current call**
 
 ```ts
