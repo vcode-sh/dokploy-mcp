@@ -12,10 +12,16 @@ const budgetScriptPath = resolve(repoRoot, 'scripts/v2/check-budgets.mjs')
 const budgetDistEntryPath = resolve(repoRoot, 'dist/codemode/tools/index.js')
 const readmePath = resolve(repoRoot, 'README.md')
 const coveragePath = resolve(repoRoot, 'docs/coverage.md')
+const packagePath = resolve(repoRoot, 'package.json')
+const serverJsonPath = resolve(repoRoot, 'server.json')
+const versionPath = resolve(repoRoot, 'src/version.ts')
+const claudePath = resolve(repoRoot, 'CLAUDE.md')
+const agentsPath = resolve(repoRoot, 'AGENTS.md')
 
 const classicEndpointPerToolBaselineTokens = 92354
 const defaultPublicTools = ['search', 'execute', 'list_profiles']
 const checkMode = process.argv.includes('--check')
+const legacyDocPatterns = ['196 tools', '23 modules', 'Node >= 22', 'src/tools/']
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'))
@@ -126,6 +132,63 @@ function formatToolList(tools) {
   return tools.map((tool) => `\`${tool}\``).join(', ')
 }
 
+function collectVersionFacts() {
+  const packageJson = readJson(packagePath)
+  const serverJson = readJson(serverJsonPath)
+  const versionSource = readFileSync(versionPath, 'utf8')
+  const serverVersionMatch = versionSource.match(/SERVER_VERSION = '([^']+)'/)
+
+  if (!serverVersionMatch) {
+    throw new Error('Could not parse SERVER_VERSION from src/version.ts')
+  }
+
+  return [
+    { label: 'package.json version', value: packageJson.version },
+    { label: 'server.json version', value: serverJson.version },
+    { label: 'server.json packages[0].version', value: serverJson.packages?.[0]?.version },
+    { label: 'src/version.ts SERVER_VERSION', value: serverVersionMatch[1] },
+  ]
+}
+
+function checkVersionAlignment() {
+  const versions = collectVersionFacts()
+  const expectedVersion = versions[0]?.value
+  const mismatches = versions.filter((entry) => entry.value !== expectedVersion)
+
+  if (mismatches.length === 0) {
+    return []
+  }
+
+  return [
+    [
+      'Version fields are out of sync:',
+      ...versions.map((entry) => `- ${entry.label}: ${entry.value ?? '(missing)'}`),
+    ].join('\n'),
+  ]
+}
+
+function checkLegacyDocs() {
+  const docs = [
+    { path: claudePath, label: 'CLAUDE.md' },
+    { path: agentsPath, label: 'AGENTS.md' },
+  ]
+  const errors = []
+
+  for (const doc of docs) {
+    const source = readFileSync(doc.path, 'utf8')
+    const matches = legacyDocPatterns.filter((pattern) => source.includes(pattern))
+    if (matches.length > 0) {
+      errors.push(`${doc.label} contains legacy architecture text: ${matches.join(', ')}`)
+    }
+  }
+
+  return errors
+}
+
+function runCheckAssertions() {
+  return [...checkVersionAlignment(), ...checkLegacyDocs()]
+}
+
 function updateReadme(source, facts) {
   return replaceManagedSection(source, 'readme', renderReadmeFacts(facts))
 }
@@ -159,14 +222,22 @@ function main() {
     .filter(({ current, next }) => current !== next)
 
   if (checkMode) {
-    if (updates.length === 0) {
+    const assertionErrors = runCheckAssertions()
+
+    if (updates.length === 0 && assertionErrors.length === 0) {
       console.log('Docs factual sections are current.')
       return
     }
 
-    console.error('Docs factual sections are out of date. Run `npm run docs:sync:facts`.')
-    for (const update of updates) {
-      console.error(`- ${relative(repoRoot, update.path)}`)
+    if (updates.length > 0) {
+      console.error('Docs factual sections are out of date. Run `npm run docs:sync:facts`.')
+      for (const update of updates) {
+        console.error(`- ${relative(repoRoot, update.path)}`)
+      }
+    }
+
+    for (const error of assertionErrors) {
+      console.error(error)
     }
     process.exitCode = 1
     return

@@ -39,6 +39,31 @@ function createPreparedDeployTask(
     pollIntervalMs: 250,
     maxPolls: 2,
   }
+  const executor =
+    overrides.executor ??
+    (async (procedure: string) => {
+      if (procedure === 'application.deploy') {
+        return {
+          deploymentId: 'dep-2',
+          applicationId: 'app-1',
+          status: 'queued',
+        }
+      }
+
+      if (procedure === 'deployment.latestByType') {
+        return {
+          id: 'app-1',
+          type: 'application',
+          total: 1,
+          latestDeployment: {
+            deploymentId: 'dep-2',
+            status: 'queued',
+          },
+        }
+      }
+
+      throw new Error(`Unexpected procedure ${procedure}`)
+    })
 
   return {
     input,
@@ -60,31 +85,8 @@ function createPreparedDeployTask(
         rollout,
       }),
     },
-    executor:
-      overrides.executor ??
-      (async (procedure: string) => {
-        if (procedure === 'application.deploy') {
-          return {
-            deploymentId: 'dep-2',
-            applicationId: 'app-1',
-            status: 'queued',
-          }
-        }
-
-        if (procedure === 'deployment.latestByType') {
-          return {
-            id: 'app-1',
-            type: 'application',
-            total: 1,
-            latestDeployment: {
-              deploymentId: 'dep-2',
-              status: 'queued',
-            },
-          }
-        }
-
-        throw new Error(`Unexpected procedure ${procedure}`)
-      }),
+    executor,
+    pollExecutor: executor,
     getCalls: () => [],
   }
 }

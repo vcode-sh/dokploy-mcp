@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { getHealthPayload, resolveHttpOptions } from '../src/http/options.js'
 import { remoteDokployHeaderInputs } from '../src/http/security.js'
@@ -24,6 +24,7 @@ function omitEnv(
 
 afterEach(() => {
   process.env = { ...ORIGINAL_ENV }
+  vi.restoreAllMocks()
 })
 
 describe('http options', () => {
@@ -122,6 +123,26 @@ describe('http options', () => {
 
     process.env.DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK = 'not-a-boolean'
     expect(resolveHttpOptions().allowConfigFallback).toBe(false)
+  })
+
+  it('warns when remote HTTP origins allow every origin', () => {
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    expect(resolveHttpOptions({ allowedOrigins: ['*'] }).allowedOrigins).toEqual(['*'])
+    expect(stderr).toHaveBeenCalledWith(
+      'dokploy-mcp: DOKPLOY_MCP_ALLOWED_ORIGINS=* reflects any Origin. Use an explicit allowlist for hosted deployments.',
+    )
+  })
+
+  it('does not warn when remote HTTP origins use an explicit allowlist', () => {
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    expect(
+      resolveHttpOptions({
+        allowedOrigins: ['https://cursor.example.com', 'https://app.example.com'],
+      }).allowedOrigins,
+    ).toEqual(['https://cursor.example.com', 'https://app.example.com'])
+    expect(stderr).not.toHaveBeenCalled()
   })
 
   it('serializes health payload with sorted capability flags and remote auth metadata', () => {

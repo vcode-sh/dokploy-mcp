@@ -22,6 +22,7 @@ import type {
 } from './types.js'
 
 const MAX_JSON_BODY_BYTES = 1024 * 1024
+const sessionRequestQueues = new WeakMap<SessionRecord, Promise<void>>()
 
 class RequestBodyTooLargeError extends Error {
   constructor(limitBytes: number) {
@@ -171,15 +172,43 @@ async function handleTrackedSessionRequest(
   }
 
   try {
-    await withHttpRequestConfig(session.resolvedConfig, () =>
-      session.transport.handleRequest(req, res, parsedBody),
-    )
+    const handleRequest = () =>
+      withHttpRequestConfig(session.resolvedConfig, () =>
+        session.transport.handleRequest(req, res, parsedBody),
+      )
+
+    if (requestKind === 'request') {
+      await runSerializedSessionRequest(session, handleRequest)
+    } else {
+      await handleRequest()
+    }
   } finally {
     if (requestKind !== 'control') {
       sessions.unregisterRequestAborter(session, abortRequest)
     }
 
     await sessions.endRequest(session, requestKind)
+  }
+}
+
+async function runSerializedSessionRequest<T>(
+  session: SessionRecord,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const previous = sessionRequestQueues.get(session) ?? Promise.resolve()
+  const run = previous.catch(() => undefined).then(operation)
+  const tail = run.then(
+    () => undefined,
+    () => undefined,
+  )
+  sessionRequestQueues.set(session, tail)
+
+  try {
+    return await run
+  } finally {
+    if (sessionRequestQueues.get(session) === tail) {
+      sessionRequestQueues.delete(session)
+    }
   }
 }
 

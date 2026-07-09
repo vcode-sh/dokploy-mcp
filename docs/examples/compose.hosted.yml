@@ -1,0 +1,38 @@
+services:
+  dokploy-mcp:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DOKPLOY_MCP_TRANSPORT: http
+      DOKPLOY_MCP_HTTP_HOST: 0.0.0.0
+      DOKPLOY_MCP_HTTP_PORT: 3000
+      DOKPLOY_MCP_HTTP_PATH: /mcp
+      DOKPLOY_MCP_HEALTH_PATH: /health
+      # Leave empty unless a browser-based client needs CORS. Prefer explicit origins, not "*".
+      DOKPLOY_MCP_ALLOWED_ORIGINS: ""
+      DOKPLOY_MCP_SANDBOX_WORKER_MEMORY_MB: 256
+      DOKPLOY_MCP_SANDBOX_MAX_CONCURRENT: 4
+      # Do not set DOKPLOY_MCP_HTTP_ALLOW_CONFIG_FALLBACK for multi-client hosted servers.
+      # Per-request X-Dokploy-Url and X-Dokploy-Api-Key headers keep tenant credentials isolated.
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then((r)=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+# Put TLS in front of this service. Example Caddyfile:
+#
+# mcp.example.com {
+#   reverse_proxy dokploy-mcp:3000
+# }

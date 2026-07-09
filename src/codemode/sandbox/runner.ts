@@ -9,6 +9,7 @@ interface RunSandboxedFunctionOptions<TContext extends Record<string, unknown>> 
   code: string
   context: TContext
   limits?: SandboxLimits
+  onTimeout?: () => void
 }
 
 function deepFreeze<T>(value: T): T {
@@ -38,24 +39,37 @@ const ARROW_FN_RE = /^\s*async\s*\(/
  *   2. async (ctx) => { ... }                   -- arrow with param
  *   3. async () => dokploy.project.all()        -- arrow using globals
  *   4. dokploy.project.all()                    -- raw expression (auto-wrapped)
- *   5. const x = await dokploy.project.all()    -- raw statements (auto-wrapped)
+ *   5. const x = await dokploy.project.all()    -- raw statements; use top-level
+ *                                                   return to produce a result
  */
 function wrapSandboxCode(code: string): string {
   const trimmed = code.trim()
   if (ARROW_FN_RE.test(trimmed)) {
     return trimmed
   }
-  // Raw code -- wrap in an async function that receives context but ignores it
-  // (context keys are already available as globals)
-  const hasReturn = /\breturn\b/.test(trimmed)
-  const body = hasReturn ? trimmed : `return (${trimmed})`
-  return `async () => { ${body} }`
+  const expressionWrapped = `async () => { return (${trimmed}\n) }`
+  if (compiles(expressionWrapped)) {
+    return expressionWrapped
+  }
+  return `async () => { ${trimmed}\n }`
+}
+
+function compiles(source: string): boolean {
+  try {
+    new Script(source, {
+      filename: 'codemode-wrap-probe.js',
+    })
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function runSandboxedFunction<TContext extends Record<string, unknown>>({
   code,
   context,
   limits: providedLimits,
+  onTimeout,
 }: RunSandboxedFunctionOptions<TContext>): Promise<SandboxExecutionResult> {
   const limits = providedLimits ?? resolveSandboxLimits()
   const logs: string[] = []
@@ -141,6 +155,11 @@ export async function runSandboxedFunction<TContext extends Record<string, unkno
         return
       }
       settled = true
+      try {
+        onTimeout?.()
+      } catch {
+        // Timeout reporting must not be masked by cancellation hook failures.
+      }
       reject(new Error(`Sandbox execution timed out after ${limits.timeoutMs}ms.`))
     }, limits.timeoutMs)
     timeoutId.unref?.()

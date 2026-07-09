@@ -9,6 +9,46 @@ const logRequestKinds = new Set([
   'redis',
 ])
 
+export const DATABASE_KINDS = [
+  {
+    kind: 'mariadb',
+    idField: 'mariadbId',
+    supportsPasswordType: true,
+    readProcedure: 'mariadb.one',
+    previewProcedure: 'mariadb.changePassword',
+  },
+  {
+    kind: 'mongo',
+    idField: 'mongoId',
+    supportsPasswordType: false,
+    readProcedure: 'mongo.one',
+    previewProcedure: 'mongo.changePassword',
+  },
+  {
+    kind: 'mysql',
+    idField: 'mysqlId',
+    supportsPasswordType: true,
+    readProcedure: 'mysql.one',
+    previewProcedure: 'mysql.changePassword',
+  },
+  {
+    kind: 'postgres',
+    idField: 'postgresId',
+    supportsPasswordType: false,
+    readProcedure: 'postgres.one',
+    previewProcedure: 'postgres.changePassword',
+  },
+  {
+    kind: 'redis',
+    idField: 'redisId',
+    supportsPasswordType: false,
+    readProcedure: 'redis.one',
+    previewProcedure: 'redis.changePassword',
+  },
+] as const
+
+export type DatabaseKind = (typeof DATABASE_KINDS)[number]['kind']
+
 export function createManyOutputSchema() {
   return {
     type: 'object',

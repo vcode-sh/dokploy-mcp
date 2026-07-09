@@ -87,6 +87,7 @@ type WorkflowActionResolution =
 interface PreparedDeployApplicationTask {
   input: DeployApplicationWorkflowInput
   executor: ResourceExecutor
+  pollExecutor: ResourceExecutor
   application: ApplicationPreview
   resolved: ReturnType<typeof buildResolvedInput>
   rollout: RolloutOptions
@@ -171,9 +172,11 @@ async function sleepWithSignal(milliseconds: number, signal?: AbortSignal) {
 
 function createWorkflowExecutor() {
   const tracker = createCallTracker(invokeProcedure, resolveSandboxLimits().maxCalls)
+  const pollTracker = createCallTracker(invokeProcedure, MAX_ROLLOUT_MAX_POLLS)
   return {
     executor: createResourceExecutor((procedure, input) => tracker.call(procedure, input)),
-    getCalls: tracker.getCalls,
+    pollExecutor: createResourceExecutor((procedure, input) => pollTracker.call(procedure, input)),
+    getCalls: () => [...tracker.getCalls(), ...pollTracker.getCalls()],
   }
 }
 
@@ -588,10 +591,24 @@ async function waitForDeploymentRollout(options: {
   for (let attempt = 1; attempt <= options.rollout.maxPolls; attempt += 1) {
     throwIfAborted(options.signal)
 
-    const latestByType = await options.executor('deployment.latestByType', {
-      id: options.applicationId,
-      type: 'application',
-    })
+    let latestByType: unknown
+    try {
+      latestByType = await options.executor('deployment.latestByType', {
+        id: options.applicationId,
+        type: 'application',
+      })
+    } catch (error) {
+      if (!isApiCallBudgetError(error)) {
+        throw error
+      }
+
+      return {
+        status: 'budget-exhausted' as const,
+        attempts: attempt,
+        latestDeployment,
+      }
+    }
+
     const latest =
       isRecord(latestByType) && 'latestDeployment' in latestByType
         ? latestByType.latestDeployment
@@ -622,6 +639,10 @@ async function waitForDeploymentRollout(options: {
     attempts: options.rollout.maxPolls,
     latestDeployment,
   }
+}
+
+function isApiCallBudgetError(error: unknown) {
+  return error instanceof Error && /exceeded \d+ API calls/.test(error.message)
 }
 
 function buildNeedsInputResult(message: string, candidates: ApplicationCandidate[]) {
@@ -735,6 +756,7 @@ function buildApprovalRequiredResult(options: {
 async function runAppliedDeployment(options: {
   input: DeployApplicationWorkflowInput
   executor: ResourceExecutor
+  pollExecutor: ResourceExecutor
   application: ApplicationPreview
   resolved: ReturnType<typeof buildResolvedInput>
   rollout: RolloutOptions
@@ -754,7 +776,7 @@ async function runAppliedDeployment(options: {
   })
   const rolloutStatus = options.rollout.waitForRollout
     ? await waitForDeploymentRollout({
-        executor: options.executor,
+        executor: options.pollExecutor,
         applicationId: options.application.applicationId,
         deploymentId: getDeploymentId(deployment),
         rollout: options.rollout,
@@ -790,7 +812,7 @@ export async function prepareDeployApplicationWorkflow(
   input: DeployApplicationWorkflowInput,
   options: WorkflowRunnerOptions,
 ): Promise<DeployApplicationPreparation> {
-  const { executor, getCalls } = createWorkflowExecutor()
+  const { executor, pollExecutor, getCalls } = createWorkflowExecutor()
   throwIfAborted(options.signal)
 
   const applicationResolution = await resolveApplicationId(input, executor, options)
@@ -888,6 +910,7 @@ export async function prepareDeployApplicationWorkflow(
     getCalls,
     input,
     executor,
+    pollExecutor,
     application,
     resolved,
     rollout,

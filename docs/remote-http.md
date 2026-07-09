@@ -122,13 +122,6 @@ The health endpoint returns the active remote-auth posture, including:
 
 ## Verification Commands
 
-Dedicated `phase 5` verification:
-
-```bash
-npm run test:phase5
-npm run test:phase5:coverage
-```
-
 Repository-wide verification:
 
 ```bash
@@ -145,15 +138,12 @@ npm run ci:budgets
 
 Latest local verification in this execution cycle:
 
-- `npm run test:phase5:coverage`: `175` tests passed with `97.79%` statements, `91.66%`
-  branches, `95.91%` functions, `99.61%` lines on the dedicated Phase 5 slice
 - `npm test`: `495` tests passed
 - `npm run test:coverage`: `90.07%` statements, `79.45%` branches, `94.23%` functions, `90.48%`
   lines repository-wide
 
-The dedicated Phase 5 acceptance suite clears the requested `90%+` level across statements,
-branches, functions, and lines, and includes unit, adversarial, integration, and metadata
-verification for the remote surface.
+See [coverage.md](./coverage.md) for the generated coverage snapshot maintained by the docs facts
+checker.
 
 The full repository now also clears `90%` for statements and lines. Remaining lower branch
-coverage is outside the specific Phase 5 closeout scope.
+coverage is outside the hosted HTTP closeout scope.

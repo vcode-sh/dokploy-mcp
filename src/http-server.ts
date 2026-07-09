@@ -6,6 +6,7 @@ import {
 } from 'node:http'
 import type { AddressInfo, Socket } from 'node:net'
 
+import { resolveSandboxRuntime } from './codemode/sandbox/runtime.js'
 import { resolveHttpOptions } from './http/options.js'
 import { createHttpRequestHandler } from './http/request-handler.js'
 import { canWriteResponse, writeJsonRpcError } from './http/responses.js'
@@ -270,6 +271,12 @@ export function createHttpServer(options: HttpServerOptions = {}) {
 }
 
 export async function startHttpServer(options: HttpServerOptions = {}): Promise<StartedHttpServer> {
+  if (resolveSandboxRuntime() === 'local') {
+    throw new Error(
+      'DOKPLOY_MCP_SANDBOX_RUNTIME=local is not supported with serve-http; unset it or use subprocess.',
+    )
+  }
+
   const managed = createManagedHttpServer(options)
   const { resolved, server } = managed
 

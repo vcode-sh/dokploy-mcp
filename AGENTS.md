@@ -2,13 +2,13 @@
 
 ## What this is
 
-MCP (Model Context Protocol) server for the Dokploy API. v2 is Code Mode only: two public tools, `search` and `execute`, backed by generated OpenAPI artifacts, a sandboxed runtime, and a generated Dokploy SDK. TypeScript, ES modules, Node >= 24.
+MCP (Model Context Protocol) server for the Dokploy API. v2 is Code Mode only: three public tools: `search`, `execute`, and `list_profiles`, backed by generated OpenAPI artifacts, a sandboxed runtime, and a generated Dokploy SDK. TypeScript, ES modules, Node >= 24.
 
 ## Architecture
 
 - Entry: `src/index.ts` (CLI vs MCP server)
 - Server: `src/server.ts` (registers Code Mode tools with `McpServer`)
-- Public tools: `src/codemode/tools/search.ts`, `src/codemode/tools/execute.ts`
+- Public tools: `src/codemode/tools/search.ts`, `src/codemode/tools/execute.ts`, `src/codemode/tools/list-profiles.ts`
 - Tool factory: `src/mcp/tool-factory.ts`
 - Search context: `src/codemode/context/search-context.ts`
 - Execute context: `src/codemode/context/execute-context.ts`
@@ -32,7 +32,7 @@ MCP (Model Context Protocol) server for the Dokploy API. v2 is Code Mode only: t
 
 - Framework: Vitest
 - Tests in `tests/*.test.ts`
-- Coverage: v8 provider, excludes `src/index.ts` and `src/cli/**`
+- Coverage: v8 provider, excludes entry shims `src/index.ts`, `src/cli/index.ts`, and generated code
 - Run: `npm test` or `npm run test:coverage`
 
 ## Commands

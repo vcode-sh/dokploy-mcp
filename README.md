@@ -42,6 +42,8 @@ Need proof instead of a sales monologue? Start with [docs/live-e2e-proof.md](./d
 
 Get your API key from **Dokploy Settings > Profile > API/CLI**.
 
+For env-based setup, start from [`.env.example`](./.env.example).
+
 If your client uses a JSON-style MCP config, this is the whole block:
 
 ```json
@@ -148,6 +150,7 @@ working shape.
 - [docs/guides/modes.md](./docs/guides/modes.md)
 - [docs/guides/compose.md](./docs/guides/compose.md)
 - [docs/guides/hosted-http.md](./docs/guides/hosted-http.md)
+- [docs/guides/hosted-deploy.md](./docs/guides/hosted-deploy.md)
 - [docs/guides/troubleshooting.md](./docs/guides/troubleshooting.md)
 - [docs/live-e2e-proof.md](./docs/live-e2e-proof.md)
 

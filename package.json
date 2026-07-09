@@ -1,6 +1,6 @@
 {
   "name": "@vibetools/dokploy-mcp",
-  "version": "3.1.2",
+  "version": "4.0.0",
   "description": "Dokploy MCP server for Codex, Cursor, and Claude with compact stdio and hosted HTTP modes",
   "mcpName": "io.github.vcode-sh/dokploy-mcp",
   "type": "module",
@@ -34,14 +34,6 @@
     "smoke:execute": "node scripts/v2/smoke-execute-live.mjs",
     "start": "node dist/index.js",
     "test": "vitest run",
-    "test:phase2": "vitest run --config vitest.phase2.config.ts",
-    "test:phase2:coverage": "vitest run --config vitest.phase2.config.ts --coverage",
-    "test:phase3": "vitest run --config vitest.phase3.config.ts",
-    "test:phase3:coverage": "vitest run --config vitest.phase3.config.ts --coverage",
-    "test:phase4": "vitest run --config vitest.phase4.config.ts",
-    "test:phase4:coverage": "vitest run --config vitest.phase4.config.ts --coverage",
-    "test:phase5": "vitest run --config vitest.phase5.config.ts",
-    "test:phase5:coverage": "vitest run --config vitest.phase5.config.ts --coverage",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
@@ -63,14 +55,6 @@
     "@vitest/coverage-v8": "^4.1.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
-  },
-  "overrides": {
-    "@hono/node-server": "1.19.14",
-    "hono": "4.12.18",
-    "express-rate-limit": "8.5.1",
-    "ip-address": "10.2.0",
-    "path-to-regexp": "8.4.2",
-    "fast-uri": "3.1.2"
   },
   "engines": {
     "node": ">=24.0.0"

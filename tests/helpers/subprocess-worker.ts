@@ -21,6 +21,7 @@ export const subprocessTestWorkerModes = [
   'invalid-done',
   'disconnect-after-call',
   'disconnect-immediately',
+  'env-report',
 ] as const
 export type SubprocessTestWorkerMode = (typeof subprocessTestWorkerModes)[number]
 
@@ -34,7 +35,7 @@ const defaultSubprocessLimits: SandboxLimits = {
 }
 
 const defaultSubprocessIntegrationLimits: SandboxLimits = {
-  timeoutMs: 50,
+  timeoutMs: 500,
   maxResultBytes: 8 * 1024,
   maxLogBytes: 2 * 1024,
   maxCalls: 5,

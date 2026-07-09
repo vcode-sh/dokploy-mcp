@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+.old
+*.tgz
+.git
+plans
+.env
+.env.*
+!.env.example

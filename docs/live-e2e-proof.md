@@ -1,5 +1,9 @@
 # Live End-To-End Proof
 
+Snapshot captured 2026-04-21 against package v3.0.x; commands and surface below reflect that date.
+Current behavior is continuously checked by `npm test` and `npm run ci:budgets`; this document is
+historical live evidence, not a freshness claim.
+
 Yes, it actually deployed something. Revolutionary stuff.
 
 This document is the public evidence snapshot for the current `v3` package surface. It focuses on
@@ -377,6 +381,8 @@ npm run test:phase5
 npm run ci:budgets
 npm test
 ```
+
+`test:phase5` was retired after v3 shipped; use `npm test` for current verification.
 
 For the hosted HTTP contract and operator details, see [remote-http.md](./remote-http.md).
 For the generated coverage and budget snapshot, see [coverage.md](./coverage.md).

@@ -105,6 +105,56 @@ describe('codemode procedure overrides', () => {
     }
   })
 
+  it('redacts git provider secrets inside application response arrays', () => {
+    const data = [
+      {
+        applicationId: 'app-1',
+        githubClientSecret: 'test-placeholder-not-a-real-key',
+      },
+      {
+        applicationId: 'app-2',
+        githubClientSecret: 'test-placeholder-not-a-real-key-2',
+      },
+    ]
+
+    const redacted = transformProcedureResponse('github.one', {}, data) as Array<
+      Record<string, string>
+    >
+
+    expect(redacted[0]?.githubClientSecret).toBe('[REDACTED]')
+    expect(redacted[1]?.githubClientSecret).toBe('[REDACTED]')
+    expect(transformProcedureResponse('github.one', { includeSecrets: true }, data)).toBe(data)
+  })
+
+  it('redacts git provider secrets inside nested arrays', () => {
+    const data = {
+      applicationId: 'app-1',
+      github: [
+        {
+          name: 'primary',
+          privateKey: 'test-placeholder-not-a-real-key',
+        },
+      ],
+    }
+
+    const redacted = transformProcedureResponse('github.one', {}, data) as {
+      github: Array<Record<string, string>>
+    }
+
+    expect(redacted.github[0]?.privateKey).toBe('[REDACTED]')
+  })
+
+  it('preserves identity when git provider redaction does not change a response', () => {
+    const data = {
+      applicationId: 'app-1',
+      github: {
+        name: 'primary',
+      },
+    }
+
+    expect(transformProcedureResponse('github.one', {}, data)).toBe(data)
+  })
+
   it('redacts notification provider secrets by default', () => {
     const notification = {
       notificationId: 'notif-1',
@@ -344,6 +394,34 @@ describe('codemode procedure overrides', () => {
     expect(shaped.logs).not.toContain('top-secret-token')
     expect(shaped.logs).not.toContain('super-secret@')
     expect(shaped.logs).not.toContain('key-material')
+  })
+
+  it('redacts broader env and URI credential log patterns without over-redacting prose', () => {
+    const logText = [
+      'DATABASE_DSN=postgres://dokploy:super-secret@db.example.com:5432/app',
+      'SENTRY_DSN=https://public:private@sentry.example.com/1',
+      'BROKER_URL=amqp://worker:rabbit-secret@queue.example.com/vhost',
+      'ENCRYPTION_KEY=test-placeholder-not-a-real-key',
+      'AUTHOR=jane',
+      'the password field is configured elsewhere',
+    ].join('\n')
+
+    const shaped = transformProcedureResponse(
+      'application.readLogs',
+      {},
+      {
+        logs: logText,
+      },
+    ) as { logs: string }
+
+    expect(shaped.logs).toContain('DATABASE_DSN=[REDACTED]')
+    expect(shaped.logs).toContain('SENTRY_DSN=[REDACTED]')
+    expect(shaped.logs).toContain('amqp://worker:[REDACTED]@queue.example.com/vhost')
+    expect(shaped.logs).toContain('ENCRYPTION_KEY=[REDACTED]')
+    expect(shaped.logs).toContain('AUTHOR=jane')
+    expect(shaped.logs).toContain('the password field is configured elsewhere')
+    expect(shaped.logs).not.toContain('super-secret')
+    expect(shaped.logs).not.toContain('rabbit-secret')
   })
 
   it('caps structured log arrays and redacts secrets inside log messages', () => {

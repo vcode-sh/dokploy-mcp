@@ -3,7 +3,7 @@
   "name": "io.github.vcode-sh/dokploy-mcp",
   "title": "Dokploy MCP",
   "description": "Dokploy MCP server for Codex, Cursor, and Claude with compact stdio and hosted HTTP modes",
-  "version": "3.1.2",
+  "version": "4.0.0",
   "websiteUrl": "https://github.com/vcode-sh/dokploy-mcp",
   "repository": {
     "url": "https://github.com/vcode-sh/dokploy-mcp",
@@ -21,7 +21,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@vibetools/dokploy-mcp",
-      "version": "3.1.2",
+      "version": "4.0.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

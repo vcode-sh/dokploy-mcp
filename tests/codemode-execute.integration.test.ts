@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { invokeProcedureWithApi } from '../src/codemode/gateway/api-gateway.js'
 import { createSandboxHost } from '../src/codemode/sandbox/host.js'
 import { runSandboxedFunction } from '../src/codemode/sandbox/runner.js'
+import { resetLocalRuntimeWarningForTests } from '../src/codemode/sandbox/runtime.js'
 import { buildExecuteContext, runExecuteWithHost } from '../src/codemode/tools/execute.js'
 
 function readFixture(relativePath: string) {
@@ -18,6 +19,12 @@ function trimFixtureCode(value: string) {
 }
 
 describe('codemode execute integration', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+    resetLocalRuntimeWarningForTests()
+  })
+
   function trace(procedure: string, index: number) {
     return {
       procedure,
@@ -117,6 +124,70 @@ describe('codemode execute integration', () => {
         durationMs: 1,
       },
     ])
+  })
+
+  it('warns once when execute uses the local sandbox runtime', async () => {
+    vi.stubEnv('DOKPLOY_MCP_SANDBOX_RUNTIME', 'local')
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const host = {
+      async call(procedure: string) {
+        return {
+          data: { procedure },
+          trace: {
+            procedure,
+            method: 'GET' as const,
+            startedAt: 0,
+            finishedAt: 1,
+            durationMs: 1,
+          },
+        }
+      },
+      getCalls() {
+        return []
+      },
+    }
+
+    await runExecuteWithHost('async () => 1', host)
+    await runExecuteWithHost('async () => 2', host)
+
+    expect(stderr).toHaveBeenCalledTimes(1)
+    expect(stderr.mock.calls[0]?.[0]).toContain('DOKPLOY_MCP_SANDBOX_RUNTIME=local')
+  })
+
+  it('aborts local execute host calls after a sandbox timeout', async () => {
+    vi.stubEnv('DOKPLOY_MCP_SANDBOX_RUNTIME', 'local')
+    vi.stubEnv('DOKPLOY_MCP_SANDBOX_TIMEOUT_MS', '10')
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    let callCount = 0
+    const host = {
+      async call(procedure: string) {
+        callCount += 1
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        return {
+          data: { procedure },
+          trace: {
+            procedure,
+            method: 'GET' as const,
+            startedAt: callCount,
+            finishedAt: callCount + 1,
+            durationMs: 1,
+          },
+        }
+      },
+      getCalls() {
+        return []
+      },
+    }
+
+    await expect(
+      runExecuteWithHost('async () => { while (true) { await dokploy.project.all({}) } }', host),
+    ).rejects.toThrow('Sandbox execution timed out after 10ms.')
+    const callsAfterTimeout = callCount
+
+    await new Promise((resolve) => setTimeout(resolve, 70))
+
+    expect(callCount).toBe(callsAfterTimeout)
+    expect(stderr).toHaveBeenCalledOnce()
   })
 
   it('surfaces reusable resource links when execute results include known Dokploy IDs', async () => {

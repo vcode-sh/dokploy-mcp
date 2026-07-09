@@ -14,6 +14,8 @@ You want it when:
 npx @vibetools/dokploy-mcp serve-http
 ```
 
+For Docker and compose deployment, see [hosted-deploy.md](./hosted-deploy.md).
+
 Defaults:
 
 - MCP path: `/mcp`
