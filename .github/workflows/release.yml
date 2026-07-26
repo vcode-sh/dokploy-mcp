@@ -172,6 +172,6 @@ jobs:
           fetch-depth: 0
 
       - name: GitHub Release
-        uses: softprops/action-gh-release@v3.0.0
+        uses: softprops/action-gh-release@v3.0.1
         with:
           generate_release_notes: true
